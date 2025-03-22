@@ -1,5 +1,10 @@
 import { BaseMessage, LoginStatusResponse } from "../types/messaging";
 
+/**
+ * Send message to background
+ * @param message
+ * @returns
+ */
 export async function sendMessage<T extends BaseMessage | LoginStatusResponse>(
   message: T | any
 ) {
@@ -14,6 +19,11 @@ export async function sendMessage<T extends BaseMessage | LoginStatusResponse>(
   });
 }
 
+/**
+ * Send message to all tabs
+ * @param message
+ * @returns
+ */
 export function sendMessageToTabs<T extends BaseMessage | LoginStatusResponse>(
   message: T | any
 ) {

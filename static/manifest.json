@@ -1,7 +1,7 @@
 {
 	"name": "Subturtle",
 	"description": "Learn English from any subtitle on Internet",
-	"version": "1.6.5",
+	"version": "1.6.6",
 	"manifest_version": 3,
 	"icons": {
 		"128": "/assets/logo-128.png",
