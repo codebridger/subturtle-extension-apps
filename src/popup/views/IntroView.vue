@@ -1,5 +1,5 @@
 <template>
-  <section class="h-screen pb-10 flex flex-col justify-between">
+  <section class="h-screen flex flex-col justify-between">
     <Carousel :value="slides">
       <template #item="{ data }">
         <img :src="data.image" class="w-full h-auto" />
@@ -9,17 +9,30 @@
       </template>
     </Carousel>
 
-    <section class="px-14 text-lg text-center">
-      <p class="text-gray-300 font-thin">
-        This is a new way to improve your language skills over your daily
-        activities. Login to get started.
-      </p>
-    </section>
+    <section
+      :class="[
+        'overflow-y-auto',
+        'py-12 px-12',
+        'flex items-center justify-between',
+        'bg-gray-950',
+      ]"
+    >
+      <section class="text-lg">
+        <p class="text-gray-300">
+          This is a new way to improve your language skills over your daily
+          activities.
+        </p>
+      </section>
 
-    <section class="flex justify-center">
-      <Button :disabled="isLogin" label="Login" @click="openLogin">
-        <template #icon> <span class="i-solar-login-3-bold" /> </template>
-      </Button>
+      <div class="w-12 animate-[slide_1s_ease-in-out_infinite] text-gray-300">
+        <span class="i-solar-double-alt-arrow-right-bold-duotone text-2xl" />
+      </div>
+
+      <section class="flex justify-center">
+        <Button :disabled="isLogin" label="Login" @click="openLogin">
+          <template #icon> <span class="i-solar-login-3-bold" /> </template>
+        </Button>
+      </section>
     </section>
 
     <!-- <section class="flex flex-col items-center">
