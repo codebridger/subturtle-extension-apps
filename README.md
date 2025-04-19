@@ -11,7 +11,7 @@
 ---
 
 <p align="center">
-<img src="https://github.com/codebridger/subturtle-extension-apps/blob/main/extension/misc/media-kit/Frame%202.png" width="70%"/>
+<img src="https://github.com/codebridger/subturtle-extension-apps/blob/main/misc/media-kit/Frame%202.png" width="70%"/>
 </p>
 
 ---
@@ -37,9 +37,9 @@ Latest updates
 ---
 
 <p align="center">
-<img src="https://github.com/codebridger/subturtle-extension-apps/blob/main/extension/misc/media-kit/Word%20detail%201.png" width="30%" />
-<img src="https://github.com/codebridger/subturtle-extension-apps/blob/main/extension/misc/media-kit/Word%20detail%202.png" width="30%" />
-<img src="https://github.com/codebridger/subturtle-extension-apps/blob/main/extension/misc/media-kit/Word%20detail%203.png" width="30%" />
+<img src="https://github.com/codebridger/subturtle-extension-apps/blob/main/misc/media-kit/Word%20detail%201.png" width="30%" />
+<img src="https://github.com/codebridger/subturtle-extension-apps/blob/main/misc/media-kit/Word%20detail%202.png" width="30%" />
+<img src="https://github.com/codebridger/subturtle-extension-apps/blob/main/misc/media-kit/Word%20detail%203.png" width="30%" />
 </p>
 
 ---
