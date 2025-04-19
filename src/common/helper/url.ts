@@ -1,5 +1,5 @@
 export function joinToBaseUrl(path: string) {
-  let base_url = process.env.SUBTURTLE_WEBSITE || "";
+  let base_url = process.env.SUBTURTLE_API_URL || "";
 
   // if base_url has a trailing slash, remove it
   if (base_url.endsWith("/")) {

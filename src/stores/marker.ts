@@ -1,4 +1,5 @@
 import { defineStore } from "pinia";
+import { TranslateService } from "../common/services/translate.service";
 
 export interface MarkedWord {
   id: string;
@@ -10,6 +11,8 @@ interface State {
   mode: "mark" | "select";
   marking: boolean;
   markedWords: MarkedWord[];
+  sourceLanguage: string;
+  translatedWords: Record<string, string>;
 }
 
 export const useMarkerStore = defineStore("marker", {
@@ -17,6 +20,8 @@ export const useMarkerStore = defineStore("marker", {
     mode: "select",
     marking: false,
     markedWords: [],
+    sourceLanguage: "",
+    translatedWords: {},
   }),
 
   getters: {
@@ -31,6 +36,22 @@ export const useMarkerStore = defineStore("marker", {
   },
 
   actions: {
+    translate() {
+      let translatingList = [this.selectedPhrase];
+
+      const _this = this;
+
+      TranslateService.instance
+        .translateByGoogle(translatingList)
+        .then(({ list, lang }) => {
+          _this.sourceLanguage = lang;
+
+          translatingList.forEach((result, i) => {
+            _this.translatedWords[result] = list[i];
+          });
+        });
+    },
+
     toggleMarkingMode(value: boolean) {
       this.mode = value ? "mark" : "select";
     },
@@ -64,6 +85,9 @@ export const useMarkerStore = defineStore("marker", {
 
         return aid - bid;
       });
+
+      // Translate the selected phrase
+      this.translate();
     },
 
     clear() {
@@ -97,7 +121,7 @@ export const stopMarking = (e: KeyboardEvent) => {
   if (e.key !== "Control" && e.key !== "Meta") return;
 
   useMarkerStore().toggleMarkingMode(false);
-  document.body.style.cursor = "default";
 
+  document.body.style.cursor = "default";
   document.removeEventListener("keyup", stopMarking);
 };

@@ -35,6 +35,22 @@ module.exports = {
         "surface-900": "rgb(var(--surface-900))",
         "surface-950": "rgb(var(--surface-950))",
       },
+      keyframes: {
+        slide: {
+          '0%': {
+            transform: 'translateX(-10px)'
+          },
+          '50%': {
+            transform: 'translateX(10px)'
+          },
+          '100%': {
+            transform: 'translateX(-10px)'
+          }
+        }
+      },
+      animation: {
+        'slide': 'slide 1.5s ease-in-out infinite'
+      }
     },
   },
 

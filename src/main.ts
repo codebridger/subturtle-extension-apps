@@ -4,10 +4,12 @@ import "./animation.scss";
 import "./tailwind.css";
 
 import { App, createApp } from "vue";
-import components from "./module/subtitle/components/components";
+import subtitleComponents from "./subtitle/components/components";
+import generalComponents from "./common/components/components";
+import ConsoleCrane from "./console-crane/views/ConsoleCrane.vue";
 
-import { netflix } from "./module/subtitle/web_netflix/initializer";
-import { youtube } from "./module/subtitle/web_youtube/initializer";
+import { netflix } from "./subtitle/web_netflix/initializer";
+import { youtube } from "./subtitle/web_youtube/initializer";
 import { AppInitializer } from "./common/types/general.type";
 import { cleanText } from "./common/helper/text";
 import { analytic } from "./plugins/mixpanel";
@@ -17,7 +19,7 @@ import { addPlugins } from "./plugins/install";
 import {
   registerGlobalEvents,
   unregisterGlobalEvents,
-} from "./module/subtitle/helpers/global-events";
+} from "./subtitle/helpers/global-events";
 import { loginWithLastSession } from "./plugins/modular-rest";
 
 let vueApp!: App;
@@ -47,13 +49,24 @@ function start() {
     ) {
       initialized = true;
 
-      // Create a vue app and add plugins
-      vueApp = addPlugins(createApp(appInitializer.component as any));
+      // Create a vue app
+      const app = createApp(appInitializer.component as any);
+
+      // Add plugins
+      vueApp = addPlugins(app);
 
       // Login with last session
       loginWithLastSession();
 
       // Register components
+      //
+
+      const components = {
+        ...subtitleComponents,
+        ...generalComponents,
+        ConsoleCrane,
+      };
+
       Object.keys(components).forEach((name) => {
         let component = (components as any)[name];
         vueApp.component(name, component);
@@ -62,6 +75,9 @@ function start() {
           cleanText: cleanText,
         };
       });
+
+      //
+      // END Register components
 
       appInitializer
         .start(vueApp)

@@ -1,6 +1,6 @@
 import { GlobalOptions, authentication } from "@modular-rest/client";
 
-import { sendMessage, sendMessageToTabs } from "../module/popup/helper/massage";
+import { sendMessage, sendMessageToTabs } from "../common/helper/massage";
 
 import {
   GetLoginStatusMessage,
@@ -9,7 +9,7 @@ import {
 import { ref } from "vue";
 
 GlobalOptions.set({
-  host: process.env.SUBTURTLE_WEBSITE || "",
+  host: process.env.SUBTURTLE_API_URL || "",
 });
 
 export {
@@ -37,12 +37,13 @@ export async function loginWithLastSession() {
   // Check if the user is logged in
   // If the user is logged in, try to login with the token as last session.
   await sendMessage(new GetLoginStatusMessage())
-    .then((res) => {
+    .then(async (res) => {
       if (!GetLoginStatusMessage.checkResponse(res)) return;
 
-      return authentication.loginWithLastSession(res.token);
+      const user = await authentication.loginWithToken(res.token as string, true);
+      return user;
     })
-    .then(() => {
+    .then((user) => {
       console.log("login success ", authentication.isLogin);
       isLogin.value = authentication.isLogin;
     })

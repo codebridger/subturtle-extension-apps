@@ -3,10 +3,10 @@ import "./tailwind.css";
 
 import { createApp } from "vue";
 import { createPinia } from "pinia";
-import rootComponent from "./module/popup/App.vue";
-import components from "./module/popup/components/components";
-import { getAsset } from "./module/popup/helper/assets";
-import { router } from "./module/popup/router";
+import rootComponent from "./popup/App.vue";
+import components from "./popup/components/components";
+import { getAsset } from "./popup/helper/assets";
+import { router } from "./popup/router";
 import { installVuePrime } from "./plugins/vue-prime";
 
 // Set uninstall url
