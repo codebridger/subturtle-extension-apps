@@ -32,169 +32,20 @@
 
       <!-- Main Content - Optimized for Popup -->
       <div class="px-6 py-3">
-        <!-- Language Selection Card -->
+        <!-- Dashboard Button Card -->
         <div
           class="bg-white/5 backdrop-blur-lg rounded-xl p-4 mb-4 border border-white/10"
         >
           <div class="flex items-center justify-between gap-4">
             <div>
               <h2 class="text-lg font-semibold text-white">
-                Select Your Target Language
+                Access Your Dashboard
               </h2>
               <p class="text-gray-400 text-sm">
-                Choose the language to help English by
+                Manage your saved phrases and track your progress
               </p>
             </div>
-            <div class="w-48">
-              <form>
-                <select-target />
-              </form>
-            </div>
-          </div>
-        </div>
-
-        <!-- Features Grid - More Compact -->
-        <div class="grid grid-cols-3 gap-4 mb-4">
-          <!-- How It Works Card -->
-          <div
-            class="bg-white/5 backdrop-blur-lg rounded-xl p-4 border border-white/10"
-          >
-            <h3
-              class="text-base font-semibold text-white mb-2 flex items-center"
-            >
-              <span
-                class="w-6 h-6 bg-blue-500/20 rounded-full flex items-center justify-center text-sm mr-2"
-              >
-                1
-              </span>
-              Basic Usage
-            </h3>
-            <p class="text-gray-400 text-sm">
-              Open a video, enable subtitles, and hover over words to see
-              translations.
-            </p>
-          </div>
-
-          <!-- Multiple Word Translation Card -->
-          <div
-            class="bg-white/5 backdrop-blur-lg rounded-xl p-4 border border-white/10"
-          >
-            <h3
-              class="text-base font-semibold text-white mb-2 flex items-center"
-            >
-              <span
-                class="w-6 h-6 bg-purple-500/20 rounded-full flex items-center justify-center text-sm mr-2"
-              >
-                2
-              </span>
-              Multiple Words
-            </h3>
-            <ul class="text-gray-400 text-sm space-y-1">
-              <li class="flex items-center">
-                <span class="w-1 h-1 bg-purple-400 rounded-full mr-1.5"></span>
-                Hold <span class="font-bold">Ctrl</span> or
-                <span class="font-bold">Command</span>
-              </li>
-              <li class="flex items-center">
-                <span class="w-1 h-1 bg-purple-400 rounded-full mr-1.5"></span>
-                Drag to select words
-              </li>
-              <li class="flex items-center">
-                <span class="w-1 h-1 bg-purple-400 rounded-full mr-1.5"></span>
-                Click to save for practice
-              </li>
-            </ul>
-          </div>
-
-          <!-- Phrase Management Card -->
-          <div
-            class="bg-white/5 backdrop-blur-lg rounded-xl p-4 border border-white/10"
-          >
-            <h3
-              class="text-base font-semibold text-white mb-2 flex items-center"
-            >
-              <span
-                class="w-6 h-6 bg-amber-500/20 rounded-full flex items-center justify-center text-sm mr-2"
-              >
-                3
-              </span>
-              Save & Organize
-            </h3>
-            <ul class="text-gray-400 text-sm space-y-1">
-              <li class="flex items-center">
-                <span class="w-1 h-1 bg-amber-400 rounded-full mr-1.5"></span>
-                Click phrase to see details
-              </li>
-              <li class="flex items-center">
-                <span class="w-1 h-1 bg-amber-400 rounded-full mr-1.5"></span>
-                Save phrases for practice
-              </li>
-              <li class="flex items-center">
-                <span class="w-1 h-1 bg-amber-400 rounded-full mr-1.5"></span>
-                Create custom bundles
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- Practice Section -->
-        <div
-          class="bg-white/5 backdrop-blur-lg rounded-xl p-4 border border-white/10 mb-4"
-        >
-          <div class="flex items-start justify-between gap-4">
-            <div class="flex-1">
-              <h3
-                class="text-base font-semibold text-white mb-3 flex items-center"
-              >
-                <span
-                  class="w-6 h-6 bg-emerald-500/20 rounded-full flex items-center justify-center text-sm mr-2"
-                >
-                  4
-                </span>
-                Practice & Master
-              </h3>
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <h4 class="text-sm font-medium text-emerald-400 mb-2">
-                    Practice Modes
-                  </h4>
-                  <ul class="text-gray-400 text-sm space-y-1">
-                    <li class="flex items-center">
-                      <span
-                        class="w-1 h-1 bg-emerald-400 rounded-full mr-1.5"
-                      ></span>
-                      Flashcard mode
-                    </li>
-                    <li class="flex items-center">
-                      <span
-                        class="w-1 h-1 bg-emerald-400 rounded-full mr-1.5"
-                      ></span>
-                      AI teacher practice
-                    </li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 class="text-sm font-medium text-emerald-400 mb-2">
-                    Manage & Track
-                  </h4>
-                  <ul class="text-gray-400 text-sm space-y-1">
-                    <li class="flex items-center">
-                      <span
-                        class="w-1 h-1 bg-emerald-400 rounded-full mr-1.5"
-                      ></span>
-                      Manage bundles
-                    </li>
-                    <li class="flex items-center">
-                      <span
-                        class="w-1 h-1 bg-emerald-400 rounded-full mr-1.5"
-                      ></span>
-                      Track progress
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-            <div class="flex-shrink-0">
+            <div>
               <button
                 v-if="isLogin"
                 @click="openDashboard"
@@ -220,6 +71,177 @@
           </div>
         </div>
 
+        <!-- How to use Subturtle? Header -->
+        <h2 class="text-lg font-semibold text-white mb-3">
+          How to use Subturtle?
+        </h2>
+
+        <!-- Features Grid - 5 Steps -->
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <!-- Step 1: Language Selection Card -->
+          <div
+            class="bg-white/5 backdrop-blur-lg rounded-xl p-4 border border-white/10"
+          >
+            <h3
+              class="text-base font-semibold text-white mb-3 flex items-center"
+            >
+              <span
+                class="w-6 h-6 bg-indigo-500/20 rounded-full flex items-center justify-center text-sm mr-2"
+              >
+                1
+              </span>
+              Select Target Language
+            </h3>
+            <div class="flex items-center space-x-3">
+              <span class="text-gray-400 text-sm">Choose language:</span>
+              <div class="flex-1 z-10">
+                <select-target />
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2: Basic Usage -->
+          <div
+            class="bg-white/5 backdrop-blur-lg rounded-xl p-4 border border-white/10"
+          >
+            <h3
+              class="text-base font-semibold text-white mb-2 flex items-center"
+            >
+              <span
+                class="w-6 h-6 bg-blue-500/20 rounded-full flex items-center justify-center text-sm mr-2"
+              >
+                2
+              </span>
+              Open Video & Enable Subtitles
+            </h3>
+            <p class="text-gray-400 text-sm">
+              Open a video on Netflix or YouTube, enable subtitles, and hover
+              over words to see translations.
+            </p>
+          </div>
+
+          <!-- Step 3: Multiple Word Translation Card -->
+          <div
+            class="bg-white/5 backdrop-blur-lg rounded-xl p-4 border border-white/10"
+          >
+            <h3
+              class="text-base font-semibold text-white mb-2 flex items-center"
+            >
+              <span
+                class="w-6 h-6 bg-purple-500/20 rounded-full flex items-center justify-center text-sm mr-2"
+              >
+                3
+              </span>
+              Select Multiple Words
+            </h3>
+            <ul class="text-gray-400 text-sm space-y-1">
+              <li class="flex items-center">
+                <span class="w-1 h-1 bg-purple-400 rounded-full mr-1.5"></span>
+                Hold&nbsp;<span class="font-bold">Ctrl</span> &nbsp;or&nbsp;
+                <span class="font-bold">Command</span>
+              </li>
+              <li class="flex items-center">
+                <span class="w-1 h-1 bg-purple-400 rounded-full mr-1.5"></span>
+                Drag to select words
+              </li>
+              <li class="flex items-center">
+                <span class="w-1 h-1 bg-purple-400 rounded-full mr-1.5"></span>
+                Click to save for practice
+              </li>
+            </ul>
+          </div>
+
+          <!-- Step 4: Phrase Management Card -->
+          <div
+            class="bg-white/5 backdrop-blur-lg rounded-xl p-4 border border-white/10"
+          >
+            <h3
+              class="text-base font-semibold text-white mb-2 flex items-center"
+            >
+              <span
+                class="w-6 h-6 bg-amber-500/20 rounded-full flex items-center justify-center text-sm mr-2"
+              >
+                4
+              </span>
+              Save & Organize
+            </h3>
+            <ul class="text-gray-400 text-sm space-y-1">
+              <li class="flex items-center">
+                <span class="w-1 h-1 bg-amber-400 rounded-full mr-1.5"></span>
+                Click phrase to see details
+              </li>
+              <li class="flex items-center">
+                <span class="w-1 h-1 bg-amber-400 rounded-full mr-1.5"></span>
+                Save phrases for practice
+              </li>
+              <li class="flex items-center">
+                <span class="w-1 h-1 bg-amber-400 rounded-full mr-1.5"></span>
+                Create custom bundles
+              </li>
+            </ul>
+          </div>
+
+          <!-- Step 5: Practice Section -->
+          <div
+            class="bg-white/5 backdrop-blur-lg rounded-xl p-4 border border-white/10 col-span-2"
+          >
+            <div class="flex items-start gap-4">
+              <div class="flex-1">
+                <h3
+                  class="text-base font-semibold text-white mb-3 flex items-center"
+                >
+                  <span
+                    class="w-6 h-6 bg-emerald-500/20 rounded-full flex items-center justify-center text-sm mr-2"
+                  >
+                    5
+                  </span>
+                  Practice & Master
+                </h3>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 class="text-sm font-medium text-emerald-400 mb-2">
+                      Practice Modes
+                    </h4>
+                    <ul class="text-gray-400 text-sm space-y-1">
+                      <li class="flex items-center">
+                        <span
+                          class="w-1 h-1 bg-emerald-400 rounded-full mr-1.5"
+                        ></span>
+                        Flashcard mode
+                      </li>
+                      <li class="flex items-center">
+                        <span
+                          class="w-1 h-1 bg-emerald-400 rounded-full mr-1.5"
+                        ></span>
+                        AI teacher practice
+                      </li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 class="text-sm font-medium text-emerald-400 mb-2">
+                      Manage & Track
+                    </h4>
+                    <ul class="text-gray-400 text-sm space-y-1">
+                      <li class="flex items-center">
+                        <span
+                          class="w-1 h-1 bg-emerald-400 rounded-full mr-1.5"
+                        ></span>
+                        Manage bundles
+                      </li>
+                      <li class="flex items-center">
+                        <span
+                          class="w-1 h-1 bg-emerald-400 rounded-full mr-1.5"
+                        ></span>
+                        Track progress
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Supported Platforms -->
         <div
           class="bg-white/5 backdrop-blur-lg rounded-xl p-4 border border-white/10 mb-4"
@@ -230,18 +252,20 @@
             </h3>
             <div class="flex items-center space-x-6">
               <div class="transform hover:scale-105 transition-transform">
-                <img
-                  class="h-8"
-                  :src="getAsset('/svg/netflix_logo.svg')"
-                  alt="Netflix"
-                />
+                <a href="https://www.netflix.com" target="_blank">
+                  <img
+                    class="h-8"
+                    :src="getAsset('/svg/netflix_logo.svg')"
+                    alt="Netflix"
+                /></a>
               </div>
               <div class="transform hover:scale-105 transition-transform">
-                <img
-                  class="h-8"
-                  :src="getAsset('/svg/youtube_logo.svg')"
-                  alt="YouTube"
-                />
+                <a href="https://www.youtube.com" target="_blank">
+                  <img
+                    class="h-8"
+                    :src="getAsset('/svg/youtube_logo.svg')"
+                    alt="YouTube"
+                /></a>
               </div>
             </div>
           </div>
