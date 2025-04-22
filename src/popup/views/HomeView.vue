@@ -12,16 +12,15 @@
           <div class="flex items-center justify-between">
             <div class="flex-1">
               <h1 class="text-xl font-bold text-white mb-1">
-                Learn Languages Through
+                Learn English streaming your&nbsp;
                 <span
                   class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400"
                 >
-                  Video Content
+                  favorite shows
                 </span>
               </h1>
               <p class="text-gray-300 text-sm max-w-md">
-                Transform your language learning experience with instant
-                translations
+                From subtitles to fluency. Learn from real-life, native content.
               </p>
             </div>
             <div class="transform hover:scale-105 transition-transform">
@@ -43,7 +42,7 @@
                 Select Your Target Language
               </h2>
               <p class="text-gray-400 text-sm">
-                Choose the language you want to learn
+                Choose the language to help English by
               </p>
             </div>
             <div class="w-48">
