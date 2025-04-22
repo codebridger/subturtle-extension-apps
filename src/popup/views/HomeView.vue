@@ -31,7 +31,7 @@
       </div>
 
       <!-- Main Content - Optimized for Popup -->
-      <div class="px-6 py-3">
+      <div class="p-6">
         <!-- Dashboard Button Card -->
         <div
           class="bg-white/5 backdrop-blur-lg rounded-xl p-4 mb-4 border border-white/10"
@@ -72,7 +72,7 @@
         </div>
 
         <!-- How to use Subturtle? Header -->
-        <h2 class="text-lg font-semibold text-white mb-3">
+        <h2 class="text-2xl text-center font-semibold text-white my-8">
           How to use Subturtle?
         </h2>
 
