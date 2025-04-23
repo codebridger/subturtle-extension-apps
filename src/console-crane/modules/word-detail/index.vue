@@ -1,6 +1,9 @@
 <template>
   <!-- Main word detail component - displays dictionary information and translation for a selected word -->
-  <div class="flex flex-col items-center justify-start" :key="key">
+  <div
+    class="flex flex-col items-center justify-start overflow-y-auto"
+    :key="key"
+  >
     <div
       class="select-text text-gray-900 flex flex-col px-20 justify-start items-center"
       :style="{
@@ -12,23 +15,27 @@
       <section class="px-[30px] mb-24 flex flex-col w-full" @click.stop="">
         <div class="flex items-center space-x-5 p-5">
           <h1 class="text-9xl white-shadow">{{ title }}</h1>
-          <h3 class="text-5xl white-shadow mt-8">{{ phonetic }}</h3>
+          <h3 class="text-5xl white-shadow mt-8">
+            {{ wordData?.linguistic_data?.pronunciation || "" }}
+          </h3>
         </div>
 
         <!-- Translation box showing the word in target language -->
         <Fieldset class="w-full" :legend="targetLanguageTitle">
           <div class="text-center">
-            <span class="text-7xl white-shadow">{{
-              cleanText(activeTranslate!)
-            }}</span>
+            <span
+              class="text-7xl white-shadow"
+              :dir="wordData?.direction?.target"
+              >{{ cleanText(wordData?.translation?.phrase || "") }}</span
+            >
           </div>
         </Fieldset>
 
         <!-- Save word functionality - only shown to logged in users -->
         <SaveWordSection
-          v-if="isLogin && activeTranslate"
+          v-if="isLogin && wordData?.translation?.phrase"
           :phrase="cleanText(getProps().word!)"
-          :translation="cleanText(activeTranslate!)"
+          :translation="cleanText(wordData?.translation?.phrase || '')"
         />
 
         <!-- Login prompt if user is not logged in -->
@@ -45,37 +52,150 @@
         </Button>
       </section>
 
-      <!-- DEFINITION SECTION - Shows word meanings organized by parts of speech -->
-      <template v-if="store">
-        <!-- 
-        Definition cards
-      -->
+      <!-- LINGUISTIC DATA SECTION - Shows detailed linguistic information -->
+      <template v-if="wordData && wordData.linguistic_data">
         <section class="w-full mt-10">
-          <!-- Tabs to switch between different parts of speech (noun, verb, etc.) -->
-          <tabs
-            class="mb-5 justify-start pl-[30px]"
-            :list="store.partsOfSpeech"
-            v-model="activeTab"
-          />
+          <!-- Main definition card -->
+          <Fieldset class="w-full mb-5" legend="Definition">
+            <div class="p-4">
+              <p
+                class="text-4xl text-white mb-6"
+                :dir="wordData?.direction?.target"
+              >
+                {{ wordData.linguistic_data.definition }}
+              </p>
 
-          <!-- Carousel of definition cards for the selected part of speech -->
-          <Carousel
-            class="w-full"
-            :value="meaning?.definitions"
-            :page="0"
-            v-if="meaning?.definitions.length"
-            :key="getProps().word"
-          >
-            <template #item="{ data, index }">
-              <Fieldset class="h-full" :legend="'Definition ' + (index + 1)">
-                <Definition
-                  class="h-full min-h-[100px]"
-                  :data="data"
-                  :key="activeTab + index"
+              <!-- Type and formality level -->
+              <div class="flex justify-between text-2xl mb-4">
+                <Badge
+                  v-if="wordData.linguistic_data.type"
+                  :value="wordData.linguistic_data.type"
+                  severity="info"
                 />
-              </Fieldset>
-            </template>
-          </Carousel>
+                <Badge
+                  v-if="wordData.linguistic_data.formality_level"
+                  :value="wordData.linguistic_data.formality_level"
+                  severity="warning"
+                />
+              </div>
+
+              <!-- Additional notes sections when available -->
+              <div v-if="wordData.linguistic_data.usage_notes" class="mb-4">
+                <h3 class="font-bold text-3xl mb-2">Usage Notes</h3>
+                <p
+                  class="text-white text-2xl"
+                  :dir="wordData?.direction?.target"
+                >
+                  {{ wordData.linguistic_data.usage_notes }}
+                </p>
+              </div>
+
+              <div v-if="wordData.linguistic_data.grammar_notes" class="mb-4">
+                <h3 class="font-bold text-3xl mb-2">Grammar Notes</h3>
+                <p
+                  class="text-white text-2xl"
+                  :dir="wordData?.direction?.target"
+                >
+                  {{ wordData.linguistic_data.grammar_notes }}
+                </p>
+              </div>
+
+              <div v-if="wordData.linguistic_data.cultural_notes" class="mb-4">
+                <h3 class="font-bold text-3xl mb-2">Cultural Context</h3>
+                <p
+                  class="text-white text-2xl"
+                  :dir="wordData?.direction?.target"
+                >
+                  {{ wordData.linguistic_data.cultural_notes }}
+                </p>
+              </div>
+
+              <div
+                v-if="wordData.linguistic_data.literal_translation"
+                class="mb-4"
+              >
+                <h3 class="font-bold text-3xl mb-2">Literal Translation</h3>
+                <p
+                  class="text-white text-2xl"
+                  :dir="wordData?.direction?.target"
+                >
+                  {{ wordData.linguistic_data.literal_translation }}
+                </p>
+              </div>
+            </div>
+          </Fieldset>
+
+          <!-- Example sentences -->
+          <Fieldset
+            v-if="
+              wordData.linguistic_data.examples &&
+              wordData.linguistic_data.examples.length
+            "
+            class="w-full mb-5"
+            legend="Examples"
+          >
+            <div class="p-4">
+              <div
+                v-for="(example, index) in wordData.linguistic_data.examples"
+                :key="index"
+                class="mb-4"
+              >
+                <p
+                  class="text-3xl text-white mb-2"
+                  :dir="wordData?.direction?.source || 'ltr'"
+                >
+                  {{ example.source }}
+                </p>
+                <p
+                  class="text-2xl text-gray-300 italic"
+                  :dir="wordData?.direction?.target"
+                >
+                  {{ example.target }}
+                </p>
+                <Divider
+                  v-if="index < wordData.linguistic_data.examples.length - 1"
+                />
+              </div>
+            </div>
+          </Fieldset>
+
+          <!-- Related expressions -->
+          <Fieldset
+            v-if="
+              wordData.linguistic_data.related_expressions &&
+              wordData.linguistic_data.related_expressions.length
+            "
+            class="w-full"
+            legend="Related Expressions"
+          >
+            <div class="p-4">
+              <div
+                v-for="(expression, index) in wordData.linguistic_data
+                  .related_expressions"
+                :key="index"
+                class="mb-4"
+              >
+                <p
+                  class="text-3xl text-white mb-2"
+                  :dir="wordData?.direction?.source"
+                >
+                  {{ expression.source }}
+                </p>
+                <p
+                  class="text-2xl text-gray-300 italic"
+                  :dir="wordData?.direction?.target"
+                >
+                  {{ expression.target }}
+                </p>
+                <Divider
+                  v-if="
+                    index <
+                    wordData.linguistic_data.related_expressions.length - 1
+                  "
+                />
+              </div>
+            </div>
+          </Fieldset>
         </section>
       </template>
 
@@ -90,7 +210,7 @@
       <template v-else>
         <div class="my-32 text-3xl text-center text-yellow-200">
           <span
-            >There is not any definition for
+            >There is not any linguistic data for
             {{ cleanText(getProps().word!) }}</span
           >
         </div>
@@ -103,19 +223,16 @@
 import { ref, computed, watch, inject } from "vue";
 import { cleanText, firstUpper } from "../../../common/helper/text";
 import { TranslateService } from "../../../common/services/translate.service";
-import {
-  DefinitionStore,
-  Meaning,
-} from "../../../common/types/dictionaryapi.type";
+import { LanguageLearningData } from "./types";
 
 import { analytic } from "../../../plugins/mixpanel";
 import { isLogin } from "../../../plugins/modular-rest";
-import Definition from "../components/Definition.vue";
-import SaveWordSection from "../components/SaveWordSection.vue";
+import SaveWordSection from "../../components/SaveWordSection.vue";
 
 import Fieldset from "primevue/fieldset";
-import Carousel from "primevue/carousel";
+import Divider from "primevue/divider";
 import Button from "primevue/button";
+import Badge from "primevue/badge";
 
 import { useRoute } from "vue-router";
 import { useMarkerStore } from "../../../stores/marker";
@@ -133,6 +250,7 @@ function getProps() {
 
   return data as unknown as {
     word: string;
+    context?: string;
   };
 }
 
@@ -140,12 +258,10 @@ function getProps() {
 const frameSize = inject<{ width: number; height: number }>("frameSize");
 
 // Main state variables
-const store = ref<DefinitionStore | null>(null); // Stores dictionary API response
+const wordData = ref<LanguageLearningData | null>(null); // Stores detailed linguistic data
 const markerStore = useMarkerStore(); // Global store for markers and translations
 
 const pending = ref(false); // Loading state
-const activeTab = ref(""); // Currently selected part of speech tab
-const meaning = ref<Meaning>(); // Current meaning being displayed
 const key = ref(new Date().getTime()); // Key for forcing component refresh
 
 // Gets the title of the target language (e.g., "Spanish", "French")
@@ -155,21 +271,7 @@ const targetLanguageTitle = computed(
 
 // Formats the word with proper capitalization
 const title = computed(() => {
-  let word = getProps().word;
-  if (store.value) word = store.value.word;
-  return firstUpper(word || "");
-});
-
-// Gets phonetic pronunciation from the dictionary response
-const phonetic = computed(() => {
-  let phonetic = "";
-  if (store.value) phonetic = store.value.phonetic;
-  return phonetic;
-});
-
-// Gets the translation of the current word from the marker store
-const activeTranslate = computed(() => {
-  return markerStore.translatedWords[markerStore.selectedPhrase];
+  return firstUpper(cleanText(getProps().word) || "");
 });
 
 /**
@@ -180,7 +282,7 @@ watch(
   () => getProps().word,
   (value) => {
     key.value = new Date().getTime();
-    store.value = null;
+    wordData.value = null;
 
     if (!value) return;
 
@@ -191,40 +293,29 @@ watch(
 );
 
 /**
- * Watch for changes to the active part of speech tab
- * Updates the displayed meaning when tab changes
- */
-watch(
-  () => activeTab,
-  (value, old) => {
-    if (old?.value !== value.value && store.value) {
-      analytic.track("Part of speech switched");
-    }
-
-    if (value.value.length) {
-      meaning.value = store.value!.getPartOfSpeech(value.value);
-    }
-  },
-  {
-    immediate: true,
-    deep: true,
-  }
-);
-
-/**
- * Fetches word details from dictionary API
- * Cleans the word text and updates component state
+ * Fetches detailed linguistic data for the word
+ * Uses context if available
  */
 function fetchWordDetail() {
   pending.value = true;
 
-  const cleaned = cleanText(getProps().word as string);
+  const props = getProps();
+  const cleaned = cleanText(props.word as string);
+  const context = props.context || "";
 
-  store.value = null;
+  wordData.value = null;
 
   TranslateService.instance
-    .translateByDictionaryapi(cleaned)
-    .then((res) => (store.value = res))
+    .fetchDetailedTranslation(cleaned, context)
+    .then((data) => {
+      try {
+        wordData.value = data;
+        wordData.value.phrase = cleaned;
+        wordData.value.context = "";
+      } catch (error) {
+        console.error("Failed to parse response:", error);
+      }
+    })
     .finally(() => (pending.value = false));
 }
 

@@ -10,6 +10,7 @@ import { analytic } from "../../plugins/mixpanel";
 import { log } from "../helper/log";
 import proxy from "./proxy.service";
 import { functionProvider } from "@modular-rest/client";
+import { LanguageLearningData } from "../../console-crane/modules/word-detail/types";
 
 export class TranslateService {
   static instance = new TranslateService();
@@ -98,7 +99,7 @@ export class TranslateService {
     text: string | string[],
     context: string = ""
   ) {
-    return functionProvider.run<{ data: string }>({
+    return functionProvider.run<LanguageLearningData>({
       name: "translateWithContext",
       args: {
         translationType: "detailed",
