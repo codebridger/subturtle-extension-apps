@@ -57,72 +57,71 @@
         <section class="w-full mt-10">
           <!-- Main definition card -->
           <Fieldset class="w-full mb-5" legend="Definition">
-            <div class="p-4">
-              <p
-                class="text-4xl text-white mb-6"
-                :dir="wordData?.direction?.target"
-              >
-                {{ wordData.linguistic_data.definition }}
-              </p>
+            <p
+              class="text-4xl text-white mb-6"
+              :dir="wordData?.direction?.target"
+            >
+              {{ wordData.linguistic_data.definition }}
+            </p>
 
-              <!-- Type and formality level -->
-              <div class="flex justify-between text-2xl mb-4">
-                <Badge
-                  v-if="wordData.linguistic_data.type"
-                  :value="wordData.linguistic_data.type"
-                  severity="info"
-                />
-                <Badge
-                  v-if="wordData.linguistic_data.formality_level"
-                  :value="wordData.linguistic_data.formality_level"
-                  severity="warning"
-                />
-              </div>
-
-              <!-- Additional notes sections when available -->
-              <div v-if="wordData.linguistic_data.usage_notes" class="mb-4">
-                <h3 class="font-bold text-3xl mb-2">Usage Notes</h3>
-                <p
-                  class="text-white text-2xl"
-                  :dir="wordData?.direction?.target"
-                >
-                  {{ wordData.linguistic_data.usage_notes }}
-                </p>
-              </div>
-
-              <div v-if="wordData.linguistic_data.grammar_notes" class="mb-4">
-                <h3 class="font-bold text-3xl mb-2">Grammar Notes</h3>
-                <p
-                  class="text-white text-2xl"
-                  :dir="wordData?.direction?.target"
-                >
-                  {{ wordData.linguistic_data.grammar_notes }}
-                </p>
-              </div>
-
-              <div v-if="wordData.linguistic_data.cultural_notes" class="mb-4">
-                <h3 class="font-bold text-3xl mb-2">Cultural Context</h3>
-                <p
-                  class="text-white text-2xl"
-                  :dir="wordData?.direction?.target"
-                >
-                  {{ wordData.linguistic_data.cultural_notes }}
-                </p>
-              </div>
-
-              <div
-                v-if="wordData.linguistic_data.literal_translation"
-                class="mb-4"
-              >
-                <h3 class="font-bold text-3xl mb-2">Literal Translation</h3>
-                <p
-                  class="text-white text-2xl"
-                  :dir="wordData?.direction?.target"
-                >
-                  {{ wordData.linguistic_data.literal_translation }}
-                </p>
-              </div>
+            <!-- Type and formality level -->
+            <div class="flex text-2xl gap-2">
+              <Badge
+                v-if="wordData.linguistic_data.type"
+                :value="wordData.linguistic_data.type.toUpperCase()"
+                severity="info"
+                size="large"
+              />
+              <Badge
+                v-if="wordData.linguistic_data.formality_level"
+                :value="wordData.linguistic_data.formality_level.toUpperCase()"
+                severity="warning"
+                size="large"
+              />
             </div>
+          </Fieldset>
+
+          <!-- Usage Notes sections when available -->
+          <Fieldset
+            legend="Usage Notes"
+            v-if="wordData.linguistic_data.usage_notes"
+            class="mb-4"
+          >
+            <div>
+              <p class="text-white text-2xl" :dir="wordData?.direction?.target">
+                {{ wordData.linguistic_data.usage_notes }}
+              </p>
+            </div>
+          </Fieldset>
+
+          <Fieldset
+            v-if="wordData.linguistic_data.grammar_notes"
+            legend="Grammar Notes"
+            class="mb-4"
+          >
+            <p class="text-white text-2xl" :dir="wordData?.direction?.target">
+              {{ wordData.linguistic_data.grammar_notes }}
+            </p>
+          </Fieldset>
+
+          <Fieldset
+            v-if="wordData.linguistic_data.cultural_notes"
+            legend="Cultural Context"
+            class="mb-4"
+          >
+            <p class="text-white text-2xl" :dir="wordData?.direction?.target">
+              {{ wordData.linguistic_data.cultural_notes }}
+            </p>
+          </Fieldset>
+
+          <Fieldset
+            v-if="wordData.linguistic_data.literal_translation"
+            legend="Literal Translation"
+            class="mb-4"
+          >
+            <p class="text-white text-2xl" :dir="wordData?.direction?.target">
+              {{ wordData.linguistic_data.literal_translation }}
+            </p>
           </Fieldset>
 
           <!-- Example sentences -->
@@ -141,16 +140,16 @@
                 class="mb-4"
               >
                 <p
-                  class="text-3xl text-white mb-2"
-                  :dir="wordData?.direction?.source || 'ltr'"
-                >
-                  {{ example.source }}
-                </p>
-                <p
-                  class="text-2xl text-gray-300 italic"
+                  class="text-3xl text-white italic mb-2"
                   :dir="wordData?.direction?.target"
                 >
                   {{ example.target }}
+                </p>
+                <p
+                  class="text-2xl text-gray-300 italic"
+                  :dir="wordData?.direction?.source"
+                >
+                  {{ example.source }}
                 </p>
                 <Divider
                   v-if="index < wordData.linguistic_data.examples.length - 1"
@@ -177,15 +176,15 @@
               >
                 <p
                   class="text-3xl text-white mb-2"
-                  :dir="wordData?.direction?.source"
-                >
-                  {{ expression.source }}
-                </p>
-                <p
-                  class="text-2xl text-gray-300 italic"
                   :dir="wordData?.direction?.target"
                 >
                   {{ expression.target }}
+                </p>
+                <p
+                  class="text-2xl text-gray-300 italic"
+                  :dir="wordData?.direction?.source"
+                >
+                  {{ expression.source }}
                 </p>
                 <Divider
                   v-if="
