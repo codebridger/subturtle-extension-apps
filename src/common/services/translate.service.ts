@@ -85,11 +85,27 @@ export class TranslateService {
     return functionProvider.run<{ data: string }>({
       name: "translateWithContext",
       args: {
+        translationType: "simple",
         sourceLanguage: "auto",
         targetLanguage: this.targetLanguage,
         phrase: text,
         context: context || "",
-        translationType: "simple",
+      },
+    });
+  }
+
+  async fetchDetailedTranslation(
+    text: string | string[],
+    context: string = ""
+  ) {
+    return functionProvider.run<{ data: string }>({
+      name: "translateWithContext",
+      args: {
+        translationType: "detailed",
+        sourceLanguage: "auto",
+        targetLanguage: this.targetLanguage,
+        phrase: text,
+        context: context || "",
       },
     });
   }
