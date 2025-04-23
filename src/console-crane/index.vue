@@ -8,10 +8,10 @@
  * - Settings
  */
 
-import { useConsoleCraneStore } from "../stores/console-crane";
+import { useConsoleCraneStore } from "./stores/console-crane";
 import { RouterView, useRouter } from "vue-router";
 import Modal from "../components/Modal.vue";
-import { SUBTURTLE_DASHBOARD_URL } from "../../common/static/global";
+import { SUBTURTLE_DASHBOARD_URL } from "../common/static/global";
 import Button from "primevue/button";
 import { watch } from "vue";
 

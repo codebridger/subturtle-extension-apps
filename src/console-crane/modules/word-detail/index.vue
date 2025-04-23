@@ -101,15 +101,15 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, inject } from "vue";
-import { cleanText, firstUpper } from "../../common/helper/text";
-import { TranslateService } from "../../common/services/translate.service";
+import { cleanText, firstUpper } from "../../../common/helper/text";
+import { TranslateService } from "../../../common/services/translate.service";
 import {
   DefinitionStore,
   Meaning,
-} from "../../common/types/dictionaryapi.type";
+} from "../../../common/types/dictionaryapi.type";
 
-import { analytic } from "../../plugins/mixpanel";
-import { isLogin } from "../../plugins/modular-rest";
+import { analytic } from "../../../plugins/mixpanel";
+import { isLogin } from "../../../plugins/modular-rest";
 import Definition from "../components/Definition.vue";
 import SaveWordSection from "../components/SaveWordSection.vue";
 
@@ -118,9 +118,9 @@ import Carousel from "primevue/carousel";
 import Button from "primevue/button";
 
 import { useRoute } from "vue-router";
-import { useMarkerStore } from "../../stores/marker";
-import { sendMessage } from "../../common/helper/massage";
-import { OpenLoginWindowMessage } from "../../common/types/messaging";
+import { useMarkerStore } from "../../../stores/marker";
+import { sendMessage } from "../../../common/helper/massage";
+import { OpenLoginWindowMessage } from "../../../common/types/messaging";
 
 const route = useRoute();
 
