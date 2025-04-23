@@ -40,7 +40,10 @@ export async function loginWithLastSession() {
     .then(async (res) => {
       if (!GetLoginStatusMessage.checkResponse(res)) return;
 
-      const user = await authentication.loginWithToken(res.token as string, true);
+      const user = await authentication.loginWithToken(
+        res.token as string,
+        true
+      );
       return user;
     })
     .then((user) => {
@@ -49,9 +52,25 @@ export async function loginWithLastSession() {
     })
     // if the login failed, it means token is invalid or expired.
     // so the token should be removed from the storage.
-    .catch((err) => {
-      console.error("login failed ", err);
+    .catch(async (err) => {
+      console.error("Subturtle login failed ", err);
       sendMessage(new StoreUserTokenMessage(null));
+    })
+    .finally(() => {
+      if (!authentication.isLogin) {
+        authentication
+          .loginAsAnonymous()
+          .then((user) => {
+            console.log(
+              "Subturtle Anonymous login succeded",
+              authentication.isLogin
+            );
+            isLogin.value = authentication.isLogin;
+          })
+          .catch((err) => {
+            console.error("Subturtle anonymous login failed", err);
+          });
+      }
     });
 }
 

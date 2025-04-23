@@ -182,7 +182,7 @@ export default defineComponent({
       this.translatedLines = [];
 
       TranslateService.instance
-        .translateByGoogle(translatingList)
+        .fetchSimpleTranslation(translatingList)
         .then(({ list, lang }) => {
           translatingList.forEach((result, i) => {
             this.translatedLines.push(list[i]);

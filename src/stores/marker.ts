@@ -42,12 +42,12 @@ export const useMarkerStore = defineStore("marker", {
       const _this = this;
 
       TranslateService.instance
-        .translateByGoogle(translatingList)
-        .then(({ list, lang }) => {
-          _this.sourceLanguage = lang;
+        .fetchSimpleTranslation(translatingList)
+        .then((res: string) => {
+          _this.sourceLanguage = "auto";
 
           translatingList.forEach((result, i) => {
-            _this.translatedWords[result] = list[i];
+            _this.translatedWords[result] = res;
           });
         });
     },
