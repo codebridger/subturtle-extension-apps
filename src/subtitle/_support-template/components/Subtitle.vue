@@ -213,11 +213,11 @@ export default defineComponent({
 
       TranslateService.instance
         .fetchSimpleTranslation(translatingList)
-        .then(({ list, lang }) => {
-          this.sourceLanguage = lang;
+        .then((translatedText) => {
+          this.sourceLanguage = "auto";
 
           translatingList.forEach((result, i) => {
-            this.translatedLines.push(list[i]);
+            this.translatedLines.push(translatedText);
           });
         });
     },
@@ -227,11 +227,11 @@ export default defineComponent({
 
       TranslateService.instance
         .fetchSimpleTranslation(translatingList)
-        .then(({ list, lang }) => {
-          this.sourceLanguage = lang;
+        .then((translatedText) => {
+          this.sourceLanguage = "auto";
 
           translatingList.forEach((result, i) => {
-            this.translatedWords[result] = list[i];
+            this.translatedWords[result] = translatedText;
           });
         });
     },
