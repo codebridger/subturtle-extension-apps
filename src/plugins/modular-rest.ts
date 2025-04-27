@@ -20,8 +20,9 @@ export {
 
 export const isLogin = ref(false);
 function updateIsLogin() {
-  isLogin.value =
+  const loginInfo =
     authentication.isLogin && authentication.user?.type.toLowerCase() == "user";
+  isLogin.value = loginInfo;
 }
 
 chrome.runtime.onMessage.addListener((request, _sender) => {

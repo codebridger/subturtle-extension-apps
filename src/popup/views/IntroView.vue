@@ -83,7 +83,7 @@ const slides = [
 ];
 
 watch(isLogin, (value) => {
-  if (value) {
+  if (value == true) {
     router.push("/");
   }
 });
