@@ -70,9 +70,13 @@ function OpenWordDetail() {
   if (markerStore.words.length > 1) {
     consoleCrane.toggleConsoleCrane("word-detail", {
       word: markerStore.selectedPhrase,
+      context: markerStore.context,
     });
   } else {
-    consoleCrane.toggleConsoleCrane("word-detail", { word: props.modelValue });
+    consoleCrane.toggleConsoleCrane("word-detail", {
+      word: props.modelValue,
+      context: markerStore.context,
+    });
   }
 }
 </script>

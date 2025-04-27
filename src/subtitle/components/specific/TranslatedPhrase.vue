@@ -44,6 +44,7 @@ const items = ref([
     command: () => {
       consoleCraneStore.toggleConsoleCrane("word-detail", {
         word: markerStore.selectedPhrase,
+        context: markerStore.context,
       });
     },
   },

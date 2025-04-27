@@ -53,6 +53,10 @@ import Button from "primevue/button";
 import { OpenLoginWindowMessage } from "../../common/types/messaging";
 import { isLogin } from "../../plugins/modular-rest";
 import { getAsset } from "../helper/assets";
+import { watch } from "vue";
+import { useRouter } from "vue-router";
+
+const router = useRouter();
 
 function openLogin() {
   chrome.runtime.sendMessage(new OpenLoginWindowMessage());
@@ -77,6 +81,12 @@ const slides = [
   //   image: getAsset("/slides/slide01.png"),
   // },
 ];
+
+watch(isLogin, (value) => {
+  if (value) {
+    router.push("/");
+  }
+});
 </script>
 
 <style scoped>

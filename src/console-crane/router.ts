@@ -1,6 +1,6 @@
 import { RouteRecordRaw, createMemoryHistory, createRouter } from "vue-router";
 
-import WordDetailPage from "./views/WordDetail.vue";
+import WordDetailPage from "./modules/word-detail/index.vue";
 
 const routes: RouteRecordRaw[] = [
   {

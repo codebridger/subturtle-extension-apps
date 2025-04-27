@@ -123,8 +123,8 @@ export default defineComponent({
       let lines = [this.data?.definition, this.data?.example];
 
       TranslateService.instance
-        .translateByGoogle(lines)
-        .then(({ list, lang }) => {
+        .fetchSimpleTranslation(lines)
+        .then(({ list, lang }: any) => {
           this.sourceLanguage = lang;
 
           lines.forEach((result, i) => {

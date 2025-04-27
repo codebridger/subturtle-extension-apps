@@ -18,7 +18,11 @@ export {
   fileProvider,
 } from "@modular-rest/client";
 
-export const isLogin = ref(authentication.isLogin);
+export const isLogin = ref(false);
+function updateIsLogin() {
+  isLogin.value =
+    authentication.isLogin && authentication.user?.type.toLowerCase() == "user";
+}
 
 chrome.runtime.onMessage.addListener((request, _sender) => {
   console.log("Content-S: New Message", request);
@@ -40,28 +44,49 @@ export async function loginWithLastSession() {
     .then(async (res) => {
       if (!GetLoginStatusMessage.checkResponse(res)) return;
 
-      const user = await authentication.loginWithToken(res.token as string, true);
+      const user = await authentication.loginWithToken(
+        res.token as string,
+        true
+      );
       return user;
     })
     .then((user) => {
       console.log("login success ", authentication.isLogin);
-      isLogin.value = authentication.isLogin;
+      updateIsLogin();
+
+      return isLogin.value;
     })
     // if the login failed, it means token is invalid or expired.
     // so the token should be removed from the storage.
-    .catch((err) => {
-      console.error("login failed ", err);
+    .catch(async (err) => {
+      console.error("Subturtle login failed ", err);
       sendMessage(new StoreUserTokenMessage(null));
+    })
+    .finally(() => {
+      if (!authentication.isLogin) {
+        authentication
+          .loginAsAnonymous()
+          .then((user) => {
+            console.log(
+              "Subturtle Anonymous login succeded",
+              authentication.isLogin
+            );
+            updateIsLogin();
+          })
+          .catch((err) => {
+            console.error("Subturtle anonymous login failed", err);
+          });
+      }
     });
 }
 
 export async function logout(sendAuthStatusToOtherParts = true) {
   authentication.logout();
-  isLogin.value = authentication.isLogin;
+  updateIsLogin();
 
   if (sendAuthStatusToOtherParts) {
     const message = new StoreUserTokenMessage(null);
-    await sendMessageToTabs(message);
-    sendMessage(message);
+    sendMessageToTabs(message);
+    await sendMessage(message);
   }
 }

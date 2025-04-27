@@ -212,12 +212,12 @@ export default defineComponent({
       this.translatedLines = [];
 
       TranslateService.instance
-        .translateByGoogle(translatingList)
-        .then(({ list, lang }) => {
-          this.sourceLanguage = lang;
+        .fetchSimpleTranslation(translatingList)
+        .then((translatedText) => {
+          this.sourceLanguage = "auto";
 
           translatingList.forEach((result, i) => {
-            this.translatedLines.push(list[i]);
+            this.translatedLines.push(translatedText);
           });
         });
     },
@@ -226,12 +226,12 @@ export default defineComponent({
       let translatingList = [word];
 
       TranslateService.instance
-        .translateByGoogle(translatingList)
-        .then(({ list, lang }) => {
-          this.sourceLanguage = lang;
+        .fetchSimpleTranslation(translatingList)
+        .then((translatedText) => {
+          this.sourceLanguage = "auto";
 
           translatingList.forEach((result, i) => {
-            this.translatedWords[result] = list[i];
+            this.translatedWords[result] = translatedText;
           });
         });
     },

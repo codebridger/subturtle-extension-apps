@@ -259,7 +259,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import { getAsset } from "../helper/assets";
 import { isLogin, logout } from "../../plugins/modular-rest";
 import { useRouter } from "vue-router";
@@ -282,10 +282,15 @@ async function openDashboard() {
 }
 
 function confirmLogout() {
-  showLogoutConfirm.value = false;
   logout();
   router.push("/intro");
 }
+
+watch(isLogin, (newVal) => {
+  if (newVal == false) {
+    router.push("/intro");
+  }
+});
 </script>
 
 <style scoped>
