@@ -15,9 +15,9 @@
       <section class="px-[30px] mb-24 flex flex-col w-full" @click.stop="">
         <div class="flex items-center space-x-5 p-5">
           <h1 class="text-9xl white-shadow">{{ title }}</h1>
-          <h3 class="text-5xl white-shadow mt-8">
+          <!-- <h3 class="text-5xl white-shadow mt-8">
             {{ wordData?.linguistic_data?.pronunciation || "" }}
-          </h3>
+          </h3> -->
         </div>
 
         <!-- Translation box showing the word in target language -->
@@ -82,7 +82,7 @@
           </Fieldset>
 
           <!-- Usage Notes sections when available -->
-          <Fieldset
+          <!-- <Fieldset
             legend="Usage Notes"
             v-if="wordData.linguistic_data.usage_notes"
             class="mb-4"
@@ -92,9 +92,9 @@
                 {{ wordData.linguistic_data.usage_notes }}
               </p>
             </div>
-          </Fieldset>
+          </Fieldset> -->
 
-          <Fieldset
+          <!-- <Fieldset
             v-if="wordData.linguistic_data.grammar_notes"
             legend="Grammar Notes"
             class="mb-4"
@@ -102,9 +102,9 @@
             <p class="text-white text-2xl" :dir="wordData?.direction?.target">
               {{ wordData.linguistic_data.grammar_notes }}
             </p>
-          </Fieldset>
+          </Fieldset> -->
 
-          <Fieldset
+          <!-- <Fieldset
             v-if="wordData.linguistic_data.cultural_notes"
             legend="Cultural Context"
             class="mb-4"
@@ -112,9 +112,9 @@
             <p class="text-white text-2xl" :dir="wordData?.direction?.target">
               {{ wordData.linguistic_data.cultural_notes }}
             </p>
-          </Fieldset>
+          </Fieldset> -->
 
-          <Fieldset
+          <!-- <Fieldset
             v-if="wordData.linguistic_data.literal_translation"
             legend="Literal Translation"
             class="mb-4"
@@ -122,7 +122,7 @@
             <p class="text-white text-2xl" :dir="wordData?.direction?.target">
               {{ wordData.linguistic_data.literal_translation }}
             </p>
-          </Fieldset>
+          </Fieldset> -->
 
           <!-- Example sentences -->
           <Fieldset

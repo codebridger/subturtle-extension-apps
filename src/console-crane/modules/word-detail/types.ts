@@ -20,17 +20,17 @@ export type LinguisticData = {
   /** Clear explanation of meaning, contextualized to usage */
   definition: string;
   /** Information about how and when to use this text */
-  usage_notes: string;
+  // usage_notes: string;
   /** Phonetic guidance (especially for non-Latin script languages) */
   pronunciation: string;
   /** Indication of formality level */
   formality_level: "formal" | "neutral" | "informal";
   /** When the literal meaning differs significantly from idiomatic usage */
-  literal_translation: string;
+  // literal_translation: string;
   /** Cultural context important for proper understanding */
-  cultural_notes: string;
+  // cultural_notes: string;
   /** Additional grammatical information when relevant */
-  grammar_notes: string;
+  // grammar_notes: string;
   /** Example sentences showing the text in use, with translations */
   examples: Example[];
   /** Similar or connected expressions with translations */
