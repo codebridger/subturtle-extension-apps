@@ -107,6 +107,8 @@ export default defineComponent({
           });
         }
 
+        // update marker context
+
         // Get line span
         //
         let span = wrapper.querySelector('[style*="font-size"]');

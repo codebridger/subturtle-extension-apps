@@ -83,7 +83,7 @@ export class TranslateService {
   }
 
   async fetchSimpleTranslation(text: string | string[], context: string = "") {
-    return functionProvider.run<{ data: string }>({
+    return functionProvider.run<string>({
       name: "translateWithContext",
       args: {
         translationType: "simple",
