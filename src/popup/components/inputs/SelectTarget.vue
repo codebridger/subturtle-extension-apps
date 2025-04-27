@@ -1,9 +1,5 @@
 <template>
-  <select-language
-    v-model="lang"
-    @update:modelValue="onChanged"
-    label="Select target language"
-  />
+  <select-language v-model="lang" @update:modelValue="onChanged" label="" />
 </template>
 
 <script>

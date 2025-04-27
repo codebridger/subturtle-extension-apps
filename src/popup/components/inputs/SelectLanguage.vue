@@ -1,19 +1,36 @@
 <template>
-  <label
-    for="countries"
-    class="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-400"
-    >{{ label }}</label
-  >
-  <select
-    v-model="lang"
-    @change="commit"
-    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-  >
-    <!-- <option selected>Choose a language</option> -->
-    <option v-for="(lang, i) of list" :key="i" :value="lang.code">
-      {{ lang.title }}
-    </option>
-  </select>
+  <div class="flex items-center space-x-2 w-full">
+    <label
+      v-if="label"
+      for="countries"
+      class="text-sm font-medium text-gray-400 whitespace-nowrap"
+      >{{ label }}</label
+    >
+    <div class="relative flex-1">
+      <select
+        v-model="lang"
+        @change="commit"
+        class="bg-gray-800 border border-gray-700 text-gray-200 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 w-full p-2 shadow-sm appearance-none"
+      >
+        <option v-for="(lang, i) of list" :key="i" :value="lang.code">
+          {{ lang.title }}
+        </option>
+      </select>
+      <div
+        class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400"
+      >
+        <svg
+          class="fill-current h-4 w-4"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 20 20"
+        >
+          <path
+            d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"
+          />
+        </svg>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script lang="ts">
