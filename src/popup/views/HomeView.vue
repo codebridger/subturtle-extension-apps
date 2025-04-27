@@ -1,9 +1,9 @@
 <template>
   <transition name="fade">
     <div
-      class="h-[600px] w-[800px] bg-gradient-to-b from-gray-900 to-gray-800 overflow-y-auto"
+      class="min-h-[600px] w-[800px] bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 overflow-y-auto"
     >
-      <!-- Hero Section - More Compact -->
+      <!-- Hero Section -->
       <div class="relative overflow-hidden">
         <div
           class="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20"
@@ -30,259 +30,141 @@
         </div>
       </div>
 
-      <!-- Main Content - Optimized for Popup -->
-      <div class="p-6">
-        <!-- Dashboard Button Card -->
+      <!-- Main Content -->
+      <div class="px-8 py-6 space-y-6">
+        <!-- Control Panel -->
         <div
-          class="bg-white/5 backdrop-blur-lg rounded-xl p-4 mb-4 border border-white/10"
+          class="bg-white/[0.03] backdrop-blur-xl rounded-2xl p-6 border border-white/[0.08] shadow-xl"
         >
-          <div class="flex items-center justify-between gap-4">
-            <div>
-              <h2 class="text-lg font-semibold text-white">
-                Access Your Dashboard
-              </h2>
-              <p class="text-gray-400 text-sm">
-                Manage your saved phrases and track your progress
-              </p>
-            </div>
-            <div>
-              <button
-                v-if="isLogin"
-                @click="openDashboard"
-                class="dashboard-btn bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 text-white font-medium py-2 px-6 rounded-full transition-all transform hover:scale-105 shadow-lg hover:shadow-purple-500/25 text-sm flex items-center justify-center gap-2 whitespace-nowrap"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                  />
-                </svg>
-                Open Dashboard
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- How to use Subturtle? Header -->
-        <h2 class="text-2xl text-center font-semibold text-white my-8">
-          How to use Subturtle?
-        </h2>
-
-        <!-- Features Grid - 5 Steps -->
-        <div class="grid grid-cols-2 gap-4 mb-4">
-          <!-- Step 1: Language Selection Card -->
-          <div
-            class="bg-white/5 backdrop-blur-lg rounded-xl p-4 border border-white/10"
-          >
-            <h3
-              class="text-base font-semibold text-white mb-3 flex items-center"
-            >
-              <span
-                class="w-6 h-6 bg-indigo-500/20 rounded-full flex items-center justify-center text-sm mr-2"
-              >
-                1
-              </span>
-              Select Target Language
-            </h3>
-            <div class="flex items-center space-x-3">
-              <span class="text-gray-400 text-sm">Choose language:</span>
-              <div class="flex-1 z-10">
-                <select-target />
-              </div>
-            </div>
-          </div>
-
-          <!-- Step 2: Basic Usage -->
-          <div
-            class="bg-white/5 backdrop-blur-lg rounded-xl p-4 border border-white/10"
-          >
-            <h3
-              class="text-base font-semibold text-white mb-2 flex items-center"
-            >
-              <span
-                class="w-6 h-6 bg-blue-500/20 rounded-full flex items-center justify-center text-sm mr-2"
-              >
-                2
-              </span>
-              Open Video & Enable Subtitles
-            </h3>
-            <p class="text-gray-400 text-sm">
-              Open a video on Netflix or YouTube, enable subtitles, and hover
-              over words to see translations.
-            </p>
-          </div>
-
-          <!-- Step 3: Multiple Word Translation Card -->
-          <div
-            class="bg-white/5 backdrop-blur-lg rounded-xl p-4 border border-white/10"
-          >
-            <h3
-              class="text-base font-semibold text-white mb-2 flex items-center"
-            >
-              <span
-                class="w-6 h-6 bg-purple-500/20 rounded-full flex items-center justify-center text-sm mr-2"
-              >
-                3
-              </span>
-              Select Multiple Words
-            </h3>
-            <ul class="text-gray-400 text-sm space-y-1">
-              <li class="flex items-center">
-                <span class="w-1 h-1 bg-purple-400 rounded-full mr-1.5"></span>
-                Hold&nbsp;<span class="font-bold">Ctrl</span> &nbsp;or&nbsp;
-                <span class="font-bold">Command</span>
-              </li>
-              <li class="flex items-center">
-                <span class="w-1 h-1 bg-purple-400 rounded-full mr-1.5"></span>
-                Drag to select words
-              </li>
-              <li class="flex items-center">
-                <span class="w-1 h-1 bg-purple-400 rounded-full mr-1.5"></span>
-                Click to save for practice
-              </li>
-            </ul>
-          </div>
-
-          <!-- Step 4: Phrase Management Card -->
-          <div
-            class="bg-white/5 backdrop-blur-lg rounded-xl p-4 border border-white/10"
-          >
-            <h3
-              class="text-base font-semibold text-white mb-2 flex items-center"
-            >
-              <span
-                class="w-6 h-6 bg-amber-500/20 rounded-full flex items-center justify-center text-sm mr-2"
-              >
-                4
-              </span>
-              Save & Organize
-            </h3>
-            <ul class="text-gray-400 text-sm space-y-1">
-              <li class="flex items-center">
-                <span class="w-1 h-1 bg-amber-400 rounded-full mr-1.5"></span>
-                Click phrase to see details
-              </li>
-              <li class="flex items-center">
-                <span class="w-1 h-1 bg-amber-400 rounded-full mr-1.5"></span>
-                Save phrases for practice
-              </li>
-              <li class="flex items-center">
-                <span class="w-1 h-1 bg-amber-400 rounded-full mr-1.5"></span>
-                Create custom bundles
-              </li>
-            </ul>
-          </div>
-
-          <!-- Step 5: Practice Section -->
-          <div
-            class="bg-white/5 backdrop-blur-lg rounded-xl p-4 border border-white/10 col-span-2"
-          >
-            <div class="flex items-start gap-4">
-              <div class="flex-1">
-                <h3
-                  class="text-base font-semibold text-white mb-3 flex items-center"
-                >
-                  <span
-                    class="w-6 h-6 bg-emerald-500/20 rounded-full flex items-center justify-center text-sm mr-2"
-                  >
-                    5
-                  </span>
-                  Practice & Master
-                </h3>
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <h4 class="text-sm font-medium text-emerald-400 mb-2">
-                      Practice Modes
-                    </h4>
-                    <ul class="text-gray-400 text-sm space-y-1">
-                      <li class="flex items-center">
-                        <span
-                          class="w-1 h-1 bg-emerald-400 rounded-full mr-1.5"
-                        ></span>
-                        Flashcard mode
-                      </li>
-                      <li class="flex items-center">
-                        <span
-                          class="w-1 h-1 bg-emerald-400 rounded-full mr-1.5"
-                        ></span>
-                        AI teacher practice
-                      </li>
-                    </ul>
-                  </div>
-                  <div>
-                    <h4 class="text-sm font-medium text-emerald-400 mb-2">
-                      Manage & Track
-                    </h4>
-                    <ul class="text-gray-400 text-sm space-y-1">
-                      <li class="flex items-center">
-                        <span
-                          class="w-1 h-1 bg-emerald-400 rounded-full mr-1.5"
-                        ></span>
-                        Manage bundles
-                      </li>
-                      <li class="flex items-center">
-                        <span
-                          class="w-1 h-1 bg-emerald-400 rounded-full mr-1.5"
-                        ></span>
-                        Track progress
-                      </li>
-                    </ul>
-                  </div>
+          <div class="flex items-stretch gap-8">
+            <!-- Language Selection -->
+            <div class="flex-1">
+              <h3 class="text-lg font-medium text-white my-4">
+                Target Language
+              </h3>
+              <div class="flex flex-col space-y-4 items-start justify-between">
+                <span class="text-gray-400 text-sm whitespace-nowrap">
+                  Choose which language you want to learn
+                </span>
+                <div class="flex-1">
+                  <select-target label="Select" />
                 </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        <!-- Supported Platforms -->
-        <div
-          class="bg-white/5 backdrop-blur-lg rounded-xl p-4 border border-white/10 mb-4"
-        >
-          <div class="flex items-center justify-between">
-            <h3 class="text-base font-semibold text-white">
-              Supported Platforms
-            </h3>
-            <div class="flex items-center space-x-6">
-              <div class="transform hover:scale-105 transition-transform">
-                <a href="https://www.netflix.com" target="_blank">
-                  <img
-                    class="h-8"
-                    :src="getAsset('/svg/netflix_logo.svg')"
-                    alt="Netflix"
-                /></a>
-              </div>
-              <div class="transform hover:scale-105 transition-transform">
-                <a href="https://www.youtube.com" target="_blank">
-                  <img
-                    class="h-8"
-                    :src="getAsset('/svg/youtube_logo.svg')"
-                    alt="YouTube"
-                /></a>
+            <!-- Separator -->
+            <div
+              class="w-px bg-gradient-to-b from-white/[0.05] via-white/10 to-white/[0.05]"
+            ></div>
+
+            <!-- Dashboard Section -->
+            <div class="flex-2">
+              <h3 class="text-lg font-medium text-white my-4">
+                Access Your Dashboard
+              </h3>
+              <div class="flex flex-col space-y-4 items-start justify-between">
+                <p class="text-gray-400 text-sm">
+                  Manage your saved phrases and track your progress
+                </p>
+                <button
+                  v-if="isLogin"
+                  @click="openDashboard"
+                  class="dashboard-btn bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 text-white font-medium py-2 px-6 rounded-full transition-all transform hover:scale-105 shadow-lg hover:shadow-purple-500/25 text-sm flex items-center justify-center gap-2 whitespace-nowrap"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                    />
+                  </svg>
+                  Open Dashboard
+                </button>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Login/Logout Buttons -->
-        <div class="flex flex-col gap-3">
+        <!-- Help Section -->
+        <div class="text-center py-4">
+          <router-link
+            to="/help"
+            class="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors duration-200 group"
+          >
+            <span class="text-2xl font-medium">How to use Subturtle?</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-6 w-6 help-icon-pulse"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M12 21a9 9 0 100-18 9 9 0 000 18z"
+              />
+            </svg>
+          </router-link>
+        </div>
+
+        <!-- Platforms Section -->
+        <div
+          class="bg-white/[0.03] backdrop-blur-xl rounded-2xl p-4 border border-white/[0.08]"
+        >
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-medium text-white">Supported Platforms</h3>
+            <div class="flex items-center gap-8">
+              <a
+                href="https://www.netflix.com"
+                target="_blank"
+                class="transform hover:scale-105 transition-transform duration-300 opacity-80 hover:opacity-100"
+              >
+                <img
+                  class="h-8"
+                  :src="getAsset('/svg/netflix_logo.svg')"
+                  alt="Netflix"
+                />
+              </a>
+              <a
+                href="https://www.youtube.com"
+                target="_blank"
+                class="transform hover:scale-105 transition-transform duration-300 opacity-80 hover:opacity-100"
+              >
+                <img
+                  class="h-8"
+                  :src="getAsset('/svg/youtube_logo.svg')"
+                  alt="YouTube"
+                />
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="flex justify-center pt-4">
           <div
             v-if="isLogin"
-            class="text-gray-400 hover:text-white text-sm transition-colors flex items-center justify-center gap-1 cursor-pointer"
+            class="group cursor-pointer"
+            @click="handleLogout()"
           >
-            <span>Want to sign out?</span>
             <span
-              @click="handleLogout()"
-              class="text-red-400 hover:text-red-300 underline decoration-dotted underline-offset-4"
+              class="text-gray-400 group-hover:text-gray-300 text-sm transition-colors duration-200"
             >
-              Logout
+              Want to sign out?
+              <span
+                class="text-red-400 group-hover:text-red-300 underline decoration-dotted underline-offset-4 ml-1"
+              >
+                Logout
+              </span>
             </span>
           </div>
         </div>
@@ -320,14 +202,14 @@ function handleLogout() {
   opacity: 0;
 }
 
-/* Custom scrollbar for the popup */
+/* Custom scrollbar styling */
 .overflow-y-auto {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
 }
 
 .overflow-y-auto::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 
 .overflow-y-auto::-webkit-scrollbar-track {
@@ -335,25 +217,53 @@ function handleLogout() {
 }
 
 .overflow-y-auto::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
   background-color: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
 }
 
-/* Animated gradient for dashboard button */
-.dashboard-btn {
-  background-size: 200% 200%;
-  animation: gradient 3s ease infinite;
+/* Smooth hover transitions */
+a,
+button {
+  transition: all 0.2s ease-in-out;
 }
 
-@keyframes gradient {
+/* Scale animation */
+@keyframes scale {
   0% {
-    background-position: 0% 50%;
+    transform: scale(1);
   }
   50% {
-    background-position: 100% 50%;
+    transform: scale(1.02);
   }
   100% {
-    background-position: 0% 50%;
+    transform: scale(1);
+  }
+}
+
+.hover\:scale-102:hover {
+  transform: scale(1.02);
+}
+
+.help-icon-pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
   }
 }
 </style>
