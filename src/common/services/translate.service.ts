@@ -95,20 +95,24 @@ export class TranslateService {
     });
   }
 
-  async fetchDetailedTranslation(
-    text: string | string[],
-    context: string = ""
-  ) {
-    return functionProvider.run<LanguageLearningData>({
-      name: "translateWithContext",
-      args: {
-        translationType: "detailed",
-        sourceLanguage: "auto",
-        targetLanguage: this.targetLanguage,
-        phrase: text,
-        context: context || "",
-      },
-    });
+  async fetchDetailedTranslation(text: string, context: string = "") {
+    return functionProvider
+      .run<LanguageLearningData>({
+        name: "translateWithContext",
+        args: {
+          translationType: "detailed",
+          sourceLanguage: "auto",
+          targetLanguage: this.targetLanguage,
+          phrase: text,
+          context: context || "",
+        },
+      })
+      .then((data) => {
+        data.context = context;
+        data.phrase = text;
+
+        return data;
+      });
   }
 
   async translateByDictionaryapi(word: string) {

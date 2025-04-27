@@ -12,23 +12,25 @@
       }"
     >
       <!-- WORD HEADER SECTION - Displays the word, phonetic pronunciation, and translation -->
-      <section class="px-[30px] mb-24 flex flex-col w-full" @click.stop="">
-        <div class="flex items-center space-x-5 p-5">
-          <h1 class="text-9xl white-shadow">{{ title }}</h1>
-          <!-- <h3 class="text-5xl white-shadow mt-8">
-            {{ wordData?.linguistic_data?.pronunciation || "" }}
-          </h3> -->
+      <section class="px-[40px] my-14 flex flex-col w-full" @click.stop>
+        <div
+          class="p-5 flex flex-col justify-center items-center"
+          :dir="wordData?.direction?.source"
+        >
+          <h1 class="text-6xl white-shadow mb-2">{{ title }}</h1>
+          <p class="text-base max-w-96 italic text-gray-50">
+            {{ context }}
+          </p>
         </div>
 
         <!-- Translation box showing the word in target language -->
-        <Fieldset class="w-full" :legend="targetLanguageTitle">
-          <div class="text-center">
-            <span
-              class="text-7xl white-shadow"
-              :dir="wordData?.direction?.target"
-              >{{ cleanText(wordData?.translation?.phrase || "") }}</span
-            >
-          </div>
+        <Fieldset class="mb-2" :legend="targetLanguageTitle">
+          <h1
+            class="text-5xl white-shadow text-center mb-8"
+            :dir="wordData?.direction?.target"
+          >
+            {{ cleanText(wordData?.translation?.phrase || "") }}
+          </h1>
         </Fieldset>
 
         <!-- Save word functionality - only shown to logged in users -->
@@ -54,11 +56,11 @@
 
       <!-- LINGUISTIC DATA SECTION - Shows detailed linguistic information -->
       <template v-if="wordData && wordData.linguistic_data">
-        <section class="w-full mt-10">
+        <section class="w-full mt-10 px-[40px]">
           <!-- Main definition card -->
-          <Fieldset class="w-full mb-5" legend="Definition">
+          <Fieldset class="mb-2" legend="Definition">
             <p
-              class="text-4xl text-white mb-6"
+              class="text-2xl text-white mb-6"
               :dir="wordData?.direction?.target"
             >
               {{ wordData.linguistic_data.definition }}
@@ -81,90 +83,59 @@
             </div>
           </Fieldset>
 
-          <!-- Usage Notes sections when available -->
-          <!-- <Fieldset
-            legend="Usage Notes"
-            v-if="wordData.linguistic_data.usage_notes"
-            class="mb-4"
-          >
-            <div>
-              <p class="text-white text-2xl" :dir="wordData?.direction?.target">
-                {{ wordData.linguistic_data.usage_notes }}
+          <Fieldset class="mb-2" legend="Phonetic">
+            <div class="flex justify-between">
+              <p class="text-2xl text-gray-300 italic">
+                {{ wordData?.linguistic_data?.phonetic.ipa || "" }}
+              </p>
+              <p
+                class="text-2xl text-white italic mb-2"
+                :dir="wordData?.direction?.target"
+              >
+                {{ wordData.linguistic_data.phonetic.transliteration }}
               </p>
             </div>
-          </Fieldset> -->
-
-          <!-- <Fieldset
-            v-if="wordData.linguistic_data.grammar_notes"
-            legend="Grammar Notes"
-            class="mb-4"
-          >
-            <p class="text-white text-2xl" :dir="wordData?.direction?.target">
-              {{ wordData.linguistic_data.grammar_notes }}
-            </p>
-          </Fieldset> -->
-
-          <!-- <Fieldset
-            v-if="wordData.linguistic_data.cultural_notes"
-            legend="Cultural Context"
-            class="mb-4"
-          >
-            <p class="text-white text-2xl" :dir="wordData?.direction?.target">
-              {{ wordData.linguistic_data.cultural_notes }}
-            </p>
-          </Fieldset> -->
-
-          <!-- <Fieldset
-            v-if="wordData.linguistic_data.literal_translation"
-            legend="Literal Translation"
-            class="mb-4"
-          >
-            <p class="text-white text-2xl" :dir="wordData?.direction?.target">
-              {{ wordData.linguistic_data.literal_translation }}
-            </p>
-          </Fieldset> -->
+          </Fieldset>
 
           <!-- Example sentences -->
           <Fieldset
+            class="mb-2"
             v-if="
               wordData.linguistic_data.examples &&
               wordData.linguistic_data.examples.length
             "
-            class="w-full mb-5"
             legend="Examples"
           >
-            <div class="p-4">
-              <div
-                v-for="(example, index) in wordData.linguistic_data.examples"
-                :key="index"
-                class="mb-4"
+            <div
+              v-for="(example, index) in wordData.linguistic_data.examples"
+              :key="index"
+              class="mb-4"
+            >
+              <p
+                class="text-2xl text-white italic mb-2"
+                :dir="wordData?.direction?.target"
               >
-                <p
-                  class="text-3xl text-white italic mb-2"
-                  :dir="wordData?.direction?.target"
-                >
-                  {{ example.target }}
-                </p>
-                <p
-                  class="text-2xl text-gray-300 italic"
-                  :dir="wordData?.direction?.source"
-                >
-                  {{ example.source }}
-                </p>
-                <Divider
-                  v-if="index < wordData.linguistic_data.examples.length - 1"
-                />
-              </div>
+                {{ example.target }}
+              </p>
+              <p
+                class="text-2xl text-gray-300 italic"
+                :dir="wordData?.direction?.source"
+              >
+                {{ example.source }}
+              </p>
+              <Divider
+                v-if="index < wordData.linguistic_data.examples.length - 1"
+              />
             </div>
           </Fieldset>
 
           <!-- Related expressions -->
           <Fieldset
+            class="mb-2"
             v-if="
               wordData.linguistic_data.related_expressions &&
               wordData.linguistic_data.related_expressions.length
             "
-            class="w-full"
             legend="Related Expressions"
           >
             <div class="p-4">
@@ -175,7 +146,7 @@
                 class="mb-4"
               >
                 <p
-                  class="text-3xl text-white mb-2"
+                  class="text-2xl text-white mb-2"
                   :dir="wordData?.direction?.target"
                 >
                   {{ expression.target }}
@@ -258,7 +229,6 @@ const frameSize = inject<{ width: number; height: number }>("frameSize");
 
 // Main state variables
 const wordData = ref<LanguageLearningData | null>(null); // Stores detailed linguistic data
-const markerStore = useMarkerStore(); // Global store for markers and translations
 
 const pending = ref(false); // Loading state
 const key = ref(new Date().getTime()); // Key for forcing component refresh
@@ -271,6 +241,10 @@ const targetLanguageTitle = computed(
 // Formats the word with proper capitalization
 const title = computed(() => {
   return firstUpper(cleanText(getProps().word) || "");
+});
+
+const context = computed(() => {
+  return getProps().context || "";
 });
 
 /**
@@ -309,8 +283,6 @@ function fetchWordDetail() {
     .then((data) => {
       try {
         wordData.value = data;
-        wordData.value.phrase = cleaned;
-        wordData.value.context = "";
       } catch (error) {
         console.error("Failed to parse response:", error);
       }

@@ -22,7 +22,10 @@ export type LinguisticData = {
   /** Information about how and when to use this text */
   // usage_notes: string;
   /** Phonetic guidance (especially for non-Latin script languages) */
-  pronunciation: string;
+  phonetic: {
+    ipa: string;
+    transliteration: string;
+  };
   /** Indication of formality level */
   formality_level: "formal" | "neutral" | "informal";
   /** When the literal meaning differs significantly from idiomatic usage */
