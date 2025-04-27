@@ -18,7 +18,11 @@ export {
   fileProvider,
 } from "@modular-rest/client";
 
-export const isLogin = ref(authentication.isLogin);
+export const isLogin = ref(false);
+function updateIsLogin() {
+  isLogin.value =
+    authentication.isLogin && authentication.user?.type.toLowerCase() == "user";
+}
 
 chrome.runtime.onMessage.addListener((request, _sender) => {
   console.log("Content-S: New Message", request);
@@ -48,7 +52,9 @@ export async function loginWithLastSession() {
     })
     .then((user) => {
       console.log("login success ", authentication.isLogin);
-      isLogin.value = authentication.isLogin;
+      updateIsLogin();
+
+      return isLogin.value;
     })
     // if the login failed, it means token is invalid or expired.
     // so the token should be removed from the storage.
@@ -65,7 +71,7 @@ export async function loginWithLastSession() {
               "Subturtle Anonymous login succeded",
               authentication.isLogin
             );
-            isLogin.value = authentication.isLogin;
+            updateIsLogin();
           })
           .catch((err) => {
             console.error("Subturtle anonymous login failed", err);
@@ -76,11 +82,11 @@ export async function loginWithLastSession() {
 
 export async function logout(sendAuthStatusToOtherParts = true) {
   authentication.logout();
-  isLogin.value = authentication.isLogin;
+  updateIsLogin();
 
   if (sendAuthStatusToOtherParts) {
     const message = new StoreUserTokenMessage(null);
-    await sendMessageToTabs(message);
-    sendMessage(message);
+    sendMessageToTabs(message);
+    await sendMessage(message);
   }
 }

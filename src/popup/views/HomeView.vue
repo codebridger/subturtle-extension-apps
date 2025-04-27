@@ -280,8 +280,8 @@ function openDashboard() {
   window.open(SUBTURTLE_DASHBOARD_URL, "_blank");
 }
 
-function handleLogout() {
-  logout();
+async function handleLogout() {
+  await logout();
   router.push("/intro");
 }
 </script>
