@@ -263,7 +263,7 @@ import { ref, watch } from "vue";
 import { getAsset } from "../helper/assets";
 import { isLogin, logout } from "../../plugins/modular-rest";
 import { useRouter } from "vue-router";
-import { SUBTURTLE_DASHBOARD_URL } from "../../common/static/global";
+import { getSubturtleDashboardUrlWithToken } from "../../common/static/global";
 
 const router = useRouter();
 const isLoading = ref(false);
@@ -272,7 +272,7 @@ const showLogoutConfirm = ref(false);
 async function openDashboard() {
   isLoading.value = true;
   try {
-    window.open(SUBTURTLE_DASHBOARD_URL, "_blank");
+    window.open(getSubturtleDashboardUrlWithToken(), "_blank");
   } finally {
     // Short delay to show loading state
     setTimeout(() => {
