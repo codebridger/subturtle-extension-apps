@@ -34,7 +34,7 @@
         </Fieldset>
 
         <!-- Save word functionality - only shown to logged in users -->
-        <SaveWordSection
+        <SaveWordSectionV2
           v-if="isLogin && wordData?.translation?.phrase"
           :phrase="cleanText(getProps().word!)"
           :translation="cleanText(wordData?.translation?.phrase || '')"
@@ -197,7 +197,7 @@ import { LanguageLearningData } from "./types";
 
 import { analytic } from "../../../plugins/mixpanel";
 import { isLogin } from "../../../plugins/modular-rest";
-import SaveWordSection from "../../components/SaveWordSection.vue";
+import SaveWordSectionV2 from "../../components/SaveWordSectionV2.vue";
 
 import Fieldset from "primevue/fieldset";
 import Divider from "primevue/divider";
