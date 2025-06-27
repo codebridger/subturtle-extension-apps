@@ -179,6 +179,66 @@ defineExpose({
   font-weight: 500;
 }
 
+/* Style the MultiSelect chips to match saved bundles */
+:deep(.p-multiselect-token) {
+  background: linear-gradient(
+    135deg,
+    #3b82f6 0%,
+    #6366f1 50%,
+    #8b5cf6 100%
+  ) !important;
+  color: white !important;
+  border: none !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  padding: 6px 12px !important;
+  border-radius: 14px !important;
+  box-shadow: 0 1px 4px rgba(59, 130, 246, 0.2) !important;
+  transition: all 0.2s ease !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  margin: 2px !important;
+}
+
+:deep(.p-multiselect-token:hover) {
+  transform: translateY(-0.5px) !important;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3) !important;
+  background: linear-gradient(
+    135deg,
+    #2563eb 0%,
+    #4f46e5 50%,
+    #7c3aed 100%
+  ) !important;
+}
+
+:deep(.p-multiselect-token-icon) {
+  color: rgba(255, 255, 255, 0.8) !important;
+  font-size: 0.75rem !important;
+  margin-left: 6px !important;
+  transition: color 0.2s ease !important;
+}
+
+:deep(.p-multiselect-token-icon:hover) {
+  color: white !important;
+  transform: scale(1.1) !important;
+}
+
+/* Fix vertical alignment of chips */
+:deep(.p-multiselect-label-container) {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  min-height: 42px !important;
+  padding: 4px 8px !important;
+}
+
+:deep(.p-multiselect-token-label) {
+  color: white !important;
+  font-weight: 500 !important;
+}
+
 :deep(.p-multiselect-trigger) {
   color: rgba(255, 255, 255, 0.8);
 }

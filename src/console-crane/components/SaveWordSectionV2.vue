@@ -271,10 +271,10 @@ async function savePhrase() {
   background: linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%);
   color: white;
   border: none;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 500;
-  padding: 4px 8px;
-  border-radius: 12px;
+  padding: 6px 12px;
+  border-radius: 14px;
   box-shadow: 0 1px 4px rgba(59, 130, 246, 0.2);
   transition: all 0.2s ease;
   user-select: none;
@@ -290,9 +290,9 @@ async function savePhrase() {
 }
 
 :deep(.saved-chip .p-chip-remove-icon) {
-  margin-left: 4px;
+  margin-left: 6px;
   color: rgba(255, 255, 255, 0.8);
-  font-size: 0.625rem;
+  font-size: 0.75rem;
   transition: color 0.2s ease;
 }
 
@@ -308,20 +308,26 @@ async function savePhrase() {
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-:deep(.p-multiselect) {
-  border-radius: 12px 0 0 12px;
-  border-right: none;
+:deep(.p-inputgroup .p-multiselect) {
+  border-radius: 12px 0 0 12px !important;
+  border-right: none !important;
   background: rgba(255, 255, 255, 0.03);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: none;
 }
 
-:deep(.p-button) {
-  border-radius: 0 12px 12px 0;
+:deep(.p-inputgroup .p-button) {
+  border-radius: 0 12px 12px 0 !important;
+  border-left: none !important;
+}
+
+:deep(.p-inputgroup .p-button) {
   padding: 12px 20px;
   font-weight: 600;
   background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: none;
   transition: all 0.2s ease;
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
 }
