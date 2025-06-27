@@ -21,22 +21,23 @@
       </Button>
     </Inputgroup>
 
-    <!-- Existing Bundles as Chips -->
-    <div v-if="existingBundles.length > 0">
-      <div class="flex flex-wrap gap-2">
+    <!-- Existing Bundles as Fieldset -->
+    <Fieldset
+      v-if="existingBundles.length > 0"
+      class="saved-bundles-fieldset"
+      legend="Saved in"
+    >
+      <div class="flex flex-wrap gap-1.5">
         <Chip
           v-for="bundle in existingBundles"
           :key="bundle._id"
           :label="bundle.title"
           removable
           @remove="removePhraseFromBundle(bundle._id)"
-          class="bg-green-100 text-green-800 border border-green-200"
+          class="saved-chip"
         />
       </div>
-      <small class="text-gray-500 mt-1 block"
-        >{{ existingBundles.length }} bundle(s) contain this phrase</small
-      >
-    </div>
+    </Fieldset>
   </div>
 </template>
 
@@ -44,6 +45,7 @@
 import Button from "primevue/button";
 import Inputgroup from "primevue/inputgroup";
 import Chip from "primevue/chip";
+import Fieldset from "primevue/fieldset";
 import SelectPhraseBundleV2 from "./SelectPhraseBundleV2.vue";
 import { onMounted, ref, watch } from "vue";
 import {
@@ -240,11 +242,99 @@ async function savePhrase() {
   color: var(--surface-border-color) !important;
 }
 
-:deep(.p-chip) {
-  font-size: 0.875rem;
+:deep(.saved-bundles-fieldset) {
+  margin-top: 6px;
+  margin-bottom: 6px;
 }
 
-:deep(.p-chip .p-chip-remove-icon) {
-  margin-left: 0.5rem;
+:deep(.saved-bundles-fieldset .p-fieldset-content) {
+  padding: 8px 12px;
+}
+
+:deep(.saved-bundles-fieldset .p-fieldset-legend) {
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+:deep(.saved-chip) {
+  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%);
+  color: white;
+  border: none;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(59, 130, 246, 0.2);
+  transition: all 0.2s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+:deep(.saved-chip:hover) {
+  transform: translateY(-0.5px);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 50%, #7c3aed 100%);
+}
+
+:deep(.saved-chip .p-chip-remove-icon) {
+  margin-left: 4px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.625rem;
+  transition: color 0.2s ease;
+}
+
+:deep(.saved-chip .p-chip-remove-icon:hover) {
+  color: white;
+  transform: scale(1.1);
+}
+
+:deep(.p-inputgroup) {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+:deep(.p-multiselect) {
+  border-radius: 12px 0 0 12px;
+  border-right: none;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+:deep(.p-button) {
+  border-radius: 0 12px 12px 0;
+  padding: 12px 20px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+  border: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+}
+
+:deep(.p-button:hover) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(139, 92, 246, 0.35);
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%);
+}
+
+:deep(.p-button:disabled) {
+  opacity: 0.6;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Loading state */
+:deep(.p-button .p-button-loading-icon) {
+  margin-right: 8px;
+}
+
+/* Smooth transitions for all interactive elements */
+* {
+  transition: all 0.2s ease;
 }
 </style>

@@ -176,11 +176,99 @@ defineExpose({
 <style scoped>
 :deep(.p-multiselect-label) {
   font-size: 14px !important;
+  font-weight: 500;
+}
+
+:deep(.p-multiselect-trigger) {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+:deep(.p-multiselect:not(.p-disabled).p-focus) {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+}
+
+:deep(.p-multiselect-header) {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 16px;
+}
+
+:deep(.p-multiselect-header .p-inputgroup) {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+:deep(.p-multiselect-header .p-inputtext) {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  border-radius: 8px 0 0 8px;
+}
+
+:deep(.p-multiselect-header .p-inputtext::placeholder) {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+:deep(.p-multiselect-header .p-button) {
+  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%);
+  border: none;
+  border-radius: 0 8px 8px 0;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+}
+
+:deep(.p-multiselect-header .p-button:hover) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 50%, #7c3aed 100%);
+}
+
+:deep(.p-multiselect-items) {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+}
+
+:deep(.p-multiselect-item) {
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin: 4px 8px;
+  transition: all 0.2s ease;
+}
+
+:deep(.p-multiselect-item:hover) {
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.1) 0%,
+    rgba(99, 102, 241, 0.05) 100%
+  );
+  transform: translateX(4px);
+  border-left: 2px solid #6366f1;
+}
+
+:deep(.p-multiselect-item.p-highlight) {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+}
+
+:deep(.p-multiselect-empty-message) {
+  padding: 20px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
 }
 </style>
 
 <style>
 .p-multiselect-panel {
   z-index: 9999 !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15) !important;
 }
 </style>

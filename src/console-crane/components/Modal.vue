@@ -6,7 +6,7 @@
       v-if="modelValue"
     >
       <section
-        class="absolute rounded-md mx-60 my-32 top-0 left-0 right-0 bottom-0 gradient-background"
+        class="absolute rounded-md mx-60 my-32 top-0 left-0 right-0 bottom-0 bg-blue-900"
         ref="modalContentContainer"
       >
         <!-- Close button -->
