@@ -82,9 +82,15 @@ const defaultBundleStore = useDefaultBundleStore();
 
 watch(
   () => [props.phrase, props.translation],
-  () => {
+  async () => {
     selectedBundles.value = [];
-    loadExistingBundles();
+    await loadExistingBundles();
+
+    // Auto-select previous bundles for new phrases (not already saved)
+    if (existingBundles.value.length === 0) {
+      const defaultBundles = defaultBundleStore.getDefaultBundles();
+      selectedBundles.value = defaultBundles;
+    }
   },
   { immediate: true, deep: true }
 );
@@ -181,12 +187,7 @@ function updateBundles(bundleIds: string[], phraseId: string) {
     }),
   ];
 
-  return Promise.all(promiseList).then(() => {
-    // Update default bundles but don't overwrite existing ones
-    const currentDefaults = defaultBundleStore.getDefaultBundles();
-    const newDefaults = [...new Set([...currentDefaults, ...bundleIds])];
-    defaultBundleStore.setDefaultBundles(newDefaults);
-  });
+  return Promise.all(promiseList);
 }
 
 async function savePhrase() {
@@ -226,6 +227,9 @@ async function savePhrase() {
 
     // Add phrase to selected bundles
     await updateBundles(selectedBundles.value, phraseId);
+
+    // Store selected bundles as new defaults for future saves
+    defaultBundleStore.setDefaultBundles(selectedBundles.value);
 
     // Clear selection and reload existing bundles
     selectedBundles.value = [];
