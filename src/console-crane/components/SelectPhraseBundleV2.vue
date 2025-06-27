@@ -3,12 +3,12 @@
     ref="multiSelectRef"
     option-label="title"
     option-value="_id"
-    placeholder="Select a Phrase Bundle to save..."
-    :selection-limit="1"
+    placeholder="Select Phrase Bundles to save..."
     :options="filteredOptions"
     :loading="isFetching"
     :model-value="props.selectedBundles"
     @update:model-value="emit('update:selectedBundles', $event)"
+    display="chip"
   >
     <template #header="{ options, value }">
       <div class="p-4">

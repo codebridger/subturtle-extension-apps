@@ -9,7 +9,13 @@
       />
 
       <Button
-        :label="!selectedBundles.length ? 'Add to Bundle' : 'Add'"
+        :label="
+          !selectedBundles.length
+            ? 'Add to Bundles'
+            : `Add to ${selectedBundles.length} Bundle${
+                selectedBundles.length > 1 ? 's' : ''
+              }`
+        "
         size="large"
         @click="savePhrase"
         :disabled="!selectedBundles.length"
