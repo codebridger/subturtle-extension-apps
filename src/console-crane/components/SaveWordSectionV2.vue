@@ -63,7 +63,6 @@ import { COLLECTIONS, DATABASE } from "../../common/static/global";
 import { TranslateService } from "../../common/services/translate.service";
 import { PhraseType, PhraseBundleType } from "../../common/types/phrase.type";
 import { useDefaultBundleStore } from "../../stores/default-bundle";
-import { log } from "../../common/helper/log";
 
 const props = defineProps<{
   phrase: string;
@@ -168,65 +167,28 @@ async function removePhraseFromBundle(bundleId: string) {
   }
 }
 
-function updateBundles(bundleIds: string[], phraseId: string) {
-  const promiseList = [
-    ...bundleIds.map((bundleId) => {
-      return dataProvider.updateOne({
-        database: DATABASE.USER_CONTENT,
-        collection: COLLECTIONS.PHRASE_BUNDLE,
-        query: {
-          _id: bundleId,
-          refId: authentication.user?.id,
-        },
-        update: {
-          $push: {
-            phrases: phraseId,
-          },
-        },
-      });
-    }),
-  ];
-
-  return Promise.all(promiseList);
-}
-
 async function savePhrase() {
   if (!selectedBundles.value.length) return;
 
   isSaving.value = true;
 
-  const query = {
-    refId: authentication.user?.id!,
-    phrase: props.phrase.trim(),
-    translation: props.translation.trim(),
-    translation_language: TranslateService.instance.targetLanguage.trim(),
-  };
-
-  const dataBase = {
-    database: DATABASE.USER_CONTENT,
-    collection: COLLECTIONS.PHRASE,
-  };
-
   try {
-    let phraseId: string;
+    // Use the enhanced server function
+    const result = await functionProvider.run({
+      name: "createPhrase",
+      args: {
+        phrase: props.phrase.trim(),
+        translation: props.translation.trim(),
+        translation_language: TranslateService.instance.targetLanguage.trim(),
+        bundleIds: selectedBundles.value,
+        refId: authentication.user?.id,
+      },
+    });
 
-    if (existedPhrase.value) {
-      phraseId = existedPhrase.value._id;
-    } else {
-      // Create new phrase
-      const newPhrase = await dataProvider
-        .insertOne({
-          ...dataBase,
-          doc: query,
-        })
-        .then((data) => data as PhraseType);
-
-      phraseId = newPhrase._id;
-      existedPhrase.value = newPhrase;
+    // Update the existedPhrase reference if it's a new phrase
+    if (!existedPhrase.value) {
+      existedPhrase.value = result as PhraseType;
     }
-
-    // Add phrase to selected bundles
-    await updateBundles(selectedBundles.value, phraseId);
 
     // Store selected bundles as new defaults for future saves
     defaultBundleStore.setDefaultBundles(selectedBundles.value);
