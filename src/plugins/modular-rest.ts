@@ -7,6 +7,7 @@ import {
   StoreUserTokenMessage,
 } from "../common/types/messaging";
 import { ref } from "vue";
+import { useProfileStore } from "../stores/profile";
 
 GlobalOptions.set({
   host: process.env.SUBTURTLE_API_URL || "",
@@ -23,6 +24,14 @@ function updateIsLogin() {
   const loginInfo =
     authentication.isLogin && authentication.user?.type.toLowerCase() == "user";
   isLogin.value = loginInfo;
+
+  // If user is logged in, fetch membership and freemium details
+  if (loginInfo) {
+    const profileStore = useProfileStore();
+    profileStore.bootstrap().catch((error) => {
+      console.error("Error bootstrapping profile store:", error);
+    });
+  }
 }
 
 chrome.runtime.onMessage.addListener((request, _sender) => {
@@ -83,6 +92,11 @@ export async function loginWithLastSession() {
 
 export async function logout(sendAuthStatusToOtherParts = true) {
   authentication.logout();
+
+  // Clear profile store data
+  const profileStore = useProfileStore();
+  profileStore.logout();
+
   updateIsLogin();
 
   if (sendAuthStatusToOtherParts) {

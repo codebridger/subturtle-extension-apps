@@ -13,6 +13,7 @@ import {
   type ProfileType,
   type SubscriptionType,
 } from "../../../dashboard-app/frontend/types/database.type";
+import { log } from "../common/helper/log";
 
 export const useProfileStore = defineStore("profile", () => {
   const authUser = computed(() => authentication.user);
@@ -47,6 +48,8 @@ export const useProfileStore = defineStore("profile", () => {
         } else {
           freemiumAllocation.value = res as FreemiumAllocationType;
         }
+
+        log("fetchSubscription, res", JSON.stringify(res));
       })
       .catch((res) => {
         console.error("Error fetching subscription:", res);
@@ -72,6 +75,7 @@ export const useProfileStore = defineStore("profile", () => {
       })
       .then((profile) => {
         userDetail.value = profile;
+        log("getProfileInfo, userDetail", JSON.stringify(userDetail.value));
         return profile;
       })
       .catch((error) => {
