@@ -67,6 +67,16 @@ import { useDefaultBundleStore } from "../../stores/default-bundle";
 const props = defineProps<{
   phrase: string;
   translation: string;
+  context?: string;
+  direction?: {
+    source: "ltr" | "rtl";
+    target: "ltr" | "rtl";
+  };
+  language_info?: {
+    source: string;
+    target: string;
+  };
+  linguistic_data?: any;
 }>();
 
 const selectBundleRef = ref();
@@ -173,7 +183,7 @@ async function savePhrase() {
   isSaving.value = true;
 
   try {
-    // Use the enhanced server function
+    // Use the enhanced server function with linguistic type
     const result = await functionProvider.run({
       name: "createPhrase",
       args: {
@@ -182,6 +192,12 @@ async function savePhrase() {
         translation_language: TranslateService.instance.targetLanguage.trim(),
         bundleIds: selectedBundles.value,
         refId: authentication.user?.id,
+        type: "linguistic", // Specify linguistic type
+        // Add linguistic-specific data from the word detail context
+        context: props.context || "",
+        direction: props.direction,
+        language_info: props.language_info,
+        linguistic_data: props.linguistic_data,
       },
     });
 

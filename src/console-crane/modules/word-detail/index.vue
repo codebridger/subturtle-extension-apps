@@ -38,6 +38,10 @@
           v-if="isLogin && wordData?.translation?.phrase"
           :phrase="cleanText(getProps().word!)"
           :translation="cleanText(wordData?.translation?.phrase || '')"
+          :context="wordData?.context"
+          :direction="wordData?.direction"
+          :language_info="wordData?.language_info"
+          :linguistic_data="wordData?.linguistic_data"
         />
 
         <!-- Login prompt if user is not logged in -->
