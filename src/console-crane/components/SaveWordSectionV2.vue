@@ -1,32 +1,70 @@
 <template>
   <div class="my-2">
-    <!-- Save to Additional Bundles -->
-    <Inputgroup class="mb-3">
-      <SelectPhraseBundleV2
-        ref="selectBundleRef"
-        v-model:selected-bundles="selectedBundles"
-        :excluded-bundle-ids="existingBundles.map((b) => b._id)"
-      />
-
-      <Button
-        :label="
-          !selectedBundles.length
-            ? 'Add to Bundles'
-            : `Add to ${selectedBundles.length} Bundle${
-                selectedBundles.length > 1 ? 's' : ''
-              }`
-        "
-        size="large"
-        @click="savePhrase"
-        :disabled="!selectedBundles.length"
-        :loading="isSaving"
-      >
-        <template #icon>
-          <i class="mr-4 i-ep-collection" />
-        </template>
-      </Button>
-    </Inputgroup>
-
+    <FreemiumLimitCounter
+      v-if="showFreemiumCounter"
+      :used="usedCount"
+      :total="totalCount"
+      :isAtLimit="!!isAtLimit"
+      :isDisabled="!!(isSaving || isAtLimit)"
+      @action="savePhrase"
+      @upgrade="handleUpgrade"
+      class="mb-4"
+    >
+      <Inputgroup class="mb-3">
+        <SelectPhraseBundleV2
+          ref="selectBundleRef"
+          v-model:selected-bundles="selectedBundles"
+          :excluded-bundle-ids="existingBundles.map((b) => b._id)"
+        />
+        <Button
+          :label="
+            isAtLimit
+              ? 'Upgrade'
+              : !selectedBundles.length
+              ? 'Add to Bundles'
+              : `Add to ${selectedBundles.length} Bundle${
+                  selectedBundles.length > 1 ? 's' : ''
+                }`
+          "
+          :icon="isAtLimit ? 'pi pi-crown' : 'pi pi-plus'"
+          size="large"
+          @click="isAtLimit ? handleUpgrade() : savePhrase()"
+          :disabled="!selectedBundles.length || isSaving"
+          :loading="isSaving"
+          class="border-none bg-gradient-to-r from-pink-500 to-purple-600 shadow-md hover:from-pink-600 hover:to-purple-700 text-white font-semibold"
+        >
+          <template #icon>
+            <i :class="isAtLimit ? 'pi pi-crown' : 'mr-4 i-ep-collection'" />
+          </template>
+        </Button>
+      </Inputgroup>
+    </FreemiumLimitCounter>
+    <template v-else>
+      <Inputgroup class="mb-3">
+        <SelectPhraseBundleV2
+          ref="selectBundleRef"
+          v-model:selected-bundles="selectedBundles"
+          :excluded-bundle-ids="existingBundles.map((b) => b._id)"
+        />
+        <Button
+          :label="
+            !selectedBundles.length
+              ? 'Add to Bundles'
+              : `Add to ${selectedBundles.length} Bundle${
+                  selectedBundles.length > 1 ? 's' : ''
+                }`
+          "
+          size="large"
+          @click="savePhrase"
+          :disabled="!selectedBundles.length || isSaving"
+          :loading="isSaving"
+        >
+          <template #icon>
+            <i class="mr-4 i-ep-collection" />
+          </template>
+        </Button>
+      </Inputgroup>
+    </template>
     <!-- Existing Bundles as Fieldset -->
     <Fieldset
       v-if="existingBundles.length > 0"
@@ -53,16 +91,22 @@ import Inputgroup from "primevue/inputgroup";
 import Chip from "primevue/chip";
 import Fieldset from "primevue/fieldset";
 import SelectPhraseBundleV2 from "./SelectPhraseBundleV2.vue";
-import { onMounted, ref, watch } from "vue";
+import { onMounted, ref, watch, computed } from "vue";
 import {
   authentication,
   dataProvider,
   functionProvider,
 } from "@modular-rest/client";
-import { COLLECTIONS, DATABASE } from "../../common/static/global";
+import {
+  COLLECTIONS,
+  DATABASE,
+  getSubturtleDashboardUrlWithToken,
+} from "../../common/static/global";
 import { TranslateService } from "../../common/services/translate.service";
 import { PhraseType, PhraseBundleType } from "../../common/types/phrase.type";
 import { useDefaultBundleStore } from "../../stores/default-bundle";
+import { useProfileStore } from "../../stores/profile";
+import FreemiumLimitCounter from "./FreemiumLimitCounter.vue";
 
 const props = defineProps<{
   phrase: string;
@@ -88,6 +132,20 @@ const isSaving = ref(false);
 const isRemoving = ref(false);
 
 const defaultBundleStore = useDefaultBundleStore();
+const profileStore = useProfileStore();
+
+const showFreemiumCounter = computed(
+  () => !!(profileStore.isFreemium && profileStore.freemiumAllocation)
+);
+const usedCount = computed(
+  () => profileStore.freemiumAllocation?.allowed_save_words_used || 0
+);
+const totalCount = computed(
+  () => profileStore.freemiumAllocation?.allowed_save_words || 0
+);
+const isAtLimit = computed(
+  () => showFreemiumCounter.value && usedCount.value >= totalCount.value
+);
 
 watch(
   () => [props.phrase, props.translation],
@@ -170,6 +228,8 @@ async function removePhraseFromBundle(bundleId: string) {
 
     // Reload existing bundles to update UI
     await loadExistingBundles();
+    // Refresh freemium counter
+    await profileStore.fetchSubscription();
   } catch (error) {
     console.error("Error removing phrase from bundle:", error);
   } finally {
@@ -212,6 +272,8 @@ async function savePhrase() {
     // Clear selection and reload existing bundles
     selectedBundles.value = [];
     await loadExistingBundles();
+    // Refresh freemium counter
+    await profileStore.fetchSubscription();
 
     // Close the dropdown after successful save
     if (selectBundleRef.value?.closeDropdown) {
@@ -222,6 +284,10 @@ async function savePhrase() {
   } finally {
     isSaving.value = false;
   }
+}
+
+function handleUpgrade() {
+  window.open(getSubturtleDashboardUrlWithToken(), "_blank");
 }
 </script>
 
