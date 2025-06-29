@@ -177,6 +177,10 @@ defineExpose({
 :deep(.p-multiselect-label) {
   font-size: 14px !important;
   font-weight: 500;
+  color: #222 !important;
+}
+:deep(.dark .p-multiselect-label) {
+  color: #f3f4f6 !important;
 }
 
 /* Style the MultiSelect chips to match saved bundles */
@@ -198,8 +202,15 @@ defineExpose({
   user-select: none !important;
   -webkit-user-select: none !important;
   -moz-user-select: none !important;
-  -ms-user-select: none !important;
-  margin: 2px !important;
+}
+:deep(.dark .p-multiselect-token) {
+  background: linear-gradient(
+    135deg,
+    #6366f1 0%,
+    #3b82f6 50%,
+    #1e293b 100%
+  ) !important;
+  color: #f3f4f6 !important;
 }
 
 :deep(.p-multiselect-token:hover) {

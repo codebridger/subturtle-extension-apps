@@ -1,11 +1,11 @@
 <template>
   <!-- Main word detail component - displays dictionary information and translation for a selected word -->
   <div
-    class="flex flex-col items-center justify-start overflow-y-auto"
+    class="flex flex-col items-center justify-start overflow-y-auto min-h-full dark:bg-blue-900"
     :key="key"
   >
     <div
-      class="select-text text-gray-900 flex flex-col px-20 justify-start items-center"
+      class="select-text flex flex-col px-20 justify-start items-center text-gray-900 dark:text-gray-100"
       :style="{
         height: '100%',
         width: `${Math.min(780, frameSize?.width!)}px`,
@@ -17,16 +17,18 @@
           class="p-5 flex flex-col justify-center items-center"
           :dir="wordData?.direction?.source"
         >
-          <h1 class="text-6xl white-shadow mb-2">{{ title }}</h1>
-          <p class="text-base max-w-96 italic text-gray-50">
+          <h1 class="text-6xl mb-2 dark:text-gray-100">
+            {{ title }}
+          </h1>
+          <p class="text-base max-w-96 italic text-gray-500 dark:text-gray-300">
             {{ context }}
           </p>
         </div>
 
         <!-- Translation box showing the word in target language -->
-        <Fieldset class="mb-2" :legend="targetLanguageTitle">
+        <Fieldset class="mb-2 dark:bg-blue-900" :legend="targetLanguageTitle">
           <h1
-            class="text-5xl white-shadow text-center mb-8"
+            class="text-5xl text-center mb-8 dark:text-gray-100"
             :dir="wordData?.direction?.target"
           >
             {{ cleanText(wordData?.translation?.phrase || "") }}
@@ -48,7 +50,7 @@
         <Button
           v-else
           severity="secondary"
-          class="my-2 text-center"
+          class="my-2 text-center dark:text-gray-100"
           @click="handleLoginRequest"
         >
           <div class="w-full flex justify-center items-center">
@@ -62,9 +64,9 @@
       <template v-if="wordData && wordData.linguistic_data">
         <section class="w-full mt-10 px-[40px]">
           <!-- Main definition card -->
-          <Fieldset class="mb-2" legend="Definition">
+          <Fieldset class="mb-2 dark:bg-blue-900" legend="Definition">
             <p
-              class="text-2xl text-white mb-6"
+              class="text-2xl mb-6 text-gray-900 dark:text-gray-100"
               :dir="wordData?.direction?.target"
             >
               {{ wordData.linguistic_data.definition }}
@@ -87,13 +89,13 @@
             </div>
           </Fieldset>
 
-          <Fieldset class="mb-2" legend="Phonetic">
+          <Fieldset class="mb-2 dark:bg-blue-900" legend="Phonetic">
             <div class="flex justify-between">
-              <p class="text-2xl text-gray-300 italic">
+              <p class="text-2xl italic text-gray-500 dark:text-gray-300">
                 {{ wordData?.linguistic_data?.phonetic.ipa || "" }}
               </p>
               <p
-                class="text-2xl text-white italic mb-2"
+                class="text-2xl italic mb-2 text-gray-900 dark:text-gray-100"
                 :dir="wordData?.direction?.target"
               >
                 {{ wordData.linguistic_data.phonetic.transliteration }}
@@ -103,7 +105,7 @@
 
           <!-- Example sentences -->
           <Fieldset
-            class="mb-2"
+            class="mb-2 dark:bg-blue-900"
             v-if="
               wordData.linguistic_data.examples &&
               wordData.linguistic_data.examples.length
@@ -116,13 +118,13 @@
               class="mb-4"
             >
               <p
-                class="text-2xl text-white italic mb-2"
+                class="text-2xl italic mb-2 text-gray-900 dark:text-gray-100"
                 :dir="wordData?.direction?.target"
               >
                 {{ example.target }}
               </p>
               <p
-                class="text-2xl text-gray-300 italic"
+                class="text-2xl italic text-gray-500 dark:text-gray-300"
                 :dir="wordData?.direction?.source"
               >
                 {{ example.source }}
@@ -135,7 +137,7 @@
 
           <!-- Related expressions -->
           <Fieldset
-            class="mb-2"
+            class="mb-2 dark:bg-blue-900"
             v-if="
               wordData.linguistic_data.related_expressions &&
               wordData.linguistic_data.related_expressions.length
@@ -150,13 +152,13 @@
                 class="mb-4"
               >
                 <p
-                  class="text-2xl text-white mb-2"
+                  class="text-2xl mb-2 text-gray-900 dark:text-gray-100"
                   :dir="wordData?.direction?.target"
                 >
                   {{ expression.target }}
                 </p>
                 <p
-                  class="text-2xl text-gray-300 italic"
+                  class="text-2xl italic text-gray-500 dark:text-gray-300"
                   :dir="wordData?.direction?.source"
                 >
                   {{ expression.source }}
@@ -175,14 +177,18 @@
 
       <!-- Loading state while fetching word data -->
       <template v-else-if="pending">
-        <div class="my-32 text-3xl text-center text-yellow-200">
+        <div
+          class="my-32 text-3xl text-center text-yellow-600 dark:text-yellow-200"
+        >
           <span>Loading...</span>
         </div>
       </template>
 
       <!-- Error state when no definitions are found -->
       <template v-else>
-        <div class="my-32 text-3xl text-center text-yellow-200">
+        <div
+          class="my-32 text-3xl text-center text-yellow-600 dark:text-yellow-200"
+        >
           <span
             >There is not any linguistic data for
             {{ cleanText(getProps().word!) }}</span

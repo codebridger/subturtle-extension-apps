@@ -13,7 +13,8 @@ import { RouterView, useRouter } from "vue-router";
 import Modal from "./components/Modal.vue";
 import { getSubturtleDashboardUrlWithToken } from "../common/static/global";
 import Button from "primevue/button";
-import { watch } from "vue";
+import { watch, onMounted, onUnmounted, ref } from "vue";
+import { useSystemTheme } from "./useSystemTheme";
 
 const store = useConsoleCraneStore();
 const router = useRouter();
@@ -30,26 +31,41 @@ watch(
 function goToDashboard() {
   window.open(getSubturtleDashboardUrlWithToken(), "_blank");
 }
+
+const rootRef = ref<HTMLElement | null>(null);
+let cleanupThemeListener: (() => void) | undefined;
+
+onMounted(() => {
+  if (rootRef.value) {
+    // cleanupThemeListener = useSystemTheme(rootRef.value);
+  }
+});
+
+onUnmounted(() => {
+  if (cleanupThemeListener) cleanupThemeListener();
+});
 </script>
 
 <template>
   <teleport to="body">
-    <modal v-model="store.isActive" v-slot="{ height, width }">
-      <div
-        class="flex flex-col py-6"
-        :style="{ width: width + 'px', height: height + 'px' }"
-      >
-        <section class="flex flex-row-reverse justify-between mx-12 mt-6">
-          <Button
-            severity="info"
-            rounded
-            label="Go to Dashboard"
-            @click="goToDashboard"
-          />
-        </section>
+    <div ref="rootRef">
+      <modal v-model="store.isActive" v-slot="{ height, width }">
+        <div
+          class="flex flex-col py-6"
+          :style="{ width: width + 'px', height: height + 'px' }"
+        >
+          <section class="flex flex-row-reverse justify-between mx-12 mt-6">
+            <Button
+              severity="info"
+              rounded
+              label="Go to Dashboard"
+              @click="goToDashboard"
+            />
+          </section>
 
-        <router-view class="w-full flex-1" />
-      </div>
-    </modal>
+          <router-view class="w-full flex-1" />
+        </div>
+      </modal>
+    </div>
   </teleport>
 </template>

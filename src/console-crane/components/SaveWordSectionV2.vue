@@ -1,5 +1,5 @@
 <template>
-  <div class="my-2">
+  <div class="my-2 bg-white dark:bg-blue-900 rounded-xl">
     <FreemiumLimitCounter
       v-if="showFreemiumCounter"
       :used="usedCount"
@@ -10,8 +10,9 @@
       @upgrade="handleUpgrade"
       class="mb-4"
     >
-      <Inputgroup class="mb-3">
+      <Inputgroup class="mb-3 !border-none">
         <SelectPhraseBundleV2
+          class="!border-none"
           ref="selectBundleRef"
           v-model:selected-bundles="selectedBundles"
           :excluded-bundle-ids="existingBundles.map((b) => b._id)"
@@ -31,7 +32,7 @@
           @click="isAtLimit ? handleUpgrade() : savePhrase()"
           :disabled="!selectedBundles.length || isSaving"
           :loading="isSaving"
-          class="border-none bg-gradient-to-r from-pink-500 to-purple-600 shadow-md hover:from-pink-600 hover:to-purple-700 text-white font-semibold"
+          class="border-none bg-gradient-to-r from-pink-500 to-purple-600 shadow-md hover:from-pink-600 hover:to-purple-700 text-white font-semibold dark:from-pink-700 dark:to-purple-900"
         >
           <template #icon>
             <i :class="isAtLimit ? 'pi pi-crown' : 'mr-4 i-ep-collection'" />
@@ -58,6 +59,7 @@
           @click="savePhrase"
           :disabled="!selectedBundles.length || isSaving"
           :loading="isSaving"
+          class="border-none bg-gradient-to-r from-pink-500 to-purple-600 shadow-md hover:from-pink-600 hover:to-purple-700 text-white font-semibold dark:from-pink-700 dark:to-purple-900"
         >
           <template #icon>
             <i class="mr-4 i-ep-collection" />
@@ -68,7 +70,7 @@
     <!-- Existing Bundles as Fieldset -->
     <Fieldset
       v-if="existingBundles.length > 0"
-      class="saved-bundles-fieldset"
+      class="saved-bundles-fieldset bg-white dark:bg-blue-900"
       legend="Saved in"
     >
       <div class="flex flex-wrap gap-1.5">

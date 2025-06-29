@@ -6,14 +6,16 @@
       v-if="modelValue"
     >
       <section
-        class="absolute rounded-md mx-60 my-32 top-0 left-0 right-0 bottom-0 bg-blue-900"
+        class="absolute rounded-md mx-60 my-32 top-0 left-0 right-0 bottom-0 bg-white dark:bg-blue-900"
         ref="modalContentContainer"
       >
         <!-- Close button -->
         <div class="absolute right-[32px] left-[calc(100%-16px)] top-[-16px]">
           <Button rounded severity="secondary" @click="close" size="small">
             <template #icon>
-              <span class="i-mdi-close text-white scale-[2]" />
+              <span
+                class="i-mdi-close text-gray-700 dark:text-white scale-[2]"
+              />
             </template>
           </Button>
         </div>

@@ -1,6 +1,6 @@
 <template>
   <div
-    class="rounded-md px-6 py-7 text-gray-600 relative flex items-start space-x-8"
+    class="rounded-md px-6 py-7 relative flex items-start space-x-8 bg-white dark:bg-blue-900 text-gray-800 dark:text-gray-100"
   >
     <!-- ICON 
     -->
@@ -8,7 +8,7 @@
       <translate-button class="" v-model="showTranslate" />
     </div>
 
-    <section class="flex-1 text-white">
+    <section class="flex-1">
       <p class="font-medium text-4xl" :dir="dir">{{ definition }}</p>
       <Divider class="my-5" />
       <p class="italic text-2xl mt-3" :dir="dir">{{ example }}</p>
