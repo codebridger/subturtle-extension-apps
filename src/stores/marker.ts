@@ -13,6 +13,7 @@ interface State {
   markedWords: MarkedWord[];
   sourceLanguage: string;
   translatedWords: Record<string, string>;
+  context: string;
 }
 
 export const useMarkerStore = defineStore("marker", {
@@ -22,6 +23,7 @@ export const useMarkerStore = defineStore("marker", {
     markedWords: [],
     sourceLanguage: "",
     translatedWords: {},
+    context: "",
   }),
 
   getters: {
@@ -42,12 +44,12 @@ export const useMarkerStore = defineStore("marker", {
       const _this = this;
 
       TranslateService.instance
-        .translateByGoogle(translatingList)
-        .then(({ list, lang }) => {
-          _this.sourceLanguage = lang;
+        .fetchSimpleTranslation(translatingList, this.context)
+        .then((res: string) => {
+          _this.sourceLanguage = "auto";
 
           translatingList.forEach((result, i) => {
-            _this.translatedWords[result] = list[i];
+            _this.translatedWords[result] = res;
           });
         });
     },
@@ -104,6 +106,10 @@ export const useMarkerStore = defineStore("marker", {
 
     getSequentialId(id: string) {
       return id.split("-").map(Number)[2];
+    },
+
+    setContext(context: string) {
+      this.context = context;
     },
   },
 });

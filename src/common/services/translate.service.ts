@@ -9,6 +9,8 @@ import { SUPPORTED_LANGUES } from "../static/langueges.static";
 import { analytic } from "../../plugins/mixpanel";
 import { log } from "../helper/log";
 import proxy from "./proxy.service";
+import { functionProvider } from "@modular-rest/client";
+import { LanguageLearningData } from "../../console-crane/modules/word-detail/types";
 
 export class TranslateService {
   static instance = new TranslateService();
@@ -44,26 +46,26 @@ export class TranslateService {
     });
   }
 
-
   get targetLanguageTitle() {
     return (
       SUPPORTED_LANGUES.find((l) => l.code == this.targetLanguage)?.title || ""
     );
   }
 
-  async translateByGoogle(text: string | string[]) {
+  async translateByGoogleTranslate(text: string | string[]) {
     let key = process.env.GOOGLE_TRANSLATE_KEY;
     let url = {
       url: `https://translation.googleapis.com/language/translate/v2?key=${key}`,
       proxyUrl: process.env.GOOGLE_TRANSLATE_PROXY_URL,
-    }
+    };
 
     let body = {
       q: text,
       target: this.targetLanguage,
     };
 
-    return proxy.post(url, body)
+    return proxy
+      .post(url, body)
       .then((body: Dictionary) => body.data.translations)
       .then((list) => {
         let lang = "en";
@@ -80,13 +82,47 @@ export class TranslateService {
       });
   }
 
+  async fetchSimpleTranslation(text: string | string[], context: string = "") {
+    return functionProvider.run<string>({
+      name: "translateWithContext",
+      args: {
+        translationType: "simple",
+        sourceLanguage: "auto",
+        targetLanguage: this.targetLanguage,
+        phrase: text,
+        context: context || "",
+      },
+    });
+  }
+
+  async fetchDetailedTranslation(text: string, context: string = "") {
+    return functionProvider
+      .run<LanguageLearningData>({
+        name: "translateWithContext",
+        args: {
+          translationType: "detailed",
+          sourceLanguage: "auto",
+          targetLanguage: this.targetLanguage,
+          phrase: text,
+          context: context || "",
+        },
+      })
+      .then((data) => {
+        data.context = context;
+        data.phrase = text;
+
+        return data;
+      });
+  }
+
   async translateByDictionaryapi(word: string) {
     let url = {
       url: "https://api.dictionaryapi.dev/api/v2/entries/en/" + encodeURI(word),
       proxyUrl: null,
-    }
+    };
 
-    return proxy.get(url)
+    return proxy
+      .get(url)
       .then((body) => {
         if (body.title) throw body;
         else return body as WordFromDictionaryApi[];

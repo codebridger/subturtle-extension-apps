@@ -5,6 +5,7 @@ const {
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: "class",
   content: ["./dist/**/*.js", "./plugins/vue-prime/**/*.js"],
 
   theme: {
@@ -37,20 +38,20 @@ module.exports = {
       },
       keyframes: {
         slide: {
-          '0%': {
-            transform: 'translateX(-10px)'
+          "0%": {
+            transform: "translateX(-10px)",
           },
-          '50%': {
-            transform: 'translateX(10px)'
+          "50%": {
+            transform: "translateX(10px)",
           },
-          '100%': {
-            transform: 'translateX(-10px)'
-          }
-        }
+          "100%": {
+            transform: "translateX(-10px)",
+          },
+        },
       },
       animation: {
-        'slide': 'slide 1.5s ease-in-out infinite'
-      }
+        slide: "slide 1.5s ease-in-out infinite",
+      },
     },
   },
 

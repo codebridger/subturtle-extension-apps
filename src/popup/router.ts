@@ -1,5 +1,9 @@
 import { RouteRecordRaw, createRouter, createWebHashHistory } from "vue-router";
-import { isLogin, loginWithLastSession } from "../plugins/modular-rest";
+import {
+  authentication,
+  isLogin,
+  loginWithLastSession,
+} from "../plugins/modular-rest";
 
 const routes: RouteRecordRaw[] = [
   {
@@ -17,6 +21,11 @@ const routes: RouteRecordRaw[] = [
     name: "intro",
     component: () => import("./views/IntroView.vue"),
   },
+  {
+    path: "/help",
+    name: "help",
+    component: () => import("./views/HelpView.vue"),
+  },
 ];
 
 export const router = createRouter({
@@ -24,12 +33,22 @@ export const router = createRouter({
   routes: routes,
 });
 
-router.beforeEach(async (to, from, next) => {
-  if (!isLogin.value) {
-    await loginWithLastSession();
+router.beforeEach(async (to, from) => {
+  // Allow access to intro and login pages regardless of login status
+  if (to.name === "intro" || to.name === "login") {
+    return true;
   }
 
-  if (to.name === "login") next();
-  else if (to.name !== "intro" && !isLogin.value) next({ name: "intro" });
-  else next();
+  // Try to login with last session if not already logged in
+  if (!isLogin.value) {
+    await loginWithLastSession();
+
+    // After trying to login, check again if successful
+    if (!isLogin.value) {
+      return { name: "intro" };
+    }
+  }
+
+  // If we got here, user is logged in, allow navigation
+  return true;
 });

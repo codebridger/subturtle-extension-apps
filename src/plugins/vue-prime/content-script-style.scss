@@ -1,5 +1,47 @@
 :root {
-	--surface-border-color: white;
+	--surface-border-color: #eeeded;
+	--primary-color: #f91e5a !important;
+	--primevue-label-color: #727272;
+}
+.dark {
+	--surface-border-color: #fff;
+	--primevue-label-color: #fff;
+}
+
+// Global overrides for pink color
+.p-component {
+	// Buttons
+	.p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-secondary):not(
+			.p-button-info
+		):not(.p-button-success):not(.p-button-warning):not(.p-button-help):not(.p-button-danger) {
+		background: #f91e5a !important;
+		border-color: #f91e5a !important;
+	}
+
+	// Highlighted elements
+	.p-highlight {
+		background: #f91e5a !important;
+		border-color: #f91e5a !important;
+	}
+
+	// Carousel indicators
+	.p-carousel-indicator.p-highlight button {
+		background-color: #f91e5a !important;
+	}
+
+	// Checkboxes, radio buttons
+	.p-checkbox-box.p-highlight,
+	.p-radiobutton-box.p-highlight {
+		background: #f91e5a !important;
+		border-color: #f91e5a !important;
+	}
+
+	// Focus rings
+	&:focus {
+		box-shadow:
+			0 0 0 2px var(--surface-border-color),
+			0 0 0 4px #f91e5a !important;
+	}
 }
 
 // Override the default style of the primevue
@@ -12,7 +54,7 @@
 		margin-left: 1rem !important;
 		background: transparent !important;
 		border: none !important;
-		color: var(--surface-border-color) !important;
+		color: var(--primevue-label-color) !important;
 	}
 }
 
@@ -29,11 +71,11 @@
 	}
 
 	.p-multiselect-trigger {
-		color: white !important;
+		color: var(--primevue-label-color) !important;
 	}
 
 	.p-multiselect-label {
-		color: white !important;
+		color: var(--primevue-label-color) !important;
 	}
 }
 

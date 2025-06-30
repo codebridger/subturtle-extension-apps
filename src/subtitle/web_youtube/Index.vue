@@ -20,6 +20,7 @@
 
 <script lang="ts">
 import { defineComponent } from "vue";
+import { useMarkerStore } from "../../stores/marker";
 
 import {
   SUBTILE_CONTAINER_CLASS,
@@ -34,6 +35,14 @@ import { log } from "../../common/helper/log";
 
 export default defineComponent({
   components: { SubtitleComponent: SubtitleComponent as any },
+
+  setup() {
+    const markerStore = useMarkerStore();
+
+    return {
+      markerStore,
+    };
+  },
 
   data(): {
     active: boolean;
@@ -94,6 +103,13 @@ export default defineComponent({
         let styleStr = wrapper.getAttribute("style");
         this.style = mapStyleString(styleStr || "");
       });
+
+      // update marker context
+      try {
+        this.markerStore.setContext(this.text.join(" "));
+      } catch (error) {
+        console.error(error);
+      }
 
       let linesWrapper = this.subtitleContainer?.querySelector(SUBTITLE_CLASS);
       let wrapperStyleString = linesWrapper?.getAttribute("style");

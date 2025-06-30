@@ -8,25 +8,27 @@
         </div> -->
       </template>
     </Carousel>
-
+    <section class="fixed top-6 left-12 rounded-full bg-gray-900 p-2">
+      <Logo size="100" onlyLogo />
+    </section>
     <section
       :class="[
         'overflow-y-auto',
         'py-12 px-12',
-        'flex items-center justify-between',
+        'flex items-center justify-between gap-4',
         'bg-gray-950',
       ]"
     >
       <section class="text-lg">
         <p class="text-gray-300">
-          This is a new way to improve your language skills over your daily
-          activities.
+          Learning English doesn't have to mean extra time. Now, you can easily
+          do it during your daily streaming routines 😉
         </p>
       </section>
 
-      <div class="w-12 animate-[slide_1s_ease-in-out_infinite] text-gray-300">
+      <!-- <div class="w-12 animate-[slide_1s_ease-in-out_infinite] text-gray-300">
         <span class="i-solar-double-alt-arrow-right-bold-duotone text-2xl" />
-      </div>
+      </div> -->
 
       <section class="flex justify-center">
         <Button :disabled="isLogin" label="Login" @click="openLogin">
@@ -51,6 +53,10 @@ import Button from "primevue/button";
 import { OpenLoginWindowMessage } from "../../common/types/messaging";
 import { isLogin } from "../../plugins/modular-rest";
 import { getAsset } from "../helper/assets";
+import { watch } from "vue";
+import { useRouter } from "vue-router";
+
+const router = useRouter();
 
 function openLogin() {
   chrome.runtime.sendMessage(new OpenLoginWindowMessage());
@@ -75,4 +81,17 @@ const slides = [
   //   image: getAsset("/slides/slide01.png"),
   // },
 ];
+
+watch(isLogin, (value) => {
+  if (value == true) {
+    router.push("/");
+  }
+});
 </script>
+
+<style scoped>
+.p-button {
+  background: #f91e5a !important;
+  border: #f91e5a !important;
+}
+</style>
