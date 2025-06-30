@@ -54,7 +54,10 @@ onUnmounted(() => {
           class="flex flex-col py-6"
           :style="{ width: width + 'px', height: height + 'px' }"
         >
-          <section class="flex flex-row-reverse justify-between mx-12 mt-6">
+          <!-- Header: always visible -->
+          <section
+            class="flex flex-row-reverse justify-between mx-12 mt-6 shrink-0"
+          >
             <Button
               severity="info"
               rounded
@@ -63,7 +66,10 @@ onUnmounted(() => {
             />
           </section>
 
-          <router-view class="w-full flex-1" />
+          <!-- Body: scrollable -->
+          <div class="flex-1 overflow-y-auto w-full">
+            <router-view class="w-full flex-1" />
+          </div>
         </div>
       </modal>
     </div>

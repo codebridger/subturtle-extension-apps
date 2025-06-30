@@ -6,13 +6,19 @@
       v-if="modelValue"
     >
       <section
-        class="absolute rounded-md mx-auto my-32 top-0 left-0 right-0 bottom-0 bg-white dark:bg-blue-900"
+        class="absolute rounded-md mx-auto my-32 top-0 left-0 right-0 bottom-0 bg-white dark:bg-blue-900 flex flex-col"
         :style="modalStyle"
         ref="modalContentContainer"
       >
         <!-- Close button -->
         <div class="absolute right-[32px] left-[calc(100%-16px)] top-[-16px]">
-          <Button rounded severity="secondary" @click="close" size="small">
+          <Button
+            rounded
+            severity="secondary"
+            @click="close"
+            size="small"
+            class="!bg-white !border-gray-300 dark:!bg-blue-900 dark:!border-gray-600 shadow-md"
+          >
             <template #icon>
               <span
                 class="i-mdi-close text-gray-700 dark:text-white scale-[2]"
@@ -22,7 +28,7 @@
         </div>
 
         <!-- Content -->
-        <div class="overflow-hidden w-full h-full" v-if="contentSize.width">
+        <div class="flex-1 overflow-y-auto w-full" v-if="contentSize.width">
           <slot :width="contentSize.width" :height="contentSize.height" />
         </div>
       </section>
