@@ -6,65 +6,27 @@ import {
 import { Dictionary } from "../types/general.type";
 import { TinyEmitter } from "tiny-emitter";
 import { SUPPORTED_LANGUES } from "../static/langueges.static";
-import { analytic } from "../../plugins/mixpanel";
-import { log } from "../helper/log";
+
 import proxy from "./proxy.service";
 import { functionProvider } from "@modular-rest/client";
 import { LanguageLearningData } from "../../console-crane/modules/word-detail/types";
 import { LanguageDetector } from "../helper/language-detection";
+import { useSettingsStore } from "../store/settings";
 
 export class TranslateService {
   static instance = new TranslateService();
   _eventBus = new TinyEmitter();
-  targetLanguage = ""; // Default fallback
+
+  get targetLanguage() {
+    return useSettingsStore().language;
+  }
 
   get languageTitle() {
     return LanguageDetector.getLanguageTitle(this.targetLanguage);
   }
 
   constructor() {
-    // Initialize with detected language
-    this.initializeTargetLanguage();
-  }
-
-  private async initializeTargetLanguage() {
-    try {
-      // Use the new language detection system
-      const detectedLang = await LanguageDetector.getDefaultLanguage();
-      log("Detected language:", detectedLang);
-      this.targetLanguage = detectedLang;
-
-      // Store the detected language
-      LanguageDetector.setLanguage(this.targetLanguage);
-      analytic.register({ target: this.targetLanguage });
-
-      log("Target language initialized:", this.targetLanguage);
-    } catch (error) {
-      console.warn("Failed to detect default language, using fallback:", error);
-      // Fallback to stored preference or default
-      chrome.storage.local.get("target", (data) => {
-        this.targetLanguage = data.target || "en";
-        analytic.register({ target: this.targetLanguage });
-      });
-    }
-
-    // Listen for change on target language
-    chrome.runtime.onMessage.addListener((message, sender) => {
-      if (message.target) {
-        log("Target language changed", message.target);
-
-        analytic.track("Target changed", {
-          to: message.target,
-        });
-
-        analytic.register({ target: message.target });
-
-        this.targetLanguage = message.target;
-        LanguageDetector.setLanguage(this.targetLanguage);
-
-        this._eventBus.emit("target-changed", this.targetLanguage);
-      }
-    });
+    // No watcher or local state needed; use store directly
   }
 
   get targetLanguageTitle() {

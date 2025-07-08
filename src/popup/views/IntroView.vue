@@ -18,7 +18,7 @@
                   Subturtle
                 </h1>
                 <section class="rounded-full bg-gray-900 p-2">
-                  <Logo size="20" onlyLogo />
+                  <Logo :size="20" onlyLogo />
                 </section>
               </div>
             </div>
@@ -59,6 +59,7 @@
 <script lang="ts" setup>
 import Carousel from "primevue/carousel";
 import Button from "primevue/button";
+import SelectTarget from "../../common/components/inputs/SelectTarget.vue";
 import { OpenLoginWindowMessage } from "../../common/types/messaging";
 import { isLogin } from "../../plugins/modular-rest";
 import { getAsset } from "../helper/assets";

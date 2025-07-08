@@ -2,47 +2,28 @@
   <select-language v-model="lang" @update:modelValue="onChanged" label="" />
 </template>
 
-<script>
-import { LanguageDetector } from "../../helper/language-detection";
+<script setup>
+import { useSettingsStore } from "../../store/settings";
 import SelectLanguage from "./SelectLanguage.vue";
+import { onMounted, ref, watch, nextTick } from "vue";
 
-export default {
-  components: {
-    SelectLanguage,
-  },
+const store = useSettingsStore();
 
-  data() {
-    return {
-      lang: "", // Default fallback
-    };
-  },
+const lang = ref("");
 
-  async mounted() {
-    // Use the new language detection system
-    try {
-      const detectedLang = await LanguageDetector.getDefaultLanguage();
-      this.lang = detectedLang;
-    } catch (error) {
-      console.warn("Failed to detect default language:", error);
-      // Fallback to stored preference or default
-      chrome.storage.local.get("target", (data) => {
-        this.lang = data.target || "en";
-      });
-    }
-  },
+watch(store.language, (newVal) => {
+  nextTick(() => {
+    lang.value = newVal;
+  });
+});
 
-  methods: {
-    onChanged() {
-      LanguageDetector.setLanguage(this.lang);
+function onChanged(lang) {
+  store.setLanguage(lang);
+}
 
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        let tabId = tabs[0].id;
-
-        chrome.tabs.sendMessage(tabId, { target: this.lang });
-      });
-    },
-  },
-};
+onMounted(() => {
+  store.fetchSettingsFromBackground();
+});
 </script>
 
 <style></style>

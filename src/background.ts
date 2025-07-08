@@ -3,6 +3,9 @@ import {
   GetCurrentChromeUserToken,
   OpenLoginWindowMessage,
   StoreUserTokenMessage,
+  SettingsSyncMessage,
+  SettingsObject,
+  MESSAGE_TYPE,
 } from "./common/types/messaging";
 
 export {};
@@ -28,6 +31,18 @@ function getScreenSize() {
         resolve({ width: window.width || 0, height: window.height || 0 });
       }
     });
+  });
+}
+
+function broadcastSettings(settings: SettingsObject) {
+  chrome.tabs.query({}, (tabs) => {
+    for (const tab of tabs) {
+      tab?.id &&
+        chrome.tabs.sendMessage(tab.id, {
+          type: MESSAGE_TYPE.SYNC_SETTINGS,
+          settings,
+        });
+    }
   });
 }
 
@@ -82,6 +97,22 @@ chrome.runtime.onMessage.addListener(function (request, _sender, sendResponse) {
         top: Math.round(top),
       });
     });
+  }
+
+  // Handle SYNC_SETTINGS
+  else if (SettingsSyncMessage.is(request)) {
+    if (request.settings) {
+      // Save settings and broadcast
+      chrome.storage.local.set({ settings: request.settings }).then(() => {
+        if (request.settings) broadcastSettings(request.settings);
+        sendResponse({ status: true });
+      });
+    } else {
+      // Return current settings
+      chrome.storage.local.get("settings").then((data) => {
+        sendResponse({ settings: data.settings });
+      });
+    }
   }
 
   return true;
