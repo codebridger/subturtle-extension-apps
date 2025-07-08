@@ -1,6 +1,7 @@
 import { RouteRecordRaw, createMemoryHistory, createRouter } from "vue-router";
 
 import WordDetailPage from "./modules/word-detail/index.vue";
+import SettingsPage from "./modules/settings/index.vue";
 
 const routes: RouteRecordRaw[] = [
   {
@@ -12,6 +13,11 @@ const routes: RouteRecordRaw[] = [
     path: "/word-detail/:data",
     name: "word-detail",
     component: WordDetailPage,
+  },
+  {
+    path: "/settings",
+    name: "settings",
+    component: SettingsPage,
   },
 ];
 
