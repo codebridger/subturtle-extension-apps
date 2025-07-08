@@ -1,4 +1,5 @@
 import { SUPPORTED_LANGUES } from "../static/langueges.static";
+import { log } from "./log";
 
 export class LanguageDetector {
   /**
@@ -13,19 +14,23 @@ export class LanguageDetector {
     // 1. Check if user has already set a preference (highest priority)
     const stored = await this.getStoredLanguage();
     if (stored) return stored;
+    log("Stored language not found, continue to detect");
 
     // 2. Try IP-based location detection (second priority)
     const locationLang = await this.detectLanguageByLocation();
     if (locationLang) return locationLang;
+    log("Location language not found, continue to detect");
 
     // 3. Try browser language detection
     const browserLang = this.detectBrowserLanguage();
     if (browserLang) return browserLang;
 
+    log("Browser language not found, continue to detect");
     // 4. Try Chrome extension API
     const chromeLang = this.detectChromeLanguage();
     if (chromeLang) return chromeLang;
 
+    log("Fallback to English");
     // 5. Fallback to English
     return "en";
   }
@@ -268,6 +273,7 @@ export class LanguageDetector {
       };
 
       const detectedLang = countryToLanguage[countryCode];
+      log("countryCode", countryCode, "detectedLang", detectedLang);
       if (detectedLang) {
         // Verify the detected language is in our supported languages
         const supportedLang = SUPPORTED_LANGUES.find(

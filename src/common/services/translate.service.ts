@@ -16,7 +16,7 @@ import { LanguageDetector } from "../helper/language-detection";
 export class TranslateService {
   static instance = new TranslateService();
   _eventBus = new TinyEmitter();
-  targetLanguage = "en"; // Default fallback
+  targetLanguage = ""; // Default fallback
 
   constructor() {
     // Initialize with detected language
@@ -27,10 +27,11 @@ export class TranslateService {
     try {
       // Use the new language detection system
       const detectedLang = await LanguageDetector.getDefaultLanguage();
+      log("Detected language:", detectedLang);
       this.targetLanguage = detectedLang;
 
       // Store the detected language
-      chrome.storage.local.set({ target: this.targetLanguage });
+      LanguageDetector.setLanguage(this.targetLanguage);
       analytic.register({ target: this.targetLanguage });
 
       log("Target language initialized:", this.targetLanguage);
@@ -55,7 +56,7 @@ export class TranslateService {
         analytic.register({ target: message.target });
 
         this.targetLanguage = message.target;
-        localStorage.setItem("target", this.targetLanguage);
+        LanguageDetector.setLanguage(this.targetLanguage);
 
         this._eventBus.emit("target-changed", this.targetLanguage);
       }

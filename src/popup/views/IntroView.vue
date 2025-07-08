@@ -1,23 +1,27 @@
 <template>
-  <section class="h-screen flex flex-col justify-between">
-    <Carousel :value="slides">
-      <template #item="{ data }">
-        <img :src="data.image" class="w-full h-auto" />
-        <!-- <div class="flex justify-center items-center h-80">
-          {{ data.title }}
-        </div> -->
-      </template>
-    </Carousel>
-    <section class="fixed top-6 left-12 rounded-full bg-gray-900 p-2">
-      <Logo size="100" onlyLogo />
-    </section>
+  <section class="h-screen flex flex-col overflow-hidden">
+    <div class="relative flex justify-center items-center w-full">
+      <div class="w-[650px]">
+        <Carousel :value="slides">
+          <template #item="{ data }">
+            <img
+              :src="data.image"
+              class="w-full h-full object-cover rounded-xl"
+            />
+            <!-- <div class="flex justify-center items-center h-80">
+            {{ data.title }}
+          </div> -->
+          </template>
+        </Carousel>
+
+        <section class="absolute top-6 left-20 rounded-full bg-gray-900 p-2">
+          <Logo size="100" onlyLogo />
+        </section>
+      </div>
+    </div>
+
     <section
-      :class="[
-        'overflow-y-auto',
-        'py-12 px-12',
-        'flex items-center justify-between gap-4',
-        'bg-gray-950',
-      ]"
+      class="px-12 flex flex-col justify-start items-end gap-8 bg-gray-950 flex-1"
     >
       <section class="text-lg">
         <p class="text-gray-300">
@@ -30,7 +34,8 @@
         <span class="i-solar-double-alt-arrow-right-bold-duotone text-2xl" />
       </div> -->
 
-      <section class="flex justify-center">
+      <section class="flex flex-row items-center justify-end gap-4">
+        <SelectTarget class="w-28" />
         <Button :disabled="isLogin" label="Login" @click="openLogin">
           <template #icon> <span class="i-solar-login-3-bold" /> </template>
         </Button>
@@ -55,6 +60,7 @@ import { isLogin } from "../../plugins/modular-rest";
 import { getAsset } from "../helper/assets";
 import { watch } from "vue";
 import { useRouter } from "vue-router";
+import SelectTarget from "../components/inputs/SelectTarget.vue";
 
 const router = useRouter();
 
@@ -93,5 +99,9 @@ watch(isLogin, (value) => {
 .p-button {
   background: #f91e5a !important;
   border: #f91e5a !important;
+}
+
+section::-webkit-scrollbar {
+  display: none;
 }
 </style>
