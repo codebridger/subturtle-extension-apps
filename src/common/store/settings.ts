@@ -12,6 +12,7 @@ import {
 export const useSettingsStore = defineStore("settings", () => {
   const theme = ref<string>("");
   const language = ref<string>("");
+  const initialized = ref<boolean>(false);
 
   function broadcastLanguageChange(lang: string) {
     log("begin broadcastLanguageChange", lang);
@@ -39,8 +40,11 @@ export const useSettingsStore = defineStore("settings", () => {
   }
 
   function initialize() {
+    if (initialized.value) return;
+
     analytic.register({ target: language.value });
     fetchSettingsFromBackground();
+    initialized.value = true;
   }
 
   async function syncSettingsToBackground() {

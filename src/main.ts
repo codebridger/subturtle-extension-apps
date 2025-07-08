@@ -21,6 +21,7 @@ import {
   unregisterGlobalEvents,
 } from "./subtitle/helpers/global-events";
 import { loginWithLastSession } from "./plugins/modular-rest";
+import { useSettingsStore } from "./common/store/settings";
 
 let vueApp!: App;
 let appInitializer!: AppInitializer;
@@ -54,6 +55,10 @@ function start() {
 
       // Add plugins
       vueApp = addPlugins(app);
+
+      // Initialize settings
+      const settingsStore = useSettingsStore();
+      settingsStore.initialize();
 
       // Login with last session
       loginWithLastSession();

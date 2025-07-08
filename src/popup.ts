@@ -8,6 +8,7 @@ import components from "./popup/components/components";
 import { getAsset } from "./popup/helper/assets";
 import { router } from "./popup/router";
 import { installVuePrime } from "./plugins/vue-prime";
+import { useSettingsStore } from "./common/store/settings";
 
 // Set uninstall url
 chrome.runtime.setUninstallURL(process.env.UNINSTALL_FORM_URL || "");
@@ -31,5 +32,9 @@ vueApp.config.globalProperties = {
   ...vueApp.config.globalProperties,
   $getAsset: getAsset,
 };
+
+// Initialize settings
+const settingsStore = useSettingsStore();
+settingsStore.initialize();
 
 vueApp.mount("#app");

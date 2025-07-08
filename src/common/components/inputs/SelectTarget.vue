@@ -1,29 +1,35 @@
 <template>
-  <select-language v-model="lang" @update:modelValue="onChanged" label="" />
+  <select-language
+    v-model="store.language"
+    @update:modelValue="onChanged"
+    label=""
+  />
 </template>
 
 <script setup>
 import { useSettingsStore } from "../../store/settings";
 import SelectLanguage from "./SelectLanguage.vue";
-import { onMounted, ref, watch, nextTick } from "vue";
+import { log } from "../../helper/log";
+import { onMounted, watch } from "vue";
 
 const store = useSettingsStore();
-
-const lang = ref("");
-
-watch(store.language, (newVal) => {
-  nextTick(() => {
-    lang.value = newVal;
-  });
-});
 
 function onChanged(lang) {
   store.setLanguage(lang);
 }
 
 onMounted(() => {
+  log("onMounted: " + store.language);
   store.fetchSettingsFromBackground();
 });
+
+watch(
+  () => store.language,
+  (newLang) => {
+    log("Language updated:", newLang);
+  },
+  { immediate: true }
+);
 </script>
 
 <style></style>

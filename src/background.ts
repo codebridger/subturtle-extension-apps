@@ -1,3 +1,4 @@
+import { log } from "./common/helper/log";
 import {
   GetLoginStatusMessage,
   GetCurrentChromeUserToken,
@@ -47,6 +48,8 @@ function broadcastSettings(settings: SettingsObject) {
 }
 
 chrome.runtime.onMessage.addListener(function (request, _sender, sendResponse) {
+  log("background: onMessage", request);
+
   // Get login status
   if (GetLoginStatusMessage.is(request)) {
     chrome.storage.sync.get("token").then(({ token }) => {
