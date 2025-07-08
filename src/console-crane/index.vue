@@ -13,8 +13,7 @@ import { RouterView, useRouter } from "vue-router";
 import Modal from "./components/Modal.vue";
 import { getSubturtleDashboardUrlWithToken } from "../common/static/global";
 import Button from "primevue/button";
-import { watch, onMounted, onUnmounted, ref } from "vue";
-import { useSystemTheme } from "./useSystemTheme";
+import { watch, onMounted, onUnmounted, ref, computed } from "vue";
 
 const store = useConsoleCraneStore();
 const router = useRouter();
@@ -32,8 +31,19 @@ function goToDashboard() {
   window.open(getSubturtleDashboardUrlWithToken(), "_blank");
 }
 
+function openSettings() {
+  store.toggleConsoleCrane("settings", {}, true);
+}
+
 const rootRef = ref<HTMLElement | null>(null);
 let cleanupThemeListener: (() => void) | undefined;
+
+const isOnSettingsPage = computed(() => {
+  return (
+    store.history.length > 0 &&
+    store.history[store.history.length - 1].name === "settings"
+  );
+});
 
 onMounted(() => {
   if (rootRef.value) {
@@ -58,12 +68,45 @@ onUnmounted(() => {
           <section
             class="flex flex-row-reverse justify-between mx-12 mt-6 shrink-0"
           >
-            <Button
-              severity="info"
-              rounded
-              label="Go to Dashboard"
-              @click="goToDashboard"
-            />
+            <div class="flex space-x-2 items-center w-full">
+              <template v-if="isOnSettingsPage">
+                <Button
+                  severity="secondary"
+                  rounded
+                  @click="store.goBack"
+                  size="small"
+                  class="!bg-white !border-gray-300 dark:!bg-blue-900 dark:!border-gray-600"
+                >
+                  <template #icon>
+                    <span
+                      class="i-mdi-arrow-left text-gray-700 dark:text-white scale-[1.5]"
+                    />
+                  </template>
+                </Button>
+              </template>
+              <template v-else>
+                <Button
+                  severity="secondary"
+                  rounded
+                  @click="openSettings"
+                  size="small"
+                  class="!bg-white !border-gray-300 dark:!bg-blue-900 dark:!border-gray-600"
+                >
+                  <template #icon>
+                    <span
+                      class="i-mdi-cog text-gray-700 dark:text-white scale-[1.5]"
+                    />
+                  </template>
+                </Button>
+              </template>
+              <div class="flex-1"></div>
+              <Button
+                severity="info"
+                rounded
+                label="Go to Dashboard"
+                @click="goToDashboard"
+              />
+            </div>
           </section>
 
           <!-- Body: scrollable -->

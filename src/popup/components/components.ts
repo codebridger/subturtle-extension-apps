@@ -2,8 +2,8 @@
 import Logo from "./materials/Logo.vue";
 
 // Inputs
-import SelectLanguage from "./inputs/SelectLanguage.vue";
-import SelectTarget from "./inputs/SelectTarget.vue";
+import SelectLanguage from "../../common/components/inputs/SelectLanguage.vue";
+import SelectTarget from "../../common/components/inputs/SelectTarget.vue";
 
 export default {
   // Materials

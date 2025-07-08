@@ -1,1 +1,1 @@
-export type ConsolePage = "word-detail";
+export type ConsolePage = "empty" | "word-detail" | "settings";

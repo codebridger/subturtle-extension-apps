@@ -1,5 +1,7 @@
 import { App } from "vue";
 
+export type Theme = "auto" | "light" | "dark";
+
 export type Dictionary = {
   [key: string]: any;
 };

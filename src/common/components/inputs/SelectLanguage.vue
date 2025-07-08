@@ -33,46 +33,53 @@
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent } from "@vue/runtime-core";
-import { SUPPORTED_LANGUES } from "../../../common/static/langueges.static";
+<script setup lang="ts">
+import { ref, computed, watch } from "vue";
+import { SUPPORTED_LANGUES } from "../../static/langueges.static";
 
-export default defineComponent({
-  props: {
-    modelValue: String,
-    label: String,
-  },
+// Define types
+interface Language {
+  title: string;
+  code: string;
+}
 
-  emits: ["update:modelValue"],
+interface Props {
+  modelValue?: string;
+  label?: string;
+}
 
-  data() {
-    return {
-      lang: "en",
-    };
-  },
+interface Emits {
+  (e: "update:modelValue", value: string): void;
+}
 
-  computed: {
-    list() {
-      return SUPPORTED_LANGUES;
-    },
-  },
-
-  watch: {
-    modelValue: {
-      immediate: true,
-      handler(value) {
-        if (!value) return;
-        this.lang = value;
-      },
-    },
-  },
-
-  methods: {
-    commit() {
-      this.$emit("update:modelValue", this.lang);
-    },
-  },
+// Define props and emits
+const props = withDefaults(defineProps<Props>(), {
+  modelValue: "",
+  label: "",
 });
+
+const emit = defineEmits<Emits>();
+
+// Reactive data
+const lang = ref<string>("en");
+
+// Computed properties
+const list = computed<Language[]>(() => SUPPORTED_LANGUES);
+
+// Watchers
+watch(
+  () => props.modelValue,
+  (value) => {
+    if (!value) return;
+    lang.value = value;
+  },
+  { immediate: true }
+);
+
+// Methods
+const commit = (): void => {
+  emit("update:modelValue", lang.value);
+};
 </script>
 
 <style></style>

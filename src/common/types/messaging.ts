@@ -3,11 +3,17 @@ export const MESSAGE_TYPE = {
   GET_CURRENT_CHROME_USER_TOKEN: "GET_CURRENT_CHROME_USER_TOKEN",
   OPEN_LOGIN_WINDOW: "OPEN_LOGIN_WINDOW",
   STORE_USER_TOKEN: "STORE_USER_TOKEN",
+  SYNC_SETTINGS: "SYNC_SETTINGS",
 };
 
 export type LoginStatusResponse = {
   status: boolean;
   token?: string;
+};
+
+export type SettingsObject = {
+  theme: string;
+  language: string;
 };
 
 export class BaseMessage {
@@ -72,5 +78,19 @@ export class OpenLoginWindowMessage implements BaseMessage {
 
   static is(message: any): message is OpenLoginWindowMessage {
     return message.type === MESSAGE_TYPE.OPEN_LOGIN_WINDOW;
+  }
+}
+
+export class SettingsSyncMessage {
+  type: string;
+  settings?: SettingsObject;
+
+  constructor(settings?: SettingsObject) {
+    this.type = MESSAGE_TYPE.SYNC_SETTINGS;
+    if (settings) this.settings = settings;
+  }
+
+  static is(message: any): message is SettingsSyncMessage {
+    return message.type === MESSAGE_TYPE.SYNC_SETTINGS;
   }
 }

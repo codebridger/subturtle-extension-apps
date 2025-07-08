@@ -1,8 +1,12 @@
+import { log } from "./common/helper/log";
 import {
   GetLoginStatusMessage,
   GetCurrentChromeUserToken,
   OpenLoginWindowMessage,
   StoreUserTokenMessage,
+  SettingsSyncMessage,
+  SettingsObject,
+  MESSAGE_TYPE,
 } from "./common/types/messaging";
 
 export {};
@@ -31,7 +35,21 @@ function getScreenSize() {
   });
 }
 
+function broadcastSettings(settings: SettingsObject) {
+  chrome.tabs.query({}, (tabs) => {
+    for (const tab of tabs) {
+      tab?.id &&
+        chrome.tabs.sendMessage(tab.id, {
+          type: MESSAGE_TYPE.SYNC_SETTINGS,
+          settings,
+        });
+    }
+  });
+}
+
 chrome.runtime.onMessage.addListener(function (request, _sender, sendResponse) {
+  log("background: onMessage", request);
+
   // Get login status
   if (GetLoginStatusMessage.is(request)) {
     chrome.storage.sync.get("token").then(({ token }) => {
@@ -82,6 +100,23 @@ chrome.runtime.onMessage.addListener(function (request, _sender, sendResponse) {
         top: Math.round(top),
       });
     });
+  }
+
+  // Handle SYNC_SETTINGS
+  else if (SettingsSyncMessage.is(request)) {
+    if (request.settings) {
+      // Save settings and broadcast
+      chrome.storage.local.set({ settings: request.settings }).then(() => {
+        if (request.settings) broadcastSettings(request.settings);
+        sendResponse({ status: true });
+      });
+    } else {
+      // Return current settings
+      chrome.storage.local.get("settings").then((data) => {
+        const settings = new SettingsSyncMessage(data.settings);
+        sendResponse(settings);
+      });
+    }
   }
 
   return true;
