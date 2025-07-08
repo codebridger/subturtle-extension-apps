@@ -1,54 +1,58 @@
 <template>
-  <section class="h-screen flex flex-col overflow-hidden">
+  <section class="h-screen flex flex-col overflow-auto">
     <div class="relative flex justify-center items-center w-full">
       <div class="w-[650px]">
         <Carousel :value="slides">
           <template #item="{ data }">
-            <img
-              :src="data.image"
-              class="w-full h-full object-cover rounded-xl"
-            />
-            <!-- <div class="flex justify-center items-center h-80">
-            {{ data.title }}
-          </div> -->
+            <div class="w-full h-full relative">
+              <img
+                :src="data.image"
+                class="w-full h-full object-cover rounded-xl"
+              />
+
+              <!-- Slider overlay header -->
+              <div
+                class="absolute top-12 flex justify-between left-0 right-0 px-12"
+              >
+                <h1 class="text-xl font-extrabold text-white mb-2">
+                  Subturtle
+                </h1>
+                <section class="rounded-full bg-gray-900 p-2">
+                  <Logo size="20" onlyLogo />
+                </section>
+              </div>
+            </div>
           </template>
         </Carousel>
-
-        <section class="absolute top-6 left-20 rounded-full bg-gray-900 p-2">
-          <Logo size="100" onlyLogo />
-        </section>
       </div>
     </div>
 
     <section
-      class="px-12 flex flex-col justify-start items-end gap-8 bg-gray-950 flex-1"
+      class="px-12 flex flex-col gap-4 bg-gray-950 flex-1 justify-center"
     >
-      <section class="text-lg">
-        <p class="text-gray-300">
-          Learning English doesn't have to mean extra time. Now, you can easily
-          do it during your daily streaming routines 😉
+      <!-- Description -->
+      <div>
+        <h2 class="text-gray-300 text-lg font-semibold text-primary">
+          Turn captions into conversations.
+        </h2>
+        <p class="text-gray-300 text-base mb-6">
+          Your favorite shows are now your personal language coaches. Learn
+          words in their true context as you stream, then practice speaking them
+          with our AI.
         </p>
-      </section>
+      </div>
 
-      <!-- <div class="w-12 animate-[slide_1s_ease-in-out_infinite] text-gray-300">
-        <span class="i-solar-double-alt-arrow-right-bold-duotone text-2xl" />
-      </div> -->
-
-      <section class="flex flex-row items-center justify-end gap-4">
-        <SelectTarget class="w-28" />
+      <!-- Login button -->
+      <div class="flex flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-2">
+          <label class="text-gray-300 text-sm">My language</label>
+          <SelectTarget class="w-28" />
+        </div>
         <Button :disabled="isLogin" label="Login" @click="openLogin">
           <template #icon> <span class="i-solar-login-3-bold" /> </template>
         </Button>
-      </section>
-    </section>
-
-    <!-- <section class="flex flex-col items-center">
-      <h3 class="font-bold text-gray-400">Supported websites</h3>
-      <div class="flex justify-center items-center -mt-3">
-        <img class="w-20" :src="getAsset('/svg/netflix_logo.svg')" />
-        <img class="w-20" :src="getAsset('/svg/youtube_logo.svg')" />
       </div>
-    </section> -->
+    </section>
   </section>
 </template>
 
@@ -80,12 +84,6 @@ const slides = [
       "Modular uses the latest security standards to keep your data safe.",
     image: getAsset("/slides/slide01.png"),
   },
-  // {
-  //   title: "Open Source",
-  //   description:
-  //     "Modular is open source, so you can be sure that your data is safe.",
-  //   image: getAsset("/slides/slide01.png"),
-  // },
 ];
 
 watch(isLogin, (value) => {

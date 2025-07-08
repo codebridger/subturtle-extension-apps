@@ -42,7 +42,7 @@
               <h3
                 class="text-lg font-medium mb-4 text-white flex items-center gap-2"
               >
-                Target Language
+                My language
                 <div class="tooltip-container">
                   <span
                     class="text-gray-400 hover:text-gray-300 cursor-help text-sm"
@@ -57,7 +57,7 @@
                 <span
                   class="text-gray-400 text-sm whitespace-nowrap group-hover:text-gray-300 transition-colors"
                 >
-                  Choose the language to help English by
+                  Choose your language, so we can help you learn better.
                 </span>
                 <div class="flex-1 w-full">
                   <select-target label="Select" class="w-full" />
