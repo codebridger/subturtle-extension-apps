@@ -39,11 +39,11 @@ export const useSettingsStore = defineStore("settings", () => {
     syncSettingsToBackground();
   }
 
-  function initialize() {
+  async function initialize() {
     if (initialized.value) return;
 
     analytic.register({ target: language.value });
-    fetchSettingsFromBackground();
+    await fetchSettingsFromBackground();
     initialized.value = true;
   }
 
@@ -89,6 +89,23 @@ export const useSettingsStore = defineStore("settings", () => {
         if (message.settings.theme) theme.value = message.settings.theme;
         if (message.settings.language)
           language.value = message.settings.language;
+      }
+    });
+  }
+
+  // Listen for storage changes
+  if (
+    typeof chrome !== "undefined" &&
+    chrome.storage &&
+    chrome.storage.onChanged
+  ) {
+    chrome.storage.onChanged.addListener((changes, namespace) => {
+      if (namespace === "local" && changes.settings) {
+        const newSettings = changes.settings.newValue as SettingsObject;
+        if (newSettings) {
+          if (newSettings.theme) theme.value = newSettings.theme;
+          if (newSettings.language) language.value = newSettings.language;
+        }
       }
     });
   }

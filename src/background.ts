@@ -113,7 +113,8 @@ chrome.runtime.onMessage.addListener(function (request, _sender, sendResponse) {
     } else {
       // Return current settings
       chrome.storage.local.get("settings").then((data) => {
-        sendResponse({ settings: data.settings });
+        const settings = new SettingsSyncMessage(data.settings);
+        sendResponse(settings);
       });
     }
   }

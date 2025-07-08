@@ -17,19 +17,6 @@ const store = useSettingsStore();
 function onChanged(lang) {
   store.setLanguage(lang);
 }
-
-onMounted(() => {
-  log("onMounted: " + store.language);
-  store.fetchSettingsFromBackground();
-});
-
-watch(
-  () => store.language,
-  (newLang) => {
-    log("Language updated:", newLang);
-  },
-  { immediate: true }
-);
 </script>
 
 <style></style>
