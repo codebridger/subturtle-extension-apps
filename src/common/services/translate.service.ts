@@ -18,6 +18,10 @@ export class TranslateService {
   _eventBus = new TinyEmitter();
   targetLanguage = ""; // Default fallback
 
+  get languageTitle() {
+    return LanguageDetector.getLanguageTitle(this.targetLanguage);
+  }
+
   constructor() {
     // Initialize with detected language
     this.initializeTargetLanguage();
@@ -105,7 +109,7 @@ export class TranslateService {
       args: {
         translationType: "simple",
         sourceLanguage: "auto",
-        targetLanguage: this.targetLanguage,
+        targetLanguage: this.languageTitle,
         phrase: text,
         context: context || "",
       },
@@ -119,7 +123,7 @@ export class TranslateService {
         args: {
           translationType: "detailed",
           sourceLanguage: "auto",
-          targetLanguage: this.targetLanguage,
+          targetLanguage: this.languageTitle,
           phrase: text,
           context: context || "",
         },
