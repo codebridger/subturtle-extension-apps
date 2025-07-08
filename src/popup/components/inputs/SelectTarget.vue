@@ -3,24 +3,32 @@
 </template>
 
 <script>
+import { LanguageDetector } from "../../../common/helper/language-detection";
+
 export default {
   data() {
     return {
-      lang: "fa",
+      lang: "", // Default fallback
     };
   },
 
-  mounted() {
-    // Load target language
-    //
-    chrome.storage.local.get("target", (data) => {
-      this.lang = data.target || "fa";
-    });
+  async mounted() {
+    // Use the new language detection system
+    try {
+      const detectedLang = await LanguageDetector.getDefaultLanguage();
+      this.lang = detectedLang;
+    } catch (error) {
+      console.warn("Failed to detect default language:", error);
+      // Fallback to stored preference or default
+      chrome.storage.local.get("target", (data) => {
+        this.lang = data.target || "en";
+      });
+    }
   },
 
   methods: {
     onChanged() {
-      chrome.storage.local.set({ target: this.lang });
+      LanguageDetector.setLanguage(this.lang);
 
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         let tabId = tabs[0].id;

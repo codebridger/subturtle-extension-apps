@@ -11,26 +11,42 @@ import { log } from "../helper/log";
 import proxy from "./proxy.service";
 import { functionProvider } from "@modular-rest/client";
 import { LanguageLearningData } from "../../console-crane/modules/word-detail/types";
+import { LanguageDetector } from "../helper/language-detection";
 
 export class TranslateService {
   static instance = new TranslateService();
   _eventBus = new TinyEmitter();
-  targetLanguage = "fa";
+  targetLanguage = "en"; // Default fallback
 
   constructor() {
-    // Load target language
-    //
-    chrome.storage.local.get("target", (data) => {
-      this.targetLanguage = data.target || "fa";
+    // Initialize with detected language
+    this.initializeTargetLanguage();
+  }
 
+  private async initializeTargetLanguage() {
+    try {
+      // Use the new language detection system
+      const detectedLang = await LanguageDetector.getDefaultLanguage();
+      this.targetLanguage = detectedLang;
+
+      // Store the detected language
+      chrome.storage.local.set({ target: this.targetLanguage });
       analytic.register({ target: this.targetLanguage });
-    });
+
+      log("Target language initialized:", this.targetLanguage);
+    } catch (error) {
+      console.warn("Failed to detect default language, using fallback:", error);
+      // Fallback to stored preference or default
+      chrome.storage.local.get("target", (data) => {
+        this.targetLanguage = data.target || "en";
+        analytic.register({ target: this.targetLanguage });
+      });
+    }
 
     // Listen for change on target language
-    //
     chrome.runtime.onMessage.addListener((message, sender) => {
       if (message.target) {
-        log("Target languege changed", message.target);
+        log("Target language changed", message.target);
 
         analytic.track("Target changed", {
           to: message.target,
