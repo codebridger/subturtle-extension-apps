@@ -1,7 +1,7 @@
 node_modules
 package-lock.json
 dist
-.env
+.env*
 .DS_Store
 static/key-file.json
 yarn.lock

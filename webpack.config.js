@@ -6,6 +6,8 @@ const CopyPlugin = require("copy-webpack-plugin");
 
 const { VueLoaderPlugin } = require("vue-loader");
 
+const isProduction = process.env.NODE_ENV === "production";
+
 module.exports = {
   mode: "development",
   devtool: false,
@@ -50,6 +52,9 @@ module.exports = {
   plugins: [
     new Dotenv({
       safe: true,
+      path: isProduction
+        ? path.resolve(__dirname, ".env.production")
+        : path.resolve(__dirname, ".env"),
     }),
     new VueLoaderPlugin(),
     new CopyPlugin({

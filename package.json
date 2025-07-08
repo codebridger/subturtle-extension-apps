@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "serve": "webpack --watch",
-    "build": "webpack --mode=production",
+    "build": "NODE_ENV=production webpack --mode=production",
     "zip": "cd dist && zip -r subturtle.zip . && mv subturtle.zip ../subturtle.zip"
   },
   "devDependencies": {
