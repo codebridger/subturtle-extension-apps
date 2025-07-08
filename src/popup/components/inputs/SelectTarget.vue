@@ -4,8 +4,13 @@
 
 <script>
 import { LanguageDetector } from "../../../common/helper/language-detection";
+import SelectLanguage from "./SelectLanguage.vue";
 
 export default {
+  components: {
+    SelectLanguage,
+  },
+
   data() {
     return {
       lang: "", // Default fallback
