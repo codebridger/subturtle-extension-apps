@@ -40,8 +40,8 @@
 <script setup lang="ts">
 import { ref, inject, onMounted } from "vue";
 import Fieldset from "primevue/fieldset";
-import SelectTarget from "../../../popup/components/inputs/SelectTarget.vue";
-import ThemeSwitcher from "../../components/ThemeSwitcher.vue";
+import SelectTarget from "../../../common/components/inputs/SelectTarget.vue";
+import ThemeSwitcher from "../../../common/components/inputs/ThemeSwitcher.vue";
 
 // Inject frame size from modal
 const frameSize = inject<{ width: number; height: number }>("frameSize");

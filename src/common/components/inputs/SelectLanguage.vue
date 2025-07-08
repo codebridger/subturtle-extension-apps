@@ -35,7 +35,7 @@
 
 <script lang="ts">
 import { defineComponent } from "@vue/runtime-core";
-import { SUPPORTED_LANGUES } from "../../../common/static/langueges.static";
+import { SUPPORTED_LANGUES } from "../../static/langueges.static";
 
 export default defineComponent({
   props: {

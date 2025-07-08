@@ -64,7 +64,6 @@ import { isLogin } from "../../plugins/modular-rest";
 import { getAsset } from "../helper/assets";
 import { watch } from "vue";
 import { useRouter } from "vue-router";
-import SelectTarget from "../components/inputs/SelectTarget.vue";
 
 const router = useRouter();
 

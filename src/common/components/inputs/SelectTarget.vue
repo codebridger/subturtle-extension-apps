@@ -3,7 +3,7 @@
 </template>
 
 <script>
-import { LanguageDetector } from "../../../common/helper/language-detection";
+import { LanguageDetector } from "../../helper/language-detection";
 import SelectLanguage from "./SelectLanguage.vue";
 
 export default {
