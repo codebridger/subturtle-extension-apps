@@ -4,8 +4,6 @@ import {
 } from "../types/dictionaryapi.type";
 
 import { Dictionary } from "../types/general.type";
-import { TinyEmitter } from "tiny-emitter";
-import { SUPPORTED_LANGUES } from "../static/langueges.static";
 
 import proxy from "./proxy.service";
 import { functionProvider } from "@modular-rest/client";
@@ -15,7 +13,6 @@ import { useSettingsStore } from "../store/settings";
 
 export class TranslateService {
   static instance = new TranslateService();
-  _eventBus = new TinyEmitter();
 
   get targetLanguage() {
     return useSettingsStore().language;
@@ -27,12 +24,6 @@ export class TranslateService {
 
   constructor() {
     // No watcher or local state needed; use store directly
-  }
-
-  get targetLanguageTitle() {
-    return (
-      SUPPORTED_LANGUES.find((l) => l.code == this.targetLanguage)?.title || ""
-    );
   }
 
   async translateByGoogleTranslate(text: string | string[]) {
@@ -114,13 +105,5 @@ export class TranslateService {
         let store = new DefinitionStore(list);
         return store;
       });
-  }
-
-  addTargetChangeListerner(callback: (lang: string) => void) {
-    this._eventBus.on("target-changed", callback);
-  }
-
-  removeTargetChangeListerner(callback: (lang: string) => void) {
-    this._eventBus.off("target-changed", callback);
   }
 }
