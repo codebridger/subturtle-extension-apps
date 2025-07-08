@@ -8,7 +8,7 @@
           :key="theme.value"
           :severity="currentTheme === theme.value ? 'primary' : 'secondary'"
           :label="theme.label"
-          @click="setTheme(theme.value)"
+          @click="setTheme(theme.value as Theme)"
           size="small"
         />
       </div>
@@ -17,8 +17,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { computed } from "vue";
 import Button from "primevue/button";
+import { useSettingsStore } from "../../store/settings";
+import { Theme } from "../../types/general.type";
+
+const settingsStore = useSettingsStore();
 
 const themes = [
   { label: "Light", value: "light" },
@@ -26,27 +30,11 @@ const themes = [
   { label: "Auto", value: "auto" },
 ];
 
-const currentTheme = ref("auto");
+const currentTheme = computed(() => settingsStore.theme);
 
-function setTheme(theme: string) {
-  currentTheme.value = theme;
-  document.documentElement.classList.remove("light", "dark");
-  if (theme === "auto") {
-    const prefersDark = window.matchMedia(
-      "(prefers-color-scheme: dark)"
-    ).matches;
-    document.documentElement.classList.add(prefersDark ? "dark" : "light");
-  } else {
-    document.documentElement.classList.add(theme);
-  }
-  localStorage.setItem("theme", theme);
+function setTheme(theme: Theme) {
+  settingsStore.setTheme(theme);
 }
-
-onMounted(() => {
-  const savedTheme = localStorage.getItem("theme") || "auto";
-  currentTheme.value = savedTheme;
-  setTheme(savedTheme);
-});
 </script>
 
 <style scoped></style>
