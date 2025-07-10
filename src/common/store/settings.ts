@@ -84,7 +84,7 @@ export const useSettingsStore = defineStore("settings", () => {
   async function fetchSettingsFromBackground() {
     try {
       const response = await sendMessage(new SettingsSyncMessage());
-      log("fetchSettingsFromBackground", response);
+
       if (
         response &&
         (response as any).type === MESSAGE_TYPE.SYNC_SETTINGS &&

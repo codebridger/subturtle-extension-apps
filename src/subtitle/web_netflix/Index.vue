@@ -17,6 +17,7 @@ import { SubtitleBondingBox } from "../../common/types/general.type";
 import SubtitleComponent from "./components/Subtitle.vue";
 
 import TextCleaner from "text-cleaner";
+import { log } from "../../common/helper/log";
 
 export default defineComponent({
   components: { SubtitleComponent: SubtitleComponent as any },
