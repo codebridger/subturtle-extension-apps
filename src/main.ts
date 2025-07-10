@@ -87,7 +87,6 @@ function start() {
       appInitializer
         .start(vueApp)
         .then((_) => {
-          analytic.track("Used In");
           registerGlobalEvents();
         })
         .catch((_) => analytic.track("Error on initiating"));

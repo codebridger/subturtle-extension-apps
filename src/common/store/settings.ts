@@ -64,9 +64,10 @@ export const useSettingsStore = defineStore("settings", () => {
     if (initialized.value) return;
 
     initializeTheme();
-    analytic.register({ target: language.value });
     await fetchSettingsFromBackground();
     initialized.value = true;
+
+    analytic.register({ target: language.value });
   }
 
   async function syncSettingsToBackground() {
