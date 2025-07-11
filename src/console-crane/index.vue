@@ -14,6 +14,7 @@ import Modal from "./components/Modal.vue";
 import { getSubturtleDashboardUrlWithToken } from "../common/static/global";
 import Button from "primevue/button";
 import { watch, onMounted, onUnmounted, ref, computed } from "vue";
+import { analytic } from "../plugins/mixpanel";
 
 const store = useConsoleCraneStore();
 const router = useRouter();
@@ -29,6 +30,8 @@ watch(
 
 function goToDashboard() {
   window.open(getSubturtleDashboardUrlWithToken(), "_blank");
+
+  analytic.track("go-to-dashboard_clicked");
 }
 
 function openSettings() {

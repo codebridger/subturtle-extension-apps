@@ -109,6 +109,7 @@ import { PhraseType, PhraseBundleType } from "../../common/types/phrase.type";
 import { useDefaultBundleStore } from "../../stores/default-bundle";
 import { useProfileStore } from "../../stores/profile";
 import FreemiumLimitCounter from "./FreemiumLimitCounter.vue";
+import { analytic } from "../../plugins/mixpanel";
 
 const props = defineProps<{
   phrase: string;
@@ -219,14 +220,18 @@ async function removePhraseFromBundle(bundleId: string) {
 
   try {
     // Use the same approach as the dashboard - call the removePhrase function
-    await functionProvider.run({
-      name: "removePhrase",
-      args: {
-        phraseId: existedPhrase.value._id,
-        bundleId: bundleId,
-        refId: authentication.user?.id,
-      },
-    });
+    await functionProvider
+      .run({
+        name: "removePhrase",
+        args: {
+          phraseId: existedPhrase.value._id,
+          bundleId: bundleId,
+          refId: authentication.user?.id,
+        },
+      })
+      .then(() => {
+        analytic.track("phrase_removed-from-bundle");
+      });
 
     // Reload existing bundles to update UI
     await loadExistingBundles();
@@ -246,27 +251,31 @@ async function savePhrase() {
 
   try {
     // Use the enhanced server function with linguistic type
-    const result = await functionProvider.run({
-      name: "createPhrase",
-      args: {
-        phrase: props.phrase.trim(),
-        translation: props.translation.trim(),
-        translation_language: TranslateService.instance.targetLanguage.trim(),
-        bundleIds: selectedBundles.value,
-        refId: authentication.user?.id,
-        type: "linguistic", // Specify linguistic type
-        // Add linguistic-specific data from the word detail context
-        context: props.context || "",
-        direction: props.direction,
-        language_info: props.language_info,
-        linguistic_data: props.linguistic_data,
-      },
-    });
+    const result = await functionProvider
+      .run<PhraseType>({
+        name: "createPhrase",
+        args: {
+          phrase: props.phrase.trim(),
+          translation: props.translation.trim(),
+          translation_language: TranslateService.instance.targetLanguage.trim(),
+          bundleIds: selectedBundles.value,
+          refId: authentication.user?.id,
+          type: "linguistic", // Specify linguistic type
+          // Add linguistic-specific data from the word detail context
+          context: props.context || "",
+          direction: props.direction,
+          language_info: props.language_info,
+          linguistic_data: props.linguistic_data,
+        },
+      })
+      .then((result) => {
+        analytic.track("phrase_saved-to-bundle");
+
+        return result;
+      });
 
     // Update the existedPhrase reference if it's a new phrase
-    if (!existedPhrase.value) {
-      existedPhrase.value = result as PhraseType;
-    }
+    existedPhrase.value = result;
 
     // Store selected bundles as new defaults for future saves
     defaultBundleStore.setDefaultBundles(selectedBundles.value);

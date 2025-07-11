@@ -2,7 +2,7 @@
   <span
     :id="id"
     @mousedown="markerStore.toggleMarking(true)"
-    @mousemove="onMouseenter"
+    @mousemove.once="onMouseenter"
     @mouseout="onMouseout"
     @click="OpenWordDetail"
     :class="{
@@ -39,7 +39,7 @@ function onMouseenter() {
     return;
   }
 
-  analytic.track("Word hovered", { word: props.modelValue });
+  analytic.track("phrase_hovered");
 
   // Mark single word
   if (
