@@ -34,6 +34,9 @@ function updateIsLogin() {
     });
 
     analytic.identify(authentication.user?.id);
+    analytic.people.set({
+      $email: authentication.user?.email,
+    });
 
     analytic.track("user_logged-in");
   }

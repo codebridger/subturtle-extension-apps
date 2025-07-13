@@ -230,7 +230,7 @@ async function removePhraseFromBundle(bundleId: string) {
         },
       })
       .then(() => {
-        analytic.track("phrase_removed-from-bundle");
+        analytic.track("phrase_removed");
       });
 
     // Reload existing bundles to update UI
@@ -269,7 +269,7 @@ async function savePhrase() {
         },
       })
       .then((result) => {
-        analytic.track("phrase_saved-to-bundle");
+        analytic.track("phrase_saved");
 
         return result;
       });
