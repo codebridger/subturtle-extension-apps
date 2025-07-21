@@ -26,7 +26,10 @@
         </div>
 
         <!-- Translation box showing the word in target language -->
-        <Fieldset class="mb-2 dark:bg-blue-900" :legend="targetLanguageTitle">
+        <Fieldset
+          class="mb-2 dark:bg-blue-900"
+          :legend="targetLanguageTitle as string"
+        >
           <h1
             class="text-5xl text-center mb-8 dark:text-gray-100"
             :dir="wordData?.direction?.target"
@@ -200,12 +203,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, inject } from "vue";
+import { ref, computed, watch, inject, onMounted } from "vue";
 import { cleanText, firstUpper } from "../../../common/helper/text";
 import { TranslateService } from "../../../common/services/translate.service";
 import { LanguageLearningData } from "./types";
 
-import { analytic } from "../../../plugins/mixpanel";
 import { isLogin } from "../../../plugins/modular-rest";
 import SaveWordSectionV2 from "../../components/SaveWordSectionV2.vue";
 
@@ -215,11 +217,15 @@ import Button from "primevue/button";
 import Badge from "primevue/badge";
 
 import { useRoute } from "vue-router";
-import { useMarkerStore } from "../../../stores/marker";
 import { sendMessage } from "../../../common/helper/massage";
 import { OpenLoginWindowMessage } from "../../../common/types/messaging";
+import { analytic } from "../../../plugins/mixpanel";
 
 const route = useRoute();
+
+onMounted(() => {
+  analytic.track("word-detail-page_viewed");
+});
 
 /**
  * Extracts word data from the route parameter
@@ -245,7 +251,7 @@ const key = ref(new Date().getTime()); // Key for forcing component refresh
 
 // Gets the title of the target language (e.g., "Spanish", "French")
 const targetLanguageTitle = computed(
-  () => TranslateService.instance.targetLanguageTitle
+  () => TranslateService.instance.languageTitle
 );
 
 // Formats the word with proper capitalization
@@ -269,7 +275,6 @@ watch(
 
     if (!value) return;
 
-    analytic.track("Word clicked", { word: value });
     fetchWordDetail();
   },
   { immediate: true, deep: true }

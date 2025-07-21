@@ -44,7 +44,10 @@ export const useSettingsStore = defineStore("settings", () => {
     theme.value = newTheme;
     applyThemeToDOM(newTheme);
     localStorage.setItem("theme", newTheme);
+
     syncSettingsToBackground();
+
+    analytic.track("theme_changed");
   }
 
   function initializeTheme() {
@@ -55,16 +58,16 @@ export const useSettingsStore = defineStore("settings", () => {
 
   function setLanguage(newLang: string) {
     language.value = newLang;
-    analytic.track("Target changed", { to: newLang });
-    analytic.register({ target: newLang });
+
     syncSettingsToBackground();
+
+    analytic.track("target-language_changed");
   }
 
   async function initialize() {
     if (initialized.value) return;
 
     initializeTheme();
-    analytic.register({ target: language.value });
     await fetchSettingsFromBackground();
     initialized.value = true;
   }
@@ -74,6 +77,9 @@ export const useSettingsStore = defineStore("settings", () => {
       theme: theme.value,
       language: language.value,
     };
+
+    analytic.register({ target_language: language.value, theme: theme.value });
+
     try {
       await sendMessage(new SettingsSyncMessage(settings));
     } catch (e) {
@@ -84,7 +90,7 @@ export const useSettingsStore = defineStore("settings", () => {
   async function fetchSettingsFromBackground() {
     try {
       const response = await sendMessage(new SettingsSyncMessage());
-      log("fetchSettingsFromBackground", response);
+
       if (
         response &&
         (response as any).type === MESSAGE_TYPE.SYNC_SETTINGS &&
@@ -97,6 +103,11 @@ export const useSettingsStore = defineStore("settings", () => {
           applyThemeToDOM(settings.theme as Theme);
         }
         if (settings.language) language.value = settings.language;
+
+        analytic.register({
+          target_language: language.value,
+          theme: theme.value,
+        });
       }
     } catch (e) {
       log("Failed to fetch settings from background", e);

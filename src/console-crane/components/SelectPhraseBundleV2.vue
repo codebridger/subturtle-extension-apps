@@ -45,6 +45,7 @@ import { computed, onMounted, ref, watch } from "vue";
 
 import { COLLECTIONS, DATABASE } from "../../common/static/global";
 import { PhraseBundleType } from "../../common/types/phrase.type";
+import { analytic } from "../../plugins/mixpanel";
 
 const props = defineProps<{
   selectedBundles: string[];
@@ -118,6 +119,8 @@ function createNewBundle() {
     .then((newBundle) => {
       searchedBundleName.value = "";
       fetchOptions();
+
+      analytic.track("phrase-bundle_created");
     })
     .finally(() => {
       isCreating.value = false;

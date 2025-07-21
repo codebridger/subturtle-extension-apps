@@ -26,9 +26,24 @@
         <!-- TRANSLATED LINES 
         -->
         <template v-if="showTranslatedSentence">
-          <div :dir="dir">
-            <p :style="textStyle" v-for="(line, i) in translatedLines" :key="i">
+          <div :dir="dir" class="min-w-[150px]">
+            <p
+              v-if="translatedLines.length"
+              v-for="(line, i) in translatedLines"
+              :key="line.toString() + i"
+              :style="textStyle"
+            >
               {{ line }}
+            </p>
+            <p
+              v-else-if="isTranslatingWholeCaption"
+              :style="textStyle"
+              class="text-center animate-bounce"
+            >
+              ...
+            </p>
+            <p v-else :style="textStyle" class="text-center">
+              Translation is not available
             </p>
           </div>
         </template>
@@ -59,12 +74,15 @@ import { useMarkerStore } from "../../../stores/marker";
 import { clamp } from "../../../common/helper/math";
 import { getDir, rtls, cleanText } from "../../../common/helper/text";
 import { TranslateService } from "../../../common/services/translate.service";
+import { log } from "../../../common/helper/log";
+import { LOADING_ICON } from "../../../common/icons/icons";
 
 interface DataModel {
   translatedLines: String[];
 
   showTranslatedSentence: boolean;
   showWordDetail: boolean;
+  isTranslatingWholeCaption: boolean;
 }
 
 export default defineComponent({
@@ -79,11 +97,16 @@ export default defineComponent({
       translatedLines: [],
       showTranslatedSentence: false,
       showWordDetail: false,
+      isTranslatingWholeCaption: false,
     };
   },
 
   computed: {
     ...mapState(useMarkerStore, ["selectedPhrase", "sourceLanguage"]),
+
+    loadingIcon() {
+      return LOADING_ICON;
+    },
 
     lines() {
       let lines = this.translatedLines.length
@@ -154,8 +177,14 @@ export default defineComponent({
     },
 
     showTranslatedSentence(value) {
-      if (!value || this.translatedLines.length) return;
-      this.translateWholeCaption();
+      log("showTranslatedSentence", value);
+
+      if (value == true) {
+        this.translateWholeCaption();
+      } else {
+        this.translatedLines = [];
+        this.clear();
+      }
     },
   },
 
@@ -181,12 +210,17 @@ export default defineComponent({
 
       this.translatedLines = [];
 
+      this.isTranslatingWholeCaption = true;
+
       TranslateService.instance
         .fetchSimpleTranslation(translatingList)
-        .then(({ list, lang }) => {
+        .then((translationResult) => {
           translatingList.forEach((result, i) => {
-            this.translatedLines.push(list[i]);
+            this.translatedLines.push(translationResult);
           });
+        })
+        .finally(() => {
+          this.isTranslatingWholeCaption = false;
         });
     },
 

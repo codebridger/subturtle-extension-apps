@@ -14,10 +14,6 @@ export const netflix: AppInitializer = {
   start: async (app) => {
     await waitUntil(() => !!document.querySelector(SUBTITLE_CLASS));
 
-    // Init Analytic
-    //
-    analytic.track("Netflix");
-
     let appDiv = document.createElement("div");
     let videoContainer = document.querySelector(".watch-video");
 

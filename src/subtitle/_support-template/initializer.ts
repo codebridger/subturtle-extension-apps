@@ -16,10 +16,6 @@ export const initConfig: AppInitializer = {
   start: async (app) => {
     await waitUntil(() => !!document.querySelector(SUBTITLE_CLASS));
 
-    // Init Analytic
-    //
-    analytic.track(serviceName);
-
     let appDiv = document.createElement("div");
 
     // Insert the app div somewhere in the page

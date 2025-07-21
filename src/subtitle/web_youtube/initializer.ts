@@ -14,10 +14,6 @@ export const youtube: AppInitializer = {
   start: async (app) => {
     await waitUntil(() => !!document.querySelector(SUBTILE_CONTAINER_CLASS));
 
-    // Init Analytic
-    //
-    analytic.track("Youtube");
-
     let appDiv = document.createElement("div");
     appDiv.id = "app";
 

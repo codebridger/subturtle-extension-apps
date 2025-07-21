@@ -8,6 +8,7 @@ import {
 } from "../common/types/messaging";
 import { ref } from "vue";
 import { useProfileStore } from "../stores/profile";
+import { analytic } from "./mixpanel";
 
 GlobalOptions.set({
   host: process.env.SUBTURTLE_API_URL || "",
@@ -30,6 +31,11 @@ function updateIsLogin() {
     const profileStore = useProfileStore();
     profileStore.bootstrap().catch((error) => {
       console.error("Error bootstrapping profile store:", error);
+    });
+
+    analytic.identify(authentication.user?.id);
+    analytic.people.set({
+      $email: authentication.user?.email,
     });
   }
 }
@@ -98,6 +104,8 @@ export async function logout(sendAuthStatusToOtherParts = true) {
   profileStore.logout();
 
   updateIsLogin();
+
+  analytic.reset();
 
   if (sendAuthStatusToOtherParts) {
     const message = new StoreUserTokenMessage(null);

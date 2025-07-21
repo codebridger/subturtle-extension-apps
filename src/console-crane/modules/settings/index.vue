@@ -38,17 +38,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, inject, onMounted } from "vue";
+import { inject, onMounted } from "vue";
 import Fieldset from "primevue/fieldset";
 import SelectTarget from "../../../common/components/inputs/SelectTarget.vue";
 import ThemeSwitcher from "../../../common/components/inputs/ThemeSwitcher.vue";
+import { analytic } from "../../../plugins/mixpanel";
 
 // Inject frame size from modal
 const frameSize = inject<{ width: number; height: number }>("frameSize");
 
 // Initialize settings from localStorage
 onMounted(() => {
-  const savedLanguage = localStorage.getItem("language") || "en";
+  analytic.track("settings-page_viewed");
 });
 </script>
 
