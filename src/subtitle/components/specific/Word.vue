@@ -2,8 +2,9 @@
   <span
     :id="id"
     @mousedown="markerStore.toggleMarking(true)"
-    @mousemove.once="onMouseenter"
+    @mousemove="onMouseenter"
     @mouseout="onMouseout"
+    @mouseup="onMouseup"
     @click="OpenWordDetail"
     :class="{
       selected: markerStore.checkedSelected(id),
@@ -39,8 +40,6 @@ function onMouseenter() {
     return;
   }
 
-  analytic.track("phrase_hovered");
-
   // Mark single word
   if (
     !markerStore.isMarkingMode &&
@@ -64,6 +63,10 @@ function onMouseout() {
   if (!markerStore.isMarkingMode) {
     markerStore.clear();
   }
+}
+
+function onMouseup() {
+  analytic.track("multi_phrase_hovered");
 }
 
 function OpenWordDetail() {

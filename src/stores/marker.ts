@@ -56,6 +56,10 @@ export const useMarkerStore = defineStore("marker", {
 
     toggleMarkingMode(value: boolean) {
       this.mode = value ? "mark" : "select";
+
+      if (value == false) {
+        this.translate();
+      }
     },
 
     toggleMarking(value: boolean) {
@@ -89,7 +93,11 @@ export const useMarkerStore = defineStore("marker", {
       });
 
       // Translate the selected phrase
-      this.translate();
+      if (!this.marking) {
+        this.translate();
+      } else {
+        // when marking changed the translate will be triggered
+      }
     },
 
     clear() {
@@ -121,13 +129,25 @@ export const startMarking = (e: KeyboardEvent) => {
   document.body.style.cursor = "text";
 
   document.addEventListener("keyup", stopMarking);
+  document.addEventListener("mouseup", stopMarking);
 };
 
-export const stopMarking = (e: KeyboardEvent) => {
-  if (e.key !== "Control" && e.key !== "Meta") return;
+export const stopMarking = (e: KeyboardEvent | MouseEvent) => {
+  const isControlOrMeta =
+    e instanceof KeyboardEvent && (e.key === "Control" || e.key === "Meta");
 
-  useMarkerStore().toggleMarkingMode(false);
+  const isMouseUp = e instanceof MouseEvent && e.type === "mouseup";
 
-  document.body.style.cursor = "default";
-  document.removeEventListener("keyup", stopMarking);
+  if (isControlOrMeta || isMouseUp) {
+    // only stop marking when the key is Control or Meta or mouseup
+
+    const isMarking = useMarkerStore().isMarking;
+    if (isMarking) {
+      useMarkerStore().toggleMarkingMode(false);
+    }
+
+    document.body.style.cursor = "default";
+    document.removeEventListener("keyup", stopMarking);
+    document.removeEventListener("mouseup", stopMarking);
+  }
 };
