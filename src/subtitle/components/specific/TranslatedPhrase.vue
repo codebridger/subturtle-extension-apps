@@ -3,15 +3,17 @@
     v-if="activeTranslate"
     class="relative flex-row-reverse flex items-center justify-center space-x-2"
   >
-    <div class="flex">
-      <Button
-        class="mx-1"
-        severity="secondary"
-        v-for="item in items"
-        :key="item.label"
-        :icon="item.icon"
-        :onClick="item.command"
-      />
+    <div class="flex space-x-2 justify-end">
+      <div>
+        <Button
+          class="!w-8 !h-8"
+          severity="secondary"
+          v-for="item in items"
+          :key="item.label"
+          :icon="item.icon"
+          :onClick="item.command"
+        />
+      </div>
     </div>
 
     <div class="p-2 rounded-md" :style="props.textStyle">
@@ -46,6 +48,13 @@ const items = ref([
         word: markerStore.selectedPhrase,
         context: markerStore.context,
       });
+    },
+  },
+  {
+    label: "Clear",
+    icon: "i-solar-close-square-linear text-2xl",
+    command: () => {
+      markerStore.clear();
     },
   },
   // {
