@@ -6,7 +6,12 @@ const {
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: "class",
-  content: ["./dist/**/*.js", "./plugins/vue-prime/**/*.js"],
+  content: [
+    "./src/**/*.vue",
+    "./src/**/*.js",
+    "./plugins/vue-prime/**/*.js",
+    "./dist/**/*.js",
+  ],
 
   theme: {
     extend: {

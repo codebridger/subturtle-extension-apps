@@ -1,7 +1,7 @@
 {
 	"name": "Subturtle",
 	"description": "Turn video subtitles into English lessons. Learn new vocabulary in context as you watch on YouTube and Netflix.",
-	"version": "1.8.3",
+	"version": "1.8.4",
 	"manifest_version": 3,
 	"icons": {
 		"128": "/assets/logo-128.png",
