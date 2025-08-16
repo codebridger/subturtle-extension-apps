@@ -7,11 +7,13 @@
       <div>
         <Button
           class="!w-8 !h-8"
-          severity="secondary"
+          color="secondary"
           v-for="item in items"
           :key="item.label"
-          :icon="item.icon"
-          :onClick="item.command"
+          :icon-name="item.icon"
+          @click="item.command"
+          rounded="full"
+          size="sm"
         />
       </div>
     </div>
@@ -30,7 +32,7 @@ import { computed, defineProps, onMounted, ref, watch } from "vue";
 import { useMarkerStore } from "../../../stores/marker";
 import { useConsoleCraneStore } from "../../../console-crane/stores/console-crane";
 
-import Button from "primevue/button";
+import { Button } from "@codebridger/lib-vue-components/elements";
 
 const markerStore = useMarkerStore();
 const consoleCraneStore = useConsoleCraneStore();

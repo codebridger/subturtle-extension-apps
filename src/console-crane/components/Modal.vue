@@ -13,10 +13,10 @@
         <!-- Close button -->
         <div class="absolute right-[32px] left-[calc(100%-16px)] top-[-16px]">
           <Button
-            rounded
-            severity="secondary"
+            rounded="full"
+            color="secondary"
             @click="close"
-            size="small"
+            size="sm"
             class="!bg-white !border-gray-300 dark:!bg-blue-900 dark:!border-gray-600 shadow-md"
           >
             <template #icon>
@@ -37,7 +37,7 @@
 </template>
 
 <script setup lang="ts">
-import Button from "primevue/button";
+import { Button } from "@codebridger/lib-vue-components/elements";
 import {
   ref,
   watch,
