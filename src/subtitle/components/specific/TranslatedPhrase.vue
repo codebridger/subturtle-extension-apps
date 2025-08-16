@@ -26,7 +26,7 @@
 
 <script lang="ts" setup>
 import { cleanText } from "../../../common/helper/text";
-import { computed, defineProps, ref } from "vue";
+import { computed, defineProps, onMounted, ref, watch } from "vue";
 import { useMarkerStore } from "../../../stores/marker";
 import { useConsoleCraneStore } from "../../../console-crane/stores/console-crane";
 
@@ -38,6 +38,19 @@ const consoleCraneStore = useConsoleCraneStore();
 const props = defineProps<{
   textStyle: any;
 }>();
+
+onMounted(() => {
+  console.log("TranslatedPhrase mounted");
+});
+
+// watch both markerStore.translatedWords[markerStore.selectedPhrase] and markerStore.selectedPhrase
+watch(
+  () => [markerStore.translatedWords, markerStore.selectedPhrase],
+  ([value, phrase]) => {
+    console.log("translatedWords", value);
+    console.log("selectedPhrase", phrase);
+  }
+);
 
 const items = ref([
   {

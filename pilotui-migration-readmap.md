@@ -42,8 +42,8 @@ Plan of action (high level)
 
 To‑Do checklist (living)
 - [x] Create/clean this roadmap
-- [ ] Install `@codebridger/lib-vue-components`
-- [ ] Add `src/plugins/pilotui.ts` and wire it in `src/plugins/install.ts`
+- [x] Install `@codebridger/lib-vue-components`
+- [x] Add `src/plugins/pilotui.ts` and wire it in `src/plugins/install.ts`
 - [ ] Replace Button, Badge, InputText, MultiSelect, Carousel with PilotUI equivalents
 - [ ] Keep/InputGroup, Divider, Fieldset, Chip (PrimeVue) or adapters if needed
 - [ ] Build + manual QA; update remain list

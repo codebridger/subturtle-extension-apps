@@ -31,6 +31,7 @@
     "webpack-cli": "6.0.1"
   },
   "dependencies": {
+    "@codebridger/lib-vue-components": "/Users/navid-shad/Projects/CodeBridger/lib-vue-components",
     "@modular-rest/client": "1.12.0",
     "animejs": "3.2.1",
     "axios": "1.3.4",
