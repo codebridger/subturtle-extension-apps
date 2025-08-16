@@ -16,15 +16,15 @@
         </label>
 
         <InputGroup>
-          <InputText
+          <Input
             v-model="searchedBundleName"
-            @update:model-value="fetchOptions"
+            @update:modelValue="fetchOptions"
           />
           <Button
             label="Create"
-            severity="secondary"
+            color="secondary"
             :disabled="!isCreateNewAllowed"
-            :loading="isCreating"
+            :is-loading="isCreating"
             @click="createNewBundle"
           />
         </InputGroup>
@@ -36,9 +36,9 @@
 <script lang="ts" setup>
 import { dataProvider, authentication } from "@modular-rest/client";
 import MultiSelect from "primevue/multiselect";
-import InputText from "primevue/inputtext";
+import { Input } from "@codebridger/lib-vue-components/elements";
 import InputGroup from "primevue/inputgroup";
-import Button from "primevue/button";
+import { Button } from "@codebridger/lib-vue-components/elements";
 
 import { computed, onMounted, ref, watch } from "vue";
 

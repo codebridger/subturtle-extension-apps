@@ -52,7 +52,7 @@
         <!-- Login prompt if user is not logged in -->
         <Button
           v-else
-          severity="secondary"
+          color="secondary"
           class="my-2 text-center dark:text-gray-100"
           @click="handleLoginRequest"
         >
@@ -213,7 +213,7 @@ import SaveWordSectionV2 from "../../components/SaveWordSectionV2.vue";
 
 import Fieldset from "primevue/fieldset";
 import Divider from "primevue/divider";
-import Button from "primevue/button";
+import { Button } from "@codebridger/lib-vue-components/elements";
 import Badge from "primevue/badge";
 
 import { useRoute } from "vue-router";

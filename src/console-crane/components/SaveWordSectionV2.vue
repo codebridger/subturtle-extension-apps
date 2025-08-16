@@ -27,11 +27,11 @@
                   selectedBundles.length > 1 ? 's' : ''
                 }`
           "
-          :icon="isAtLimit ? 'pi pi-crown' : 'pi pi-plus'"
-          size="large"
+          :icon-name="isAtLimit ? 'pi pi-crown' : ''"
+          size="lg"
           @click="isAtLimit ? handleUpgrade() : savePhrase()"
           :disabled="!selectedBundles.length || isSaving"
-          :loading="isSaving"
+          :is-loading="isSaving"
           class="border-none bg-gradient-to-r from-pink-500 to-purple-600 shadow-md hover:from-pink-600 hover:to-purple-700 text-white font-semibold dark:from-pink-700 dark:to-purple-900"
         >
           <template #icon>
@@ -55,10 +55,10 @@
                   selectedBundles.length > 1 ? 's' : ''
                 }`
           "
-          size="large"
+          size="lg"
           @click="savePhrase"
           :disabled="!selectedBundles.length || isSaving"
-          :loading="isSaving"
+          :is-loading="isSaving"
           class="border-none bg-gradient-to-r from-pink-500 to-purple-600 shadow-md hover:from-pink-600 hover:to-purple-700 text-white font-semibold dark:from-pink-700 dark:to-purple-900"
         >
           <template #icon>
@@ -88,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-import Button from "primevue/button";
+import { Button } from "@codebridger/lib-vue-components/elements";
 import Inputgroup from "primevue/inputgroup";
 import Chip from "primevue/chip";
 import Fieldset from "primevue/fieldset";

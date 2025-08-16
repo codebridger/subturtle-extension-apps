@@ -74,7 +74,7 @@ onUnmounted(() => {
             <div class="flex space-x-2 items-center w-full">
               <template v-if="isOnSettingsPage">
                 <Button
-                  variant="secondary"
+                  color="secondary"
                   rounded="full"
                   @click="store.goBack"
                   size="sm"
@@ -89,7 +89,7 @@ onUnmounted(() => {
               </template>
               <template v-else>
                 <Button
-                  variant="secondary"
+                  color="secondary"
                   rounded="full"
                   @click="openSettings"
                   size="sm"
@@ -104,7 +104,7 @@ onUnmounted(() => {
               </template>
               <div class="flex-1"></div>
               <Button
-                variant="info"
+                color="info"
                 rounded="full"
                 label="Go to Dashboard"
                 @click="goToDashboard"

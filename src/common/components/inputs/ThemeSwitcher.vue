@@ -6,7 +6,7 @@
         <Button
           v-for="theme in themes"
           :key="theme.value"
-          :variant="currentTheme === theme.value ? 'primary' : 'secondary'"
+          :color="currentTheme === theme.value ? 'primary' : 'secondary'"
           :label="theme.label"
           @click="setTheme(theme.value as Theme)"
           size="sm"
