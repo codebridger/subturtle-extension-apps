@@ -12,7 +12,7 @@ import { useConsoleCraneStore } from "./stores/console-crane";
 import { RouterView, useRouter } from "vue-router";
 import Modal from "./components/Modal.vue";
 import { getSubturtleDashboardUrlWithToken } from "../common/static/global";
-import Button from "primevue/button";
+import { Button } from "@codebridger/lib-vue-components/elements";
 import { watch, onMounted, onUnmounted, ref, computed } from "vue";
 import { analytic } from "../plugins/mixpanel";
 
@@ -74,10 +74,10 @@ onUnmounted(() => {
             <div class="flex space-x-2 items-center w-full">
               <template v-if="isOnSettingsPage">
                 <Button
-                  severity="secondary"
-                  rounded
+                  variant="secondary"
+                  rounded="full"
                   @click="store.goBack"
-                  size="small"
+                  size="sm"
                   class="!bg-white !border-gray-300 dark:!bg-blue-900 dark:!border-gray-600"
                 >
                   <template #icon>
@@ -89,10 +89,10 @@ onUnmounted(() => {
               </template>
               <template v-else>
                 <Button
-                  severity="secondary"
-                  rounded
+                  variant="secondary"
+                  rounded="full"
                   @click="openSettings"
-                  size="small"
+                  size="sm"
                   class="!bg-white !border-gray-300 dark:!bg-blue-900 dark:!border-gray-600"
                 >
                   <template #icon>
@@ -104,8 +104,8 @@ onUnmounted(() => {
               </template>
               <div class="flex-1"></div>
               <Button
-                severity="info"
-                rounded
+                variant="info"
+                rounded="full"
                 label="Go to Dashboard"
                 @click="goToDashboard"
               />
