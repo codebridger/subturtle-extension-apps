@@ -58,7 +58,7 @@
 
 <script lang="ts" setup>
 import Carousel from "primevue/carousel";
-import Button from "primevue/button";
+import { Button } from "@codebridger/lib-vue-components/elements";
 import SelectTarget from "../../common/components/inputs/SelectTarget.vue";
 import { OpenLoginWindowMessage } from "../../common/types/messaging";
 import { isLogin } from "../../plugins/modular-rest";
