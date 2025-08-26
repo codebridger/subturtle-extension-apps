@@ -3,19 +3,16 @@
     v-if="activeTranslate"
     class="relative flex-row-reverse flex items-center justify-center space-x-2"
   >
-    <div class="flex space-x-2 justify-end">
-      <div>
-        <Button
-          class="!w-8 !h-8"
-          color="secondary"
-          v-for="item in items"
-          :key="item.label"
-          :icon-name="item.icon"
-          @click="item.command"
-          rounded="full"
-          size="sm"
-        />
-      </div>
+    <div class="flex justify-end">
+      <IconButton
+        v-for="item in items"
+        size="sm"
+        class="mx-1"
+        :icon="item.icon"
+        :key="item.label"
+        :color="item.color || 'default'"
+        @click="item.command"
+      />
     </div>
 
     <div class="p-2 rounded-md" :style="props.textStyle">
@@ -32,7 +29,7 @@ import { computed, defineProps, onMounted, ref, watch } from "vue";
 import { useMarkerStore } from "../../../stores/marker";
 import { useConsoleCraneStore } from "../../../console-crane/stores/console-crane";
 
-import { Button } from "@codebridger/lib-vue-components/elements";
+import { IconButton } from "@codebridger/lib-vue-components/elements";
 
 const markerStore = useMarkerStore();
 const consoleCraneStore = useConsoleCraneStore();
@@ -57,6 +54,7 @@ watch(
 const items = ref([
   {
     label: "Info",
+    color: "info",
     icon: "i-solar-info-square-linear text-2xl",
     command: () => {
       consoleCraneStore.toggleConsoleCrane("word-detail", {
@@ -67,6 +65,7 @@ const items = ref([
   },
   {
     label: "Clear",
+    color: "danger",
     icon: "i-solar-close-square-linear text-2xl",
     command: () => {
       markerStore.clear();

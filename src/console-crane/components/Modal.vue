@@ -12,19 +12,13 @@
       >
         <!-- Close button -->
         <div class="absolute right-[32px] left-[calc(100%-16px)] top-[-16px]">
-          <Button
+          <IconButton
+            size="md"
             rounded="full"
-            color="secondary"
+            icon="i-mdi-close"
             @click="close"
-            size="sm"
-            class="!bg-white !border-gray-300 dark:!bg-blue-900 dark:!border-gray-600 shadow-md"
-          >
-            <template #icon>
-              <span
-                class="i-mdi-close text-gray-700 dark:text-white scale-[2]"
-              />
-            </template>
-          </Button>
+            color="danger"
+          />
         </div>
 
         <!-- Content -->
@@ -37,7 +31,7 @@
 </template>
 
 <script setup lang="ts">
-import { Button } from "@codebridger/lib-vue-components/elements";
+import { Button, IconButton } from "@codebridger/lib-vue-components/elements";
 import {
   ref,
   watch,

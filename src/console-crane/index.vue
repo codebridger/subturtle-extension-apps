@@ -12,7 +12,7 @@ import { useConsoleCraneStore } from "./stores/console-crane";
 import { RouterView, useRouter } from "vue-router";
 import Modal from "./components/Modal.vue";
 import { getSubturtleDashboardUrlWithToken } from "../common/static/global";
-import { Button } from "@codebridger/lib-vue-components/elements";
+import { Button, IconButton } from "@codebridger/lib-vue-components/elements";
 import { watch, onMounted, onUnmounted, ref, computed } from "vue";
 import { analytic } from "../plugins/mixpanel";
 
@@ -73,34 +73,20 @@ onUnmounted(() => {
           >
             <div class="flex space-x-2 items-center w-full">
               <template v-if="isOnSettingsPage">
-                <Button
-                  color="secondary"
-                  rounded="full"
-                  @click="store.goBack"
+                <IconButton
                   size="sm"
-                  class="!bg-white !border-gray-300 dark:!bg-blue-900 dark:!border-gray-600"
-                >
-                  <template #icon>
-                    <span
-                      class="i-mdi-arrow-left text-gray-700 dark:text-white scale-[1.5]"
-                    />
-                  </template>
-                </Button>
+                  rounded="full"
+                  icon="i-mdi-arrow-left"
+                  @click="store.goBack"
+                />
               </template>
               <template v-else>
-                <Button
-                  color="secondary"
-                  rounded="full"
-                  @click="openSettings"
+                <IconButton
                   size="sm"
-                  class="!bg-white !border-gray-300 dark:!bg-blue-900 dark:!border-gray-600"
-                >
-                  <template #icon>
-                    <span
-                      class="i-mdi-cog text-gray-700 dark:text-white scale-[1.5]"
-                    />
-                  </template>
-                </Button>
+                  rounded="full"
+                  icon="i-mdi-cog"
+                  @click="openSettings"
+                />
               </template>
               <div class="flex-1"></div>
               <Button
