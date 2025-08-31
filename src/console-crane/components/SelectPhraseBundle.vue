@@ -36,7 +36,7 @@
 <script lang="ts" setup>
 import { dataProvider, authentication } from "@modular-rest/client";
 import MultiSelect from "primevue/multiselect";
-import { Input } from "@codebridger/lib-vue-components/elements";
+import { Input } from "@codebridger/lib-vue-components";
 import InputGroup from "primevue/inputgroup";
 import { Button } from "@codebridger/lib-vue-components/elements";
 
