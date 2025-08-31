@@ -74,12 +74,14 @@
       legend="Saved in"
     >
       <div class="flex flex-wrap gap-1.5">
-        <Chip
+        <Button
           v-for="bundle in existingBundles"
           :key="bundle._id"
           :label="bundle.title"
-          removable
-          @remove="removePhraseFromBundle(bundle._id)"
+          chip
+          rounded="full"
+          size="sm"
+          @chip-click="removePhraseFromBundle(bundle._id)"
           class="saved-chip"
         />
       </div>
@@ -90,7 +92,6 @@
 <script setup lang="ts">
 import { Button } from "@codebridger/lib-vue-components/elements";
 import Inputgroup from "primevue/inputgroup";
-import Chip from "primevue/chip";
 import Fieldset from "primevue/fieldset";
 import SelectPhraseBundleV2 from "./SelectPhraseBundleV2.vue";
 import { onMounted, ref, watch, computed } from "vue";

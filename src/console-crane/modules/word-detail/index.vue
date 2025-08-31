@@ -76,18 +76,18 @@
             </p>
 
             <!-- Type and formality level -->
-            <div class="flex text-2xl gap-2">
-              <Badge
+            <div class="flex gap-2">
+              <IconButton
                 v-if="wordData.linguistic_data.type"
-                :value="wordData.linguistic_data.type.toUpperCase()"
-                severity="info"
-                size="large"
+                badge
+                size="sm"
+                :label="wordData.linguistic_data.type.toUpperCase()"
               />
-              <Badge
+              <IconButton
                 v-if="wordData.linguistic_data.formality_level"
-                :value="wordData.linguistic_data.formality_level.toUpperCase()"
-                severity="warning"
-                size="large"
+                badge
+                size="sm"
+                :label="wordData.linguistic_data.formality_level.toUpperCase()"
               />
             </div>
           </Fieldset>
@@ -213,8 +213,7 @@ import SaveWordSectionV2 from "../../components/SaveWordSectionV2.vue";
 
 import Fieldset from "primevue/fieldset";
 import Divider from "primevue/divider";
-import { Button } from "@codebridger/lib-vue-components/elements";
-import Badge from "primevue/badge";
+import { Button, IconButton } from "@codebridger/lib-vue-components/elements";
 
 import { useRoute } from "vue-router";
 import { sendMessage } from "../../../common/helper/massage";
