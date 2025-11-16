@@ -52,8 +52,14 @@
           </label>
           <SelectTarget class="w-32" />
         </div>
-        <Button :disabled="isLogin" label="Login" @click="openLogin">
-          <template #icon> <span class="i-solar-login-3-bold" /> </template>
+        <Button
+          :disabled="isLogin"
+          :color="'primary'"
+          label="Login"
+          @click="openLogin"
+          :iconName="'i-solar-login-3-bold'"
+          :iconPosition="'right'"
+        >
         </Button>
       </div>
     </section>
