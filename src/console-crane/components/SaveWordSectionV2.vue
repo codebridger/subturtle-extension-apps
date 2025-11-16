@@ -10,9 +10,9 @@
       @upgrade="handleUpgrade"
       class="mb-4"
     >
-      <Inputgroup class="mb-3 !border-none">
+      <InputGroup>
         <SelectPhraseBundleV2
-          class="!border-none"
+          class="flex-1"
           ref="selectBundleRef"
           v-model:selected-bundles="selectedBundles"
           :excluded-bundle-ids="existingBundles.map((b) => b._id)"
@@ -38,10 +38,10 @@
             <i :class="isAtLimit ? 'pi pi-crown' : 'mr-4 i-ep-collection'" />
           </template>
         </Button>
-      </Inputgroup>
+      </InputGroup>
     </FreemiumLimitCounter>
     <template v-else>
-      <Inputgroup class="mb-3">
+      <div class="flex w-full">
         <SelectPhraseBundleV2
           ref="selectBundleRef"
           v-model:selected-bundles="selectedBundles"
@@ -65,7 +65,7 @@
             <i class="mr-4 i-ep-collection" />
           </template>
         </Button>
-      </Inputgroup>
+      </div>
     </template>
     <!-- Existing Bundles as Fieldset -->
     <Fieldset
@@ -90,8 +90,7 @@
 </template>
 
 <script setup lang="ts">
-import { Button } from "@codebridger/lib-vue-components/elements";
-import Inputgroup from "primevue/inputgroup";
+import { InputGroup, Button } from "@codebridger/lib-vue-components";
 import Fieldset from "primevue/fieldset";
 import SelectPhraseBundleV2 from "./SelectPhraseBundleV2.vue";
 import { onMounted, ref, watch, computed } from "vue";

@@ -31,9 +31,8 @@
       </div>
     </div>
     <!-- Slot for word saver UI -->
-    <div>
-      <slot />
-    </div>
+
+    <slot />
   </div>
 </template>
 
