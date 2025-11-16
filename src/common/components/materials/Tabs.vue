@@ -13,7 +13,7 @@
 
 <script lang="ts">
 import { Button } from "@codebridger/lib-vue-components/elements";
-import InputGroup from "primevue/inputgroup";
+import InputGroup from "../InputGroup.vue";
 import { defineComponent } from "vue";
 
 export default defineComponent({

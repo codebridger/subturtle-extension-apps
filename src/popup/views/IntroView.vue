@@ -14,12 +14,14 @@
               <div
                 class="absolute top-12 flex justify-between left-0 right-0 px-12"
               >
-                <h1 class="text-xl font-extrabold text-white mb-2">
+                <h1 class="text-xl font-extrabold text-white mb-2 px-4">
                   Subturtle
                 </h1>
-                <section class="rounded-full bg-gray-900 p-2">
+                <h1
+                  class="rounded-full bg-gray-900 flex items-center justify-center w-10 h-10 mr-2"
+                >
                   <Logo :size="20" onlyLogo />
-                </section>
+                </h1>
               </div>
             </div>
           </template>
@@ -44,9 +46,11 @@
 
       <!-- Login button -->
       <div class="flex flex-row items-center justify-between gap-4">
-        <div class="flex items-center gap-2">
-          <label class="text-gray-300 text-sm">My language</label>
-          <SelectTarget class="w-28" />
+        <div class="flex items-center gap-3">
+          <label class="text-gray-300 text-sm font-medium whitespace-nowrap">
+            My language
+          </label>
+          <SelectTarget class="w-32" />
         </div>
         <Button :disabled="isLogin" label="Login" @click="openLogin">
           <template #icon> <span class="i-solar-login-3-bold" /> </template>
@@ -57,7 +61,7 @@
 </template>
 
 <script lang="ts" setup>
-import Carousel from "primevue/carousel";
+import Carousel from "../../common/components/Carousel.vue";
 import { Button } from "@codebridger/lib-vue-components/elements";
 import SelectTarget from "../../common/components/inputs/SelectTarget.vue";
 import { OpenLoginWindowMessage } from "../../common/types/messaging";

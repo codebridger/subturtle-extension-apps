@@ -1,5 +1,5 @@
 <template>
-  <Inputgroup class="my-2">
+  <InputGroup class="my-2">
     <SelectPhraseBundle v-model:selected-bundles="selectedBundles" />
 
     <Button
@@ -14,12 +14,12 @@
         <i class="mr-4 i-ep-collection" />
       </template>
     </Button>
-  </Inputgroup>
+  </InputGroup>
 </template>
 
 <script setup lang="ts">
 import { Button } from "@codebridger/lib-vue-components/elements";
-import Inputgroup from "primevue/inputgroup";
+import InputGroup from "../../common/components/InputGroup.vue";
 import SelectPhraseBundle from "./SelectPhraseBundle.vue";
 import { onMounted, ref, watch } from "vue";
 import { authentication, dataProvider } from "@modular-rest/client";

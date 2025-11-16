@@ -39,7 +39,7 @@
 
 <script setup lang="ts">
 import { inject, onMounted } from "vue";
-import Fieldset from "primevue/fieldset";
+import Fieldset from "../../../common/components/Fieldset.vue";
 import SelectTarget from "../../../common/components/inputs/SelectTarget.vue";
 import ThemeSwitcher from "../../../common/components/inputs/ThemeSwitcher.vue";
 import { analytic } from "../../../plugins/mixpanel";

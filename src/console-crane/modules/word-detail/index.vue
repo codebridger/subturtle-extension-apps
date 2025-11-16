@@ -211,8 +211,8 @@ import { LanguageLearningData } from "./types";
 import { isLogin } from "../../../plugins/modular-rest";
 import SaveWordSectionV2 from "../../components/SaveWordSectionV2.vue";
 
-import Fieldset from "primevue/fieldset";
-import Divider from "primevue/divider";
+import Fieldset from "../../../common/components/Fieldset.vue";
+import Divider from "../../../common/components/Divider.vue";
 import { Button, IconButton } from "@codebridger/lib-vue-components/elements";
 
 import { useRoute } from "vue-router";

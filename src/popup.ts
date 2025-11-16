@@ -7,15 +7,12 @@ import rootComponent from "./popup/App.vue";
 import components from "./popup/components/components";
 import { getAsset } from "./popup/helper/assets";
 import { router } from "./popup/router";
-import { installVuePrime } from "./plugins/vue-prime";
 import { useSettingsStore } from "./common/store/settings";
 
 // Set uninstall url
 chrome.runtime.setUninstallURL(process.env.UNINSTALL_FORM_URL || "");
 
 const vueApp = createApp(rootComponent as any);
-
-installVuePrime(vueApp);
 
 vueApp
   // add pinia

@@ -91,7 +91,7 @@
 
 <script setup lang="ts">
 import { InputGroup, Button } from "@codebridger/lib-vue-components";
-import Fieldset from "primevue/fieldset";
+import Fieldset from "../../common/components/Fieldset.vue";
 import SelectPhraseBundleV2 from "./SelectPhraseBundleV2.vue";
 import { onMounted, ref, watch, computed } from "vue";
 import {
