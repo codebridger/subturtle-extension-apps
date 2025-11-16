@@ -27,7 +27,7 @@
 
         <!-- Translation box showing the word in target language -->
         <Fieldset
-          class="mb-2 dark:bg-blue-900"
+          class="mb-4 dark:bg-blue-900"
           :legend="targetLanguageTitle as string"
         >
           <h1
@@ -65,9 +65,9 @@
 
       <!-- LINGUISTIC DATA SECTION - Shows detailed linguistic information -->
       <template v-if="wordData && wordData.linguistic_data">
-        <section class="w-full mt-10 px-[40px]">
+        <section class="w-full mt-5 px-[40px]">
           <!-- Main definition card -->
-          <Fieldset class="mb-2 dark:bg-blue-900" legend="Definition">
+          <Fieldset class="mb-4 dark:bg-blue-900" legend="Definition">
             <p
               class="text-2xl mb-6 text-gray-900 dark:text-gray-100"
               :dir="wordData?.direction?.target"
@@ -92,7 +92,7 @@
             </div>
           </Fieldset>
 
-          <Fieldset class="mb-2 dark:bg-blue-900" legend="Phonetic">
+          <Fieldset class="mb-4 dark:bg-blue-900" legend="Phonetic">
             <div class="flex justify-between">
               <p class="text-2xl italic text-gray-500 dark:text-gray-300">
                 {{ wordData?.linguistic_data?.phonetic.ipa || "" }}
@@ -108,7 +108,7 @@
 
           <!-- Example sentences -->
           <Fieldset
-            class="mb-2 dark:bg-blue-900"
+            class="mb-4 dark:bg-blue-900"
             v-if="
               wordData.linguistic_data.examples &&
               wordData.linguistic_data.examples.length
@@ -140,7 +140,7 @@
 
           <!-- Related expressions -->
           <Fieldset
-            class="mb-2 dark:bg-blue-900"
+            class="mb-4 dark:bg-blue-900"
             v-if="
               wordData.linguistic_data.related_expressions &&
               wordData.linguistic_data.related_expressions.length
