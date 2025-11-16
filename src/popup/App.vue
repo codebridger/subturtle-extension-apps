@@ -1,5 +1,7 @@
 <template>
-  <router-view />
+  <div class="bg-white dark:bg-gray-950">
+    <router-view />
+  </div>
 </template>
 
 <script lang="ts" setup>
@@ -8,7 +10,6 @@ import { RouterView } from "vue-router";
 
 <style>
 body {
-  background-color: #001a35;
   width: 800px;
   height: 600px;
   overflow: hidden !important;

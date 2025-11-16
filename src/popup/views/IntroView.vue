@@ -18,7 +18,7 @@
                   Subturtle
                 </h1>
                 <h1
-                  class="rounded-full bg-gray-900 flex items-center justify-center w-10 h-10 mr-2"
+                  class="rounded-full bg-gray-100 dark:bg-gray-900 flex items-center justify-center w-10 h-10 mr-2"
                 >
                   <Logo :size="20" onlyLogo />
                 </h1>
@@ -30,14 +30,16 @@
     </div>
 
     <section
-      class="px-12 flex flex-col gap-4 bg-gray-950 flex-1 justify-center"
+      class="px-12 flex flex-col gap-4 bg-white dark:bg-gray-950 flex-1 justify-center"
     >
       <!-- Description -->
       <div>
-        <h2 class="text-gray-300 text-lg font-semibold text-primary">
+        <h2
+          class="text-gray-700 dark:text-gray-300 text-lg font-semibold text-primary"
+        >
           Turn captions into conversations.
         </h2>
-        <p class="text-gray-300 text-base mb-6">
+        <p class="text-gray-700 dark:text-gray-300 text-base mb-6">
           Your favorite shows are now your personal language coaches. Learn
           words in their true context as you stream, then practice speaking them
           with our AI.
@@ -47,7 +49,9 @@
       <!-- Login button -->
       <div class="flex flex-row items-center justify-between gap-4">
         <div class="flex items-center gap-3">
-          <label class="text-gray-300 text-sm font-medium whitespace-nowrap">
+          <label
+            class="text-gray-700 dark:text-gray-300 text-sm font-medium whitespace-nowrap"
+          >
             My language
           </label>
           <SelectTarget class="w-32" />
