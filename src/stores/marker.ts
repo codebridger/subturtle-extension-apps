@@ -64,6 +64,14 @@ interface State {
    * Context string (e.g., full subtitle text) for translation accuracy.
    */
   context: string;
+  /**
+   * ID of the currently hovered word (for showing selection rectangle).
+   */
+  hoveredWordId: string | null;
+  /**
+   * Whether anchor dragging is currently active (prevents rectangle recalculation).
+   */
+  isAnchorDragging: boolean;
 }
 
 /**
@@ -95,6 +103,14 @@ export const useMarkerStore = defineStore("marker", {
      * Context string for translation.
      */
     context: "",
+    /**
+     * ID of the currently hovered word.
+     */
+    hoveredWordId: null,
+    /**
+     * Whether anchor dragging is active.
+     */
+    isAnchorDragging: false,
   }),
 
   getters: {
@@ -112,9 +128,36 @@ export const useMarkerStore = defineStore("marker", {
     words: (state) => state.markedWords,
     /**
      * Returns the currently selected phrase (all marked words joined by space).
+     * Words are sorted by their DOM position (left to right, top to bottom) to ensure correct order.
      */
     selectedPhrase: (state) => {
-      return state.markedWords.map((item) => item.word).join(" ");
+      // Sort words by their DOM position to ensure correct order
+      const sortedWords = [...state.markedWords].sort((a, b) => {
+        // Get current DOM positions
+        const aEl = document.getElementById(a.id);
+        const bEl = document.getElementById(b.id);
+
+        if (!aEl || !bEl) {
+          // Fallback to sequential ID if elements not found
+          const aSeqId = a.id.split("-").map(Number)[2];
+          const bSeqId = b.id.split("-").map(Number)[2];
+          return aSeqId - bSeqId;
+        }
+
+        const aRect = aEl.getBoundingClientRect();
+        const bRect = bEl.getBoundingClientRect();
+
+        // First sort by top position (line)
+        const topDiff = aRect.top - bRect.top;
+        if (Math.abs(topDiff) > aRect.height * 0.5) {
+          return topDiff;
+        }
+
+        // Then sort by left position (word order within line)
+        return aRect.left - bRect.left;
+      });
+
+      return sortedWords.map((item) => item.word).join(" ");
     },
   },
 
@@ -239,6 +282,156 @@ export const useMarkerStore = defineStore("marker", {
      */
     setContext(context: string) {
       this.context = context;
+    },
+
+    /**
+     * Sets the currently hovered word ID (for showing selection rectangle).
+     * @param id The word ID, or null to clear
+     */
+    setHoveredWordId(id: string | null) {
+      this.hoveredWordId = id;
+    },
+
+    /**
+     * Gets the ID of the adjacent word in the specified direction based on DOM position.
+     * @param direction 'left' for previous word, 'right' for next word
+     * @returns The adjacent word ID, or null if not found
+     */
+    getAdjacentWordId(direction: "left" | "right"): string | null {
+      if (this.markedWords.length === 0) return null;
+
+      // Get all word elements and their positions
+      const allWordElements = Array.from(
+        document.querySelectorAll("span[id]")
+      ) as HTMLElement[];
+
+      // Filter to valid word elements with IDs
+      const validWords = allWordElements
+        .map((el) => {
+          const id = el.id;
+          if (!id) return null;
+          const parts = id.split("-").map(Number);
+          if (parts.length >= 3 && !isNaN(parts[2])) {
+            const rect = el.getBoundingClientRect();
+            return { id, element: el, rect, sequentialId: parts[2] };
+          }
+          return null;
+        })
+        .filter((w): w is NonNullable<typeof w> => w !== null);
+
+      if (validWords.length === 0) return null;
+
+      // Find the edge word based on direction
+      let edgeWord: (typeof validWords)[0] | null = null;
+      if (direction === "left") {
+        // Find leftmost marked word
+        const markedRects = this.markedWords
+          .map((w) => {
+            const el = document.getElementById(w.id);
+            return el ? el.getBoundingClientRect() : null;
+          })
+          .filter((r): r is DOMRect => r !== null);
+
+        if (markedRects.length === 0) return null;
+
+        const minLeft = Math.min(...markedRects.map((r) => r.left));
+        edgeWord =
+          validWords.find((w) => {
+            const marked = this.markedWords.find((mw) => mw.id === w.id);
+            return marked && Math.abs(w.rect.left - minLeft) < 1;
+          }) || null;
+      } else {
+        // Find rightmost marked word
+        const markedRects = this.markedWords
+          .map((w) => {
+            const el = document.getElementById(w.id);
+            return el ? el.getBoundingClientRect() : null;
+          })
+          .filter((r): r is DOMRect => r !== null);
+
+        if (markedRects.length === 0) return null;
+
+        const maxRight = Math.max(...markedRects.map((r) => r.right));
+        edgeWord =
+          validWords.find((w) => {
+            const marked = this.markedWords.find((mw) => mw.id === w.id);
+            return marked && Math.abs(w.rect.right - maxRight) < 1;
+          }) || null;
+      }
+
+      if (!edgeWord) return null;
+
+      // Find adjacent word based on visual position
+      const edgeRect = edgeWord.rect;
+      const edgeCenterY = edgeRect.top + edgeRect.height / 2;
+
+      let adjacentWord: (typeof validWords)[0] | null = null;
+      let minDistance = Infinity;
+
+      for (const word of validWords) {
+        // Skip if already marked
+        if (this.checkedSelected(word.id)) continue;
+
+        const wordRect = word.rect;
+        const wordCenterY = wordRect.top + wordRect.height / 2;
+
+        // Check if word is on roughly the same line (within height tolerance)
+        const verticalOverlap =
+          Math.abs(wordCenterY - edgeCenterY) < edgeRect.height * 0.8;
+
+        if (!verticalOverlap) continue;
+
+        if (direction === "left") {
+          // Word should be to the left of edge word
+          if (wordRect.right <= edgeRect.left) {
+            const distance = edgeRect.left - wordRect.right;
+            if (distance < minDistance) {
+              minDistance = distance;
+              adjacentWord = word;
+            }
+          }
+        } else {
+          // Word should be to the right of edge word
+          if (wordRect.left >= edgeRect.right) {
+            const distance = wordRect.left - edgeRect.right;
+            if (distance < minDistance) {
+              minDistance = distance;
+              adjacentWord = word;
+            }
+          }
+        }
+      }
+
+      // Only return if word is reasonably close (within 50px horizontally)
+      if (adjacentWord && minDistance < 50) {
+        return adjacentWord.id;
+      }
+
+      return null;
+    },
+
+    /**
+     * Marks a word by its ID. Finds the word element and calls markWord.
+     * @param id The word ID to mark
+     */
+    markWordById(id: string) {
+      const wordElement = document.getElementById(id);
+      if (!wordElement) return;
+
+      const boundingRect = wordElement.getBoundingClientRect();
+      const wordText = wordElement.textContent?.trim() || "";
+
+      if (wordText) {
+        this.markWord(id, wordText, boundingRect);
+      }
+    },
+
+    /**
+     * Sets the anchor dragging state.
+     * @param dragging True if dragging, false otherwise
+     */
+    setAnchorDragging(dragging: boolean) {
+      this.isAnchorDragging = dragging;
     },
   },
 });

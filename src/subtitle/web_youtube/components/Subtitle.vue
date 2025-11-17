@@ -29,6 +29,9 @@
         </div>
       </div>
     </transition>
+
+    <!-- Word Selection Rectangle with Anchors -->
+    <WordSelectionRectangle />
   </div>
 </template>
 

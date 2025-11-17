@@ -1,14 +1,12 @@
 <template>
   <span
     :id="id"
-    @mousedown="markerStore.toggleMarking(true)"
-    @mousemove="onMouseenter"
-    @mouseout="onMouseout"
-    @mouseup="onMouseup"
-    @click="OpenWordDetail"
+    @mouseenter="onMouseEnter"
+    @mouseleave.stop="onMouseLeave"
+    @click.stop="OpenWordDetail"
     :class="{
       selected: markerStore.checkedSelected(id),
-      pointer: !markerStore.isMarkingMode && markerStore.checkedSelected(id),
+      pointer: markerStore.checkedSelected(id),
     }"
     >{{ modelValue }}</span
   >
@@ -17,7 +15,7 @@
 <script lang="ts" setup>
 import { useConsoleCraneStore } from "../../../console-crane/stores/console-crane";
 import { useMarkerStore } from "../../../stores/marker";
-import { ref, getCurrentInstance, onMounted } from "vue";
+import { ref, getCurrentInstance, onMounted, onUnmounted } from "vue";
 import { analytic } from "../../../plugins/mixpanel";
 
 const consoleCrane = useConsoleCraneStore();
@@ -28,45 +26,61 @@ const props = defineProps<{
 }>();
 
 const elRef = ref<HTMLElement | null>(null);
+const mouseLeaveTimeout = ref<number | null>(null);
 
 onMounted(() => {
   elRef.value = getCurrentInstance()?.proxy?.$el;
 });
 
-function onMouseenter() {
+onUnmounted(() => {
+  if (mouseLeaveTimeout.value) {
+    clearTimeout(mouseLeaveTimeout.value);
+  }
+});
+
+function onMouseEnter() {
   const boundingRect = elRef.value?.getBoundingClientRect();
 
   if (!boundingRect) {
     return;
   }
 
-  // Mark single word
-  if (
-    !markerStore.isMarkingMode &&
-    // refuse to mark if the word is already marked
-    !markerStore.checkedSelected(props.id)
-  ) {
-    markerStore.clear();
+  // Set hovered word ID (for rectangle display)
+  markerStore.setHoveredWordId(props.id);
 
+  // Mark the word if not already marked
+  // This ensures rectangle appears around the hovered word
+  if (!markerStore.checkedSelected(props.id)) {
+    // Clear previous selection and mark this word
+    markerStore.clear();
     markerStore.markWord(props.id, props.modelValue?.trim(), boundingRect);
   }
-
-  // Mark multiple words
-  if (markerStore.isMarkingMode && markerStore.isMarking) {
-    markerStore.markWord(props.id, props.modelValue, boundingRect);
-  }
 }
 
-function onMouseout() {
-  return;
-
-  if (!markerStore.isMarkingMode) {
-    markerStore.clear();
+function onMouseLeave(e: MouseEvent) {
+  // Add a small delay to prevent flickering when moving to anchors
+  if (mouseLeaveTimeout.value) {
+    clearTimeout(mouseLeaveTimeout.value);
   }
-}
+  mouseLeaveTimeout.value = window.setTimeout(() => {
+    // Check if we're hovering over an anchor or rectangle
+    const elementUnderCursor = document.elementFromPoint(e.clientX, e.clientY);
 
-function onMouseup() {
-  analytic.track("multi_phrase_hovered");
+    const isOverAnchor = elementUnderCursor?.closest(".selection-anchor");
+    const isOverRectangle = elementUnderCursor?.closest(
+      ".word-selection-rectangle"
+    );
+
+    // Don't clear hover if moving to anchor or rectangle
+    if (
+      !isOverAnchor &&
+      !isOverRectangle &&
+      markerStore.hoveredWordId === props.id
+    ) {
+      markerStore.setHoveredWordId(null);
+    }
+    mouseLeaveTimeout.value = null;
+  }, 150);
 }
 
 function OpenWordDetail() {
