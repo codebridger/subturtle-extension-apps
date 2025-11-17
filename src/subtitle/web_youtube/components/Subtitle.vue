@@ -63,23 +63,70 @@ export default defineComponent({
   },
 
   computed: {
-    ...mapState(useMarkerStore, ["selectedPhrase", "sourceLanguage"]),
+    ...mapState(useMarkerStore, [
+      "selectedPhrase",
+      "sourceLanguage",
+      "rectangleBounds",
+    ]),
 
     translateStyle(): StyleValue {
-      let bottom = 20;
+      const bounds = this.rectangleBounds;
+      const hasSelection = this.selectedPhrase.length > 0;
+
+      // Get subtitle container bounds
+      let subtitleTop = 0;
+      let subtitleLeft = 0;
+      let subtitleWidth = 0;
 
       if (this.$refs.subturtleSubtitle) {
         // @ts-ignore
-        bottom = this.$refs.subturtleSubtitle.clientHeight * 1.5;
+        const subtitleEl = this.$refs.subturtleSubtitle as HTMLElement;
+        const subtitleRect = subtitleEl.getBoundingClientRect();
+        subtitleTop = subtitleRect.top;
+        subtitleLeft = subtitleRect.left;
+        subtitleWidth = subtitleRect.width;
       }
 
+      // Fixed offset: 6rem
+      const offset = "6rem";
+
+      // If we have rectangle bounds and selection, center translation within rectangle width
+      // but position it above the whole caption area
+      if (bounds && hasSelection && subtitleTop > 0) {
+        return {
+          position: "fixed",
+          fontSize: this.textStyle?.fontSize || "22px",
+          left: bounds.left + "px",
+          width: bounds.width + "px",
+          textAlign: "center",
+          opacity: hasSelection ? 1 : 0,
+          top: `calc(${subtitleTop}px - ${offset})`,
+          transition: "all ease 200ms",
+        };
+      }
+
+      // Fallback: position above subtitle container
+      if (subtitleTop > 0) {
+        return {
+          position: "fixed",
+          fontSize: this.textStyle?.fontSize || "22px",
+          left: subtitleLeft + "px",
+          width: subtitleWidth + "px",
+          textAlign: "center",
+          opacity: hasSelection ? 1 : 0,
+          top: `calc(${subtitleTop}px - ${offset})`,
+          transition: "all ease 200ms",
+        };
+      }
+
+      // Last resort fallback
       return {
         position: "absolute",
         fontSize: this.textStyle?.fontSize || "22px",
         width: "100%",
         textAlign: "center",
-        opacity: this.selectedPhrase.length ? 1 : 0,
-        bottom: bottom + "px",
+        opacity: hasSelection ? 1 : 0,
+        bottom: "20px",
       };
     },
 

@@ -68,10 +68,6 @@ interface State {
    * ID of the currently hovered word (for showing selection rectangle).
    */
   hoveredWordId: string | null;
-  /**
-   * Whether anchor dragging is currently active (prevents rectangle recalculation).
-   */
-  isAnchorDragging: boolean;
 }
 
 /**
@@ -107,10 +103,6 @@ export const useMarkerStore = defineStore("marker", {
      * ID of the currently hovered word.
      */
     hoveredWordId: null,
-    /**
-     * Whether anchor dragging is active.
-     */
-    isAnchorDragging: false,
   }),
 
   getters: {
@@ -136,28 +128,68 @@ export const useMarkerStore = defineStore("marker", {
         // Get current DOM positions
         const aEl = document.getElementById(a.id);
         const bEl = document.getElementById(b.id);
-
+        
         if (!aEl || !bEl) {
           // Fallback to sequential ID if elements not found
           const aSeqId = a.id.split("-").map(Number)[2];
           const bSeqId = b.id.split("-").map(Number)[2];
           return aSeqId - bSeqId;
         }
-
+        
         const aRect = aEl.getBoundingClientRect();
         const bRect = bEl.getBoundingClientRect();
-
+        
         // First sort by top position (line)
         const topDiff = aRect.top - bRect.top;
         if (Math.abs(topDiff) > aRect.height * 0.5) {
           return topDiff;
         }
-
+        
         // Then sort by left position (word order within line)
         return aRect.left - bRect.left;
       });
-
+      
       return sortedWords.map((item) => item.word).join(" ");
+    },
+
+    /**
+     * Returns the bounding rectangle of all marked words.
+     * Returns null if no words are marked.
+     */
+    rectangleBounds: (state) => {
+      if (state.markedWords.length === 0) return null;
+
+      // Get current DOM positions
+      const rects = state.markedWords
+        .map((word) => {
+          const el = document.getElementById(word.id);
+          return el ? el.getBoundingClientRect() : word.domeRect;
+        })
+        .filter((r): r is DOMRect => r !== null);
+
+      if (rects.length === 0) return null;
+
+      // Calculate bounding box
+      let minLeft = rects[0].left;
+      let maxRight = rects[0].right;
+      let minTop = rects[0].top;
+      let maxBottom = rects[0].bottom;
+
+      rects.forEach((rect) => {
+        if (rect.left < minLeft) minLeft = rect.left;
+        if (rect.right > maxRight) maxRight = rect.right;
+        if (rect.top < minTop) minTop = rect.top;
+        if (rect.bottom > maxBottom) maxBottom = rect.bottom;
+      });
+
+      return {
+        left: minLeft,
+        right: maxRight,
+        top: minTop,
+        bottom: maxBottom,
+        width: maxRight - minLeft,
+        height: maxBottom - minTop,
+      };
     },
   },
 
@@ -426,13 +458,6 @@ export const useMarkerStore = defineStore("marker", {
       }
     },
 
-    /**
-     * Sets the anchor dragging state.
-     * @param dragging True if dragging, false otherwise
-     */
-    setAnchorDragging(dragging: boolean) {
-      this.isAnchorDragging = dragging;
-    },
   },
 });
 

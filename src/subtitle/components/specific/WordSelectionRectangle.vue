@@ -103,11 +103,11 @@ function throttledCalculate() {
   }, 16); // ~60fps
 }
 
-// Watch for changes in marked words (only when visible and not dragging)
+// Watch for changes in marked words (only when visible)
 watch(
   () => markerStore.markedWords,
   () => {
-    if (isVisible.value && !markerStore.isAnchorDragging) {
+    if (isVisible.value) {
       throttledCalculate();
     }
   },
