@@ -1,25 +1,25 @@
 <template>
-  <Inputgroup class="my-2">
+  <InputGroup class="my-2">
     <SelectPhraseBundle v-model:selected-bundles="selectedBundles" />
 
     <Button
       :label="!isExisting ? 'Save' : 'Saved'"
-      size="large"
+      size="lg"
       @click="savePhrase"
       :disabled="!selectedBundles.length || isExisting"
-      :outlined="isExisting"
-      :loading="isSaving"
+      :outline="isExisting"
+      :is-loading="isSaving"
     >
       <template #icon>
         <i class="mr-4 i-ep-collection" />
       </template>
     </Button>
-  </Inputgroup>
+  </InputGroup>
 </template>
 
 <script setup lang="ts">
-import Button from "primevue/button";
-import Inputgroup from "primevue/inputgroup";
+import { Button } from "@codebridger/lib-vue-components/elements";
+import InputGroup from "../../common/components/InputGroup.vue";
 import SelectPhraseBundle from "./SelectPhraseBundle.vue";
 import { onMounted, ref, watch } from "vue";
 import { authentication, dataProvider } from "@modular-rest/client";

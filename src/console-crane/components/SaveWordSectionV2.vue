@@ -10,9 +10,9 @@
       @upgrade="handleUpgrade"
       class="mb-4"
     >
-      <Inputgroup class="mb-3 !border-none">
+      <InputGroup>
         <SelectPhraseBundleV2
-          class="!border-none"
+          class="flex-1"
           ref="selectBundleRef"
           v-model:selected-bundles="selectedBundles"
           :excluded-bundle-ids="existingBundles.map((b) => b._id)"
@@ -27,21 +27,21 @@
                   selectedBundles.length > 1 ? 's' : ''
                 }`
           "
-          :icon="isAtLimit ? 'pi pi-crown' : 'pi pi-plus'"
-          size="large"
+          :icon-name="isAtLimit ? 'pi pi-crown' : ''"
+          size="lg"
           @click="isAtLimit ? handleUpgrade() : savePhrase()"
           :disabled="!selectedBundles.length || isSaving"
-          :loading="isSaving"
+          :is-loading="isSaving"
           class="border-none bg-gradient-to-r from-pink-500 to-purple-600 shadow-md hover:from-pink-600 hover:to-purple-700 text-white font-semibold dark:from-pink-700 dark:to-purple-900"
         >
           <template #icon>
             <i :class="isAtLimit ? 'pi pi-crown' : 'mr-4 i-ep-collection'" />
           </template>
         </Button>
-      </Inputgroup>
+      </InputGroup>
     </FreemiumLimitCounter>
     <template v-else>
-      <Inputgroup class="mb-3">
+      <div class="flex w-full">
         <SelectPhraseBundleV2
           ref="selectBundleRef"
           v-model:selected-bundles="selectedBundles"
@@ -55,17 +55,17 @@
                   selectedBundles.length > 1 ? 's' : ''
                 }`
           "
-          size="large"
+          size="lg"
           @click="savePhrase"
           :disabled="!selectedBundles.length || isSaving"
-          :loading="isSaving"
+          :is-loading="isSaving"
           class="border-none bg-gradient-to-r from-pink-500 to-purple-600 shadow-md hover:from-pink-600 hover:to-purple-700 text-white font-semibold dark:from-pink-700 dark:to-purple-900"
         >
           <template #icon>
             <i class="mr-4 i-ep-collection" />
           </template>
         </Button>
-      </Inputgroup>
+      </div>
     </template>
     <!-- Existing Bundles as Fieldset -->
     <Fieldset
@@ -74,12 +74,14 @@
       legend="Saved in"
     >
       <div class="flex flex-wrap gap-1.5">
-        <Chip
+        <Button
           v-for="bundle in existingBundles"
           :key="bundle._id"
           :label="bundle.title"
-          removable
-          @remove="removePhraseFromBundle(bundle._id)"
+          chip
+          rounded="full"
+          size="sm"
+          @chip-click="removePhraseFromBundle(bundle._id)"
           class="saved-chip"
         />
       </div>
@@ -88,10 +90,8 @@
 </template>
 
 <script setup lang="ts">
-import Button from "primevue/button";
-import Inputgroup from "primevue/inputgroup";
-import Chip from "primevue/chip";
-import Fieldset from "primevue/fieldset";
+import { InputGroup, Button } from "@codebridger/lib-vue-components";
+import Fieldset from "../../common/components/Fieldset.vue";
 import SelectPhraseBundleV2 from "./SelectPhraseBundleV2.vue";
 import { onMounted, ref, watch, computed } from "vue";
 import {

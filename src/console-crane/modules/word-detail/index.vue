@@ -27,7 +27,7 @@
 
         <!-- Translation box showing the word in target language -->
         <Fieldset
-          class="mb-2 dark:bg-blue-900"
+          class="mb-4 dark:bg-blue-900"
           :legend="targetLanguageTitle as string"
         >
           <h1
@@ -52,7 +52,7 @@
         <!-- Login prompt if user is not logged in -->
         <Button
           v-else
-          severity="secondary"
+          color="secondary"
           class="my-2 text-center dark:text-gray-100"
           @click="handleLoginRequest"
         >
@@ -65,9 +65,9 @@
 
       <!-- LINGUISTIC DATA SECTION - Shows detailed linguistic information -->
       <template v-if="wordData && wordData.linguistic_data">
-        <section class="w-full mt-10 px-[40px]">
+        <section class="w-full mt-5 px-[40px]">
           <!-- Main definition card -->
-          <Fieldset class="mb-2 dark:bg-blue-900" legend="Definition">
+          <Fieldset class="mb-4 dark:bg-blue-900" legend="Definition">
             <p
               class="text-2xl mb-6 text-gray-900 dark:text-gray-100"
               :dir="wordData?.direction?.target"
@@ -76,23 +76,23 @@
             </p>
 
             <!-- Type and formality level -->
-            <div class="flex text-2xl gap-2">
-              <Badge
+            <div class="flex gap-2">
+              <IconButton
                 v-if="wordData.linguistic_data.type"
-                :value="wordData.linguistic_data.type.toUpperCase()"
-                severity="info"
-                size="large"
+                badge
+                size="sm"
+                :label="wordData.linguistic_data.type.toUpperCase()"
               />
-              <Badge
+              <IconButton
                 v-if="wordData.linguistic_data.formality_level"
-                :value="wordData.linguistic_data.formality_level.toUpperCase()"
-                severity="warning"
-                size="large"
+                badge
+                size="sm"
+                :label="wordData.linguistic_data.formality_level.toUpperCase()"
               />
             </div>
           </Fieldset>
 
-          <Fieldset class="mb-2 dark:bg-blue-900" legend="Phonetic">
+          <Fieldset class="mb-4 dark:bg-blue-900" legend="Phonetic">
             <div class="flex justify-between">
               <p class="text-2xl italic text-gray-500 dark:text-gray-300">
                 {{ wordData?.linguistic_data?.phonetic.ipa || "" }}
@@ -108,7 +108,7 @@
 
           <!-- Example sentences -->
           <Fieldset
-            class="mb-2 dark:bg-blue-900"
+            class="mb-4 dark:bg-blue-900"
             v-if="
               wordData.linguistic_data.examples &&
               wordData.linguistic_data.examples.length
@@ -140,7 +140,7 @@
 
           <!-- Related expressions -->
           <Fieldset
-            class="mb-2 dark:bg-blue-900"
+            class="mb-4 dark:bg-blue-900"
             v-if="
               wordData.linguistic_data.related_expressions &&
               wordData.linguistic_data.related_expressions.length
@@ -211,10 +211,9 @@ import { LanguageLearningData } from "./types";
 import { isLogin } from "../../../plugins/modular-rest";
 import SaveWordSectionV2 from "../../components/SaveWordSectionV2.vue";
 
-import Fieldset from "primevue/fieldset";
-import Divider from "primevue/divider";
-import Button from "primevue/button";
-import Badge from "primevue/badge";
+import Fieldset from "../../../common/components/Fieldset.vue";
+import Divider from "../../../common/components/Divider.vue";
+import { Button, IconButton } from "@codebridger/lib-vue-components/elements";
 
 import { useRoute } from "vue-router";
 import { sendMessage } from "../../../common/helper/massage";

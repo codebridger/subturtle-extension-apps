@@ -11,7 +11,7 @@ import {
 import { Theme } from "../types/general.type";
 
 export const useSettingsStore = defineStore("settings", () => {
-  const theme = ref<Theme>("auto");
+  const theme = ref<Theme>("dark");
   const language = ref<string>("");
   const initialized = ref<boolean>(false);
 
@@ -52,8 +52,8 @@ export const useSettingsStore = defineStore("settings", () => {
 
   function initializeTheme() {
     const savedTheme = localStorage.getItem("theme") as Theme;
-    theme.value = savedTheme;
-    applyThemeToDOM(savedTheme);
+    theme.value = savedTheme || "dark";
+    applyThemeToDOM(savedTheme || "dark");
   }
 
   function setLanguage(newLang: string) {
