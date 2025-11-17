@@ -90,14 +90,22 @@ export default defineComponent({
       // Fixed offset: 6rem
       const offset = "6rem";
 
-      // If we have rectangle bounds and selection, center translation within rectangle width
+      // If we have rectangle bounds and selection, center translation on the marked rectangle
       // but position it above the whole caption area
+      // Width is 3x rectangle width to prevent wrapping
       if (bounds && hasSelection && subtitleTop > 0) {
+        const translationWidth = bounds.width * 3;
+        // Center translation box on rectangle center
+        // Rectangle center: bounds.left + bounds.width / 2
+        // Translation left: rectangle center - translation width / 2
+        const translationLeft =
+          bounds.left + bounds.width / 2 - translationWidth / 2;
+
         return {
           position: "fixed",
           fontSize: this.textStyle?.fontSize || "22px",
-          left: bounds.left + "px",
-          width: bounds.width + "px",
+          left: translationLeft + "px",
+          width: translationWidth + "px",
           textAlign: "center",
           opacity: hasSelection ? 1 : 0,
           top: `calc(${subtitleTop}px - ${offset})`,
