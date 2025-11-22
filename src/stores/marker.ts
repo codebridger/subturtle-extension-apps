@@ -11,7 +11,7 @@
  *
  * ## Usage
  * - **Word.vue**: Handles mouse events to mark single or multiple words, clear selections, and open word detail modals using marked words and context.
- * - **MarkerBorder.vue**: Renders visual borders around contiguous marked words using the store's state and helper actions.
+ * - **WordSelectionRectangle.vue**: Renders visual borders around marked words and selection anchors using the store's state and helper actions.
  * - **TranslatedPhrase.vue**: Displays translations for the currently selected phrase and provides contextual UI actions.
  * - **web_youtube/Index.vue**: Integrates the store at the page level, updating context with the current subtitle text and ensuring the store is available for all subtitle-related components.
  * - **helpers/global-events.ts**: Registers global keyboard events to trigger marking mode via the store's exported functions.

@@ -4,7 +4,6 @@
     :textList="text"
     :textStyle="style"
   />
-  <marker-border />
   <ConsoleCrane />
 </template>
 
