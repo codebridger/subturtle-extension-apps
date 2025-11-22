@@ -45,6 +45,19 @@ function onMouseEnter() {
     return;
   }
 
+  // If multiple words are already marked (via anchors), disable hover marking
+  // Selection should persist until cleared by the Clear button
+  if (markerStore.markedWords.length > 1) {
+    // Only update hoveredWordId if the word is part of the current selection
+    // This keeps the rectangle visible when hovering marked words
+    if (markerStore.checkedSelected(props.id)) {
+      markerStore.setHoveredWordId(props.id);
+    }
+    // Don't clear or mark new words when multiple words are selected
+    return;
+  }
+
+  // Normal hover behavior when 0 or 1 word is marked
   // Set hovered word ID (for rectangle display)
   markerStore.setHoveredWordId(props.id);
 

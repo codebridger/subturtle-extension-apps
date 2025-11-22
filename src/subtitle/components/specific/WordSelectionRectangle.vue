@@ -77,6 +77,11 @@ const lastWordAnchorStyle = computed(() => {
 });
 
 const isVisible = computed(() => {
+  // When multiple words are marked (via anchors), always show rectangle
+  // When 0 or 1 word is marked, show only when hovering
+  if (markerStore.markedWords.length > 1) {
+    return true;
+  }
   return (
     markerStore.markedWords.length > 0 && markerStore.hoveredWordId !== null
   );
