@@ -109,6 +109,7 @@ export default defineComponent({
       "selectedPhrase",
       "sourceLanguage",
       "rectangleBounds",
+      "positionUpdateCounter", // Track position updates to force translateStyle recalculation
     ]),
 
     loadingIcon() {
@@ -136,6 +137,9 @@ export default defineComponent({
 
     translateStyle(): StyleValue {
       if (!this.positionRect) return {};
+
+      // Access positionUpdateCounter to make this computed reactive to position changes
+      this.positionUpdateCounter; // This line makes the computed reactive to position updates
 
       const bounds = this.rectangleBounds;
       const hasSelection = this.selectedPhrase.length > 0;

@@ -95,12 +95,35 @@ const lastWordAnchorStyle = computed(() => {
   };
 });
 
+// Calculate overall bounds from line rectangles for close button positioning
+const overallBounds = computed(() => {
+  if (lineRectangles.value.length === 0) return null;
+
+  // Find the top-most and right-most points from all line rectangles
+  let minTop = Infinity;
+  let maxRight = -Infinity;
+
+  lineRectangles.value.forEach((rect) => {
+    const top = parseFloat(rect.top);
+    const left = parseFloat(rect.left);
+    const width = parseFloat(rect.width);
+    const right = left + width;
+
+    if (top < minTop) minTop = top;
+    if (right > maxRight) maxRight = right;
+  });
+
+  return {
+    top: minTop,
+    right: maxRight,
+  };
+});
+
 const closeButtonStyle = computed(() => {
-  const bounds = markerStore.rectangleBounds;
+  const bounds = overallBounds.value;
   if (!bounds) return null;
 
   // Position close button slightly outside the top-right corner of the selection rectangle
-  const buttonSize = 16;
   const offset = 2; // Small offset to push button slightly outside
 
   return {
@@ -239,6 +262,9 @@ function calculateRectangles() {
 
     lineRectangles.value = rectangles;
     isCalculating = false;
+
+    // Trigger position update for other components (e.g., TranslatedPhrase)
+    markerStore.triggerPositionUpdate();
   });
 }
 
@@ -281,13 +307,54 @@ watch(
   { immediate: true }
 );
 
-// Update rectangles on scroll/resize (throttled)
+// Continuous position update to handle dynamic subtitle movements (e.g., YouTube player adjustments)
+let continuousUpdateInterval: number | null = null;
 let scrollHandler: (() => void) | null = null;
 let resizeHandler: (() => void) | null = null;
 let rafId: number | null = null;
 
+function startContinuousUpdate() {
+  // Stop any existing update interval
+  if (continuousUpdateInterval !== null) {
+    clearInterval(continuousUpdateInterval);
+  }
+
+  // Update rectangle positions periodically to track dynamic subtitle movements
+  // Using 100ms interval (10 times per second) for balance between responsiveness and performance
+  continuousUpdateInterval = window.setInterval(() => {
+    if (!isVisible.value || markerStore.markedWords.length === 0) {
+      stopContinuousUpdate();
+      return;
+    }
+
+    // Check if all marked words still exist in the DOM
+    const allWordsExist = markerStore.markedWords.every(
+      (word) => document.getElementById(word.id) !== null
+    );
+
+    if (allWordsExist) {
+      // Recalculate rectangles with fresh DOM positions
+      calculateRectangles();
+      // Trigger position update for other components (e.g., TranslatedPhrase)
+      markerStore.triggerPositionUpdate();
+    }
+  }, 100); // Update every 100ms
+}
+
+function stopContinuousUpdate() {
+  if (continuousUpdateInterval !== null) {
+    clearInterval(continuousUpdateInterval);
+    continuousUpdateInterval = null;
+  }
+}
+
+// Watch visibility to start/stop continuous updates
 watch(isVisible, (visible) => {
   if (visible) {
+    // Start continuous position updates
+    startContinuousUpdate();
+
+    // Also listen to scroll/resize events as fallback
     scrollHandler = () => {
       if (rafId) return;
       rafId = requestAnimationFrame(() => {
@@ -305,6 +372,10 @@ watch(isVisible, (visible) => {
     window.addEventListener("scroll", scrollHandler, true);
     window.addEventListener("resize", resizeHandler);
   } else {
+    // Stop continuous updates
+    stopContinuousUpdate();
+
+    // Remove event listeners
     if (scrollHandler) {
       window.removeEventListener("scroll", scrollHandler, true);
       scrollHandler = null;
@@ -321,8 +392,14 @@ watch(isVisible, (visible) => {
 });
 
 onUnmounted(() => {
+  // Stop continuous updates
+  stopContinuousUpdate();
+
   if (calculationTimeout) {
     clearTimeout(calculationTimeout);
+  }
+  if (continuousUpdateInterval) {
+    clearInterval(continuousUpdateInterval);
   }
   if (scrollHandler) {
     window.removeEventListener("scroll", scrollHandler, true);
