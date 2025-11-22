@@ -24,6 +24,17 @@
         direction="right"
         :style="lastWordAnchorStyle"
       />
+
+      <!-- Close button in top-right corner -->
+      <div
+        v-if="closeButtonStyle"
+        class="selection-close-button"
+        :style="closeButtonStyle"
+        @click.stop="onCloseClick"
+        title="Clear selection"
+      >
+        <span class="close-icon">×</span>
+      </div>
     </template>
   </Teleport>
 </template>
@@ -54,9 +65,15 @@ const firstWordAnchorStyle = computed(() => {
   // With translate(-50%, -50%), the left value becomes the center point
   // Setting left to firstWordRect.value.left means center is there, so right edge touches left edge
   // We want it 10px to the left, so we set left to firstWordRect.value.left - 10
+  // Push anchor down a bit
+  const verticalOffset = 5; // Push anchors down
   return {
     position: "fixed",
-    top: firstWordRect.value.top + firstWordRect.value.height / 2 + "px",
+    top:
+      firstWordRect.value.top +
+      firstWordRect.value.height / 2 +
+      verticalOffset +
+      "px",
     left: firstWordRect.value.left - anchorOffset + "px",
     transform: "translate(-50%, -50%)",
   };
@@ -68,13 +85,41 @@ const lastWordAnchorStyle = computed(() => {
   // With translate(-50%, -50%), the left value becomes the center point
   // Setting left to lastWordRect.value.right + 10 means center is 10px to the right
   // So the anchor's left edge will be at lastWordRect.value.right
+  // Push anchor down a bit
+  const verticalOffset = 5; // Push anchors down
   return {
     position: "fixed",
-    top: lastWordRect.value.top + lastWordRect.value.height / 2 + "px",
+    top:
+      lastWordRect.value.top +
+      lastWordRect.value.height / 2 +
+      verticalOffset +
+      "px",
     left: lastWordRect.value.right + anchorOffset + "px",
     transform: "translate(-50%, -50%)",
   };
 });
+
+const closeButtonStyle = computed(() => {
+  const bounds = markerStore.rectangleBounds;
+  if (!bounds) return null;
+
+  // Position close button slightly outside the top-right corner of the selection rectangle
+  const buttonSize = 16;
+  const offset = 2; // Small offset to push button slightly outside
+
+  return {
+    position: "fixed" as const,
+    top: bounds.top - offset + "px",
+    left: bounds.right + offset + "px",
+    transform: "translate(-50%, -50%)",
+  };
+});
+
+function onCloseClick(e: MouseEvent) {
+  e.stopPropagation();
+  e.preventDefault();
+  markerStore.clear();
+}
 
 const isVisible = computed(() => {
   // When multiple words are marked (via anchors), always show rectangle
@@ -185,11 +230,14 @@ function calculateRectangles() {
         if (item.rect.bottom > maxBottom) maxBottom = item.rect.bottom;
       });
 
+      // Expand rectangle with more padding on the left side
+      const padding = 1;
+      const leftPadding = 4; // Extra padding on the left side
       rectangles.push({
-        top: minTop + "px",
-        left: minLeft + "px",
-        width: maxRight - minLeft + "px",
-        height: maxBottom - minTop + "px",
+        top: minTop - padding + "px",
+        left: minLeft - leftPadding + "px",
+        width: maxRight - minLeft + padding + leftPadding + "px",
+        height: maxBottom - minTop + padding * 2 + "px",
       });
     });
 
@@ -295,7 +343,7 @@ onUnmounted(() => {
 <style scoped>
 .word-selection-rectangle {
   position: fixed;
-  border: 2px solid #3b82f6;
+  border: 1px solid #3b82f6;
   background: rgba(59, 130, 246, 0.1);
   pointer-events: none;
   z-index: 999;
@@ -304,5 +352,34 @@ onUnmounted(() => {
 
 .word-selection-rectangle > * {
   pointer-events: all;
+}
+
+.selection-close-button {
+  width: 16px;
+  height: 16px;
+  background: rgba(59, 130, 246, 0.9);
+  border: 1.5px solid #3b82f6;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.selection-close-button:hover {
+  background: rgba(239, 68, 68, 0.9);
+  border-color: #ef4444;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+}
+
+.close-icon {
+  color: white;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: bold;
+  user-select: none;
 }
 </style>

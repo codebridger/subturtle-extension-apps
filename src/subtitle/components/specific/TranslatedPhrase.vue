@@ -63,14 +63,7 @@ const items = ref([
       });
     },
   },
-  {
-    label: "Clear",
-    color: "danger",
-    icon: "i-solar-close-square-linear text-2xl",
-    command: () => {
-      markerStore.clear();
-    },
-  },
+  // Clear button removed - now handled by close button on WordSelectionRectangle
   // {
   //   label: "Save",
   //   icon: "i-solar-bookmark-line-duotone text-2xl",
