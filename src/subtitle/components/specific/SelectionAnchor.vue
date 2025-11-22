@@ -5,7 +5,9 @@
     @mouseenter="onMouseEnter"
     @mouseleave="onMouseLeave"
   >
-    <div class="anchor-handle"></div>
+    <div class="anchor-handle">
+      <span class="anchor-icon">+</span>
+    </div>
   </div>
 </template>
 
@@ -75,6 +77,19 @@ function onClick(e: MouseEvent) {
   border-radius: 50%;
   transition: all 0.2s ease;
   pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.anchor-icon {
+  font-size: 10px;
+  font-weight: bold;
+  color: #3b82f6;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
 }
 
 .selection-anchor:hover .anchor-handle {
@@ -82,8 +97,16 @@ function onClick(e: MouseEvent) {
   transform: scale(1.2);
 }
 
+.selection-anchor:hover .anchor-icon {
+  color: white;
+}
+
 .selection-anchor:active .anchor-handle {
   transform: scale(1.1);
   background: #2563eb;
+}
+
+.selection-anchor:active .anchor-icon {
+  color: white;
 }
 </style>
