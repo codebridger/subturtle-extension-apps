@@ -10,7 +10,7 @@
         class="mx-1"
         :icon="item.icon"
         :key="item.label"
-        :color="item.color || 'default'"
+        :color="(item.color as any) || 'info'"
         @click="item.command"
       />
     </div>
@@ -52,17 +52,17 @@ watch(
 );
 
 const items = ref([
-  {
-    label: "Info",
-    color: "info",
-    icon: "i-solar-info-square-linear text-2xl",
-    command: () => {
-      consoleCraneStore.toggleConsoleCrane("word-detail", {
-        word: markerStore.selectedPhrase,
-        context: markerStore.context,
-      });
-    },
-  },
+  // {
+  //   label: "Info",
+  //   color: "info",
+  //   icon: "i-solar-info-square-linear text-2xl",
+  //   command: () => {
+  //     consoleCraneStore.toggleConsoleCrane("word-detail", {
+  //       word: markerStore.selectedPhrase,
+  //       context: markerStore.context,
+  //     });
+  //   },
+  // },
   // Clear button removed - now handled by close button on WordSelectionRectangle
   // {
   //   label: "Save",
