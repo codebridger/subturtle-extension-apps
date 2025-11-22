@@ -123,32 +123,31 @@ export const useMarkerStore = defineStore("marker", {
      * Words are sorted by their DOM position (left to right, top to bottom) to ensure correct order.
      */
     selectedPhrase: (state) => {
-      // Sort words by their DOM position to ensure correct order
+      // Sort words by ID order (line, then wordIndex) to ensure correct reading order
       const sortedWords = [...state.markedWords].sort((a, b) => {
-        // Get current DOM positions
-        const aEl = document.getElementById(a.id);
-        const bEl = document.getElementById(b.id);
-        
-        if (!aEl || !bEl) {
-          // Fallback to sequential ID if elements not found
-          const aSeqId = a.id.split("-").map(Number)[2];
-          const bSeqId = b.id.split("-").map(Number)[2];
-          return aSeqId - bSeqId;
+        // Parse IDs to get line and wordIndex (reading order)
+        const aParts = a.id.split("-").map(Number);
+        const bParts = b.id.split("-").map(Number);
+
+        if (aParts.length >= 2 && bParts.length >= 2) {
+          const aLine = aParts[0];
+          const bLine = bParts[0];
+          const aWordIndex = aParts[1];
+          const bWordIndex = bParts[1];
+
+          // First sort by line (reading order across lines)
+          if (aLine !== bLine) {
+            return aLine - bLine;
+          }
+
+          // Then sort by wordIndex within the same line
+          return aWordIndex - bWordIndex;
         }
-        
-        const aRect = aEl.getBoundingClientRect();
-        const bRect = bEl.getBoundingClientRect();
-        
-        // First sort by top position (line)
-        const topDiff = aRect.top - bRect.top;
-        if (Math.abs(topDiff) > aRect.height * 0.5) {
-          return topDiff;
-        }
-        
-        // Then sort by left position (word order within line)
-        return aRect.left - bRect.left;
+
+        // Fallback to string comparison if ID format is invalid
+        return a.id.localeCompare(b.id);
       });
-      
+
       return sortedWords.map((item) => item.word).join(" ");
     },
 
@@ -325,118 +324,78 @@ export const useMarkerStore = defineStore("marker", {
     },
 
     /**
-     * Gets the ID of the adjacent word in the specified direction based on DOM position.
+     * Gets the ID of the adjacent word in the specified direction based on ID order (reading order across lines).
      * @param direction 'left' for previous word, 'right' for next word
      * @returns The adjacent word ID, or null if not found
      */
     getAdjacentWordId(direction: "left" | "right"): string | null {
       if (this.markedWords.length === 0) return null;
 
-      // Get all word elements and their positions
+      // Get all word elements with IDs
       const allWordElements = Array.from(
         document.querySelectorAll("span[id]")
       ) as HTMLElement[];
 
-      // Filter to valid word elements with IDs
-      const validWords = allWordElements
+      // Parse all words and sort by ID order (line, then wordIndex)
+      const allWords = allWordElements
         .map((el) => {
           const id = el.id;
           if (!id) return null;
           const parts = id.split("-").map(Number);
-          if (parts.length >= 3 && !isNaN(parts[2])) {
-            const rect = el.getBoundingClientRect();
-            return { id, element: el, rect, sequentialId: parts[2] };
+          if (parts.length >= 3 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+            const line = parts[0];
+            const wordIndex = parts[1];
+            const sequentialId = parts[2];
+            return { id, element: el, line, wordIndex, sequentialId };
           }
           return null;
         })
         .filter((w): w is NonNullable<typeof w> => w !== null);
 
-      if (validWords.length === 0) return null;
+      if (allWords.length === 0) return null;
 
-      // Find the edge word based on direction
-      let edgeWord: (typeof validWords)[0] | null = null;
+      // Sort words by reading order: first by line, then by wordIndex
+      allWords.sort((a, b) => {
+        if (a.line !== b.line) {
+          return a.line - b.line;
+        }
+        return a.wordIndex - b.wordIndex;
+      });
+
+      // Find edge marked word based on direction in sorted order
+      const markedIds = new Set(this.markedWords.map((w) => w.id));
+
+      let edgeIndex = -1;
       if (direction === "left") {
-        // Find leftmost marked word
-        const markedRects = this.markedWords
-          .map((w) => {
-            const el = document.getElementById(w.id);
-            return el ? el.getBoundingClientRect() : null;
-          })
-          .filter((r): r is DOMRect => r !== null);
-
-        if (markedRects.length === 0) return null;
-
-        const minLeft = Math.min(...markedRects.map((r) => r.left));
-        edgeWord =
-          validWords.find((w) => {
-            const marked = this.markedWords.find((mw) => mw.id === w.id);
-            return marked && Math.abs(w.rect.left - minLeft) < 1;
-          }) || null;
+        // Find the leftmost (first in reading order) marked word
+        edgeIndex = allWords.findIndex((w) => markedIds.has(w.id));
       } else {
-        // Find rightmost marked word
-        const markedRects = this.markedWords
-          .map((w) => {
-            const el = document.getElementById(w.id);
-            return el ? el.getBoundingClientRect() : null;
-          })
-          .filter((r): r is DOMRect => r !== null);
-
-        if (markedRects.length === 0) return null;
-
-        const maxRight = Math.max(...markedRects.map((r) => r.right));
-        edgeWord =
-          validWords.find((w) => {
-            const marked = this.markedWords.find((mw) => mw.id === w.id);
-            return marked && Math.abs(w.rect.right - maxRight) < 1;
-          }) || null;
-      }
-
-      if (!edgeWord) return null;
-
-      // Find adjacent word based on visual position
-      const edgeRect = edgeWord.rect;
-      const edgeCenterY = edgeRect.top + edgeRect.height / 2;
-
-      let adjacentWord: (typeof validWords)[0] | null = null;
-      let minDistance = Infinity;
-
-      for (const word of validWords) {
-        // Skip if already marked
-        if (this.checkedSelected(word.id)) continue;
-
-        const wordRect = word.rect;
-        const wordCenterY = wordRect.top + wordRect.height / 2;
-
-        // Check if word is on roughly the same line (within height tolerance)
-        const verticalOverlap =
-          Math.abs(wordCenterY - edgeCenterY) < edgeRect.height * 0.8;
-
-        if (!verticalOverlap) continue;
-
-        if (direction === "left") {
-          // Word should be to the left of edge word
-          if (wordRect.right <= edgeRect.left) {
-            const distance = edgeRect.left - wordRect.right;
-            if (distance < minDistance) {
-              minDistance = distance;
-              adjacentWord = word;
-            }
-          }
-        } else {
-          // Word should be to the right of edge word
-          if (wordRect.left >= edgeRect.right) {
-            const distance = wordRect.left - edgeRect.right;
-            if (distance < minDistance) {
-              minDistance = distance;
-              adjacentWord = word;
-            }
+        // Find the rightmost (last in reading order) marked word
+        for (let i = allWords.length - 1; i >= 0; i--) {
+          if (markedIds.has(allWords[i].id)) {
+            edgeIndex = i;
+            break;
           }
         }
       }
 
-      // Only return if word is reasonably close (within 50px horizontally)
-      if (adjacentWord && minDistance < 50) {
-        return adjacentWord.id;
+      if (edgeIndex === -1) return null;
+
+      // Find adjacent word in sorted order
+      if (direction === "left") {
+        // Look for previous unmarked word
+        for (let i = edgeIndex - 1; i >= 0; i--) {
+          if (!markedIds.has(allWords[i].id)) {
+            return allWords[i].id;
+          }
+        }
+      } else {
+        // Look for next unmarked word
+        for (let i = edgeIndex + 1; i < allWords.length; i++) {
+          if (!markedIds.has(allWords[i].id)) {
+            return allWords[i].id;
+          }
+        }
       }
 
       return null;
@@ -457,7 +416,6 @@ export const useMarkerStore = defineStore("marker", {
         this.markWord(id, wordText, boundingRect);
       }
     },
-
   },
 });
 

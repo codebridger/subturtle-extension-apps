@@ -1,6 +1,7 @@
 <template>
   <div
     :class="['selection-anchor', `anchor-${direction}`]"
+    :style="anchorStyle"
     @click.prevent.stop="onClick"
     @mouseenter="onMouseEnter"
     @mouseleave="onMouseLeave"
@@ -12,13 +13,22 @@
 </template>
 
 <script lang="ts" setup>
+import { computed } from "vue";
 import { useMarkerStore } from "../../../stores/marker";
 
 const props = defineProps<{
   direction: "left" | "right";
+  style?: Record<string, string> | null;
 }>();
 
 const markerStore = useMarkerStore();
+
+const anchorStyle = computed(() => {
+  if (props.style) {
+    return props.style;
+  }
+  return {};
+});
 
 function onMouseEnter() {
   // Keep rectangle visible when hovering anchors
@@ -49,9 +59,6 @@ function onClick(e: MouseEvent) {
 
 <style scoped>
 .selection-anchor {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
   width: 20px;
   height: 20px;
   cursor: pointer;
@@ -61,11 +68,18 @@ function onClick(e: MouseEvent) {
   justify-content: center;
 }
 
-.anchor-left {
+/* Default positioning if no style prop is provided (fallback) */
+.selection-anchor:not([style]) {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.selection-anchor:not([style]).anchor-left {
   left: -10px;
 }
 
-.anchor-right {
+.selection-anchor:not([style]).anchor-right {
   right: -10px;
 }
 
