@@ -25,9 +25,9 @@
         :style="lastWordAnchorStyle"
       />
 
-      <!-- Close button in top-right corner -->
+      <!-- Close button in top-right corner (only visible when multiple words selected) -->
       <div
-        v-if="closeButtonStyle"
+        v-if="closeButtonStyle && markerStore.markedWords.length > 1"
         class="selection-close-button"
         :style="closeButtonStyle"
         @click.stop="onCloseClick"
@@ -61,11 +61,9 @@ const anchorOffset = 0; // 10px
 
 const firstWordAnchorStyle = computed(() => {
   if (!firstWordRect.value) return null;
-  // Left anchor: positioned at left edge, then translated -50% to center it 10px to the left
+  // Left anchor: align with rectangle left edge (accounting for leftPadding)
   // With translate(-50%, -50%), the left value becomes the center point
-  // Setting left to firstWordRect.value.left means center is there, so right edge touches left edge
-  // We want it 10px to the left, so we set left to firstWordRect.value.left - 10
-  // Push anchor down a bit
+  const leftPadding = 4; // Match the rectangle's left padding
   const verticalOffset = 5; // Push anchors down
   return {
     position: "fixed",
@@ -74,18 +72,16 @@ const firstWordAnchorStyle = computed(() => {
       firstWordRect.value.height / 2 +
       verticalOffset +
       "px",
-    left: firstWordRect.value.left - anchorOffset + "px",
+    left: firstWordRect.value.left - leftPadding + "px",
     transform: "translate(-50%, -50%)",
   };
 });
 
 const lastWordAnchorStyle = computed(() => {
   if (!lastWordRect.value) return null;
-  // Right anchor: positioned at right edge, then translated -50% to center it 10px to the right
+  // Right anchor: align with rectangle right edge (accounting for padding)
   // With translate(-50%, -50%), the left value becomes the center point
-  // Setting left to lastWordRect.value.right + 10 means center is 10px to the right
-  // So the anchor's left edge will be at lastWordRect.value.right
-  // Push anchor down a bit
+  const rightPadding = 1; // Match the rectangle's right padding
   const verticalOffset = 5; // Push anchors down
   return {
     position: "fixed",
@@ -94,7 +90,7 @@ const lastWordAnchorStyle = computed(() => {
       lastWordRect.value.height / 2 +
       verticalOffset +
       "px",
-    left: lastWordRect.value.right + anchorOffset + "px",
+    left: lastWordRect.value.right + rightPadding + "px",
     transform: "translate(-50%, -50%)",
   };
 });
