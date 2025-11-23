@@ -102,6 +102,9 @@ const generateId = () => "subturtle-dialogue-" + Math.random().toString(36).subs
 const updateDialogues = () => {
   if (!subtitleContainer.value) return;
 
+  // Cleanup disconnected dialogues
+  dialogues.value = dialogues.value.filter(d => d.element.isConnected);
+
   // Find all dialogue bubbles
   const captionTexts = subtitleContainer.value.querySelectorAll(SUBTITLE_LINE_CLASS);
 
@@ -172,20 +175,25 @@ const updateDialogues = () => {
 };
 
 const onSeekForSubtitle = (int: Interval) => {
-  let exists = !!document.querySelector(SUBTILE_CONTAINER_CLASS);
+  try {
+    let exists = !!document.querySelector(SUBTILE_CONTAINER_CLASS);
 
-  if (!exists) {
-    active.value = false;
-    dialogues.value = []; 
-  } else if (exists) {
-    active.value = true;
-    subtitleContainer.value = document.querySelector(
-      SUBTILE_CONTAINER_CLASS
-    ) as HTMLElement;
-    updateDialogues();
+    if (!exists) {
+      active.value = false;
+      dialogues.value = []; 
+      markerStore.clear();
+    } else if (exists) {
+      active.value = true;
+      subtitleContainer.value = document.querySelector(
+        SUBTILE_CONTAINER_CLASS
+      ) as HTMLElement;
+      updateDialogues();
+    }
+  } catch (error) {
+    console.error("Error in onSeekForSubtitle:", error);
+  } finally {
+    int.next();
   }
-
-  int.next();
 };
 
 onMounted(() => {
