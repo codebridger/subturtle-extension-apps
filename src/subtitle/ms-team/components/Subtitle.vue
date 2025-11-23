@@ -7,13 +7,8 @@
         <div ref="subturtleSubtitle" :dir="sourceDir" class="text-left">
           <div v-for="(line, i) in textList" :key="i">
             <p :class="['pb-0', 'subtitle-line', props.textClasses]" :style="textStyle">
-              <word
-                v-for="(word, i2) in line.split(' ')"
-                :key="i2"
-                :id="getWordId(i, i2)"
-                :modelValue="word + ' '"
-                class="interactive-word"
-              />
+              <word v-for="(word, i2) in line.split(' ')" :key="i2" :id="getWordId(i, i2)" :modelValue="word + ' '"
+                class="interactive-word" />
             </p>
           </div>
         </div>
@@ -23,9 +18,9 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, computed, ref, watch, StyleValue } from "vue";
+import { defineProps, computed, ref } from "vue";
 import { useMarkerStore } from "../../../stores/marker";
-import { getDir, rtls, cleanText as cleanTextHelper } from "../../../common/helper/text";
+import { getDir, rtls } from "../../../common/helper/text";
 import Word from "../../components/specific/Word.vue";
 
 const props = defineProps<{
@@ -39,33 +34,23 @@ const props = defineProps<{
 const markerStore = useMarkerStore();
 const subturtleSubtitle = ref<HTMLElement | null>(null);
 
-const dir = computed(() => {
-  return getDir();
-});
-
 const sourceDir = computed(() => {
   let dir = rtls.indexOf(markerStore.sourceLanguage) != -1 ? "rtl" : "ltr";
   return dir;
 });
 
-
-
 const getWordId = (i: number, i2: number) => {
-    return markerStore.getWordId(props.dialogueIndex, i, i2);
+  return markerStore.getWordId(props.dialogueIndex, i, i2);
 }
-
-const cleanText = (text: string) => {
-  return cleanTextHelper(text);
-};
 </script>
 
 <style lang="scss" scoped>
 .ms-team-subtitle-wrapper {
-    pointer-events: none;
+  pointer-events: none;
 }
 
 .subtitle-line {
-    pointer-events: auto;
+  pointer-events: auto;
 }
 
 .container {

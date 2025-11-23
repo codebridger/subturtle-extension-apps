@@ -1,20 +1,10 @@
 <template>
   <div>
-    <teleport
-      v-for="dialogue in dialogues"
-      :key="dialogue.id"
-      :to="'#' + dialogue.id"
-    >
+    <teleport v-for="dialogue in dialogues" :key="dialogue.id" :to="'#' + dialogue.id">
       <div class="subturtle-ms-team-container">
-        <SubtitleComponent
-          :id="'subturtle-caption-' + dialogue.id"
-          class="caption-window"
-          :wrapperStyle="wrapperStyle"
-          :textList="dialogue.text"
-          :textStyle="style"
-          :textClasses="dialogue.textClasses"
-          :dialogueIndex="dialogue.index"
-        />
+        <SubtitleComponent :id="'subturtle-caption-' + dialogue.id" class="caption-window" :wrapperStyle="wrapperStyle"
+          :textList="dialogue.text" :textStyle="style" :textClasses="dialogue.textClasses"
+          :dialogueIndex="dialogue.index" />
       </div>
     </teleport>
 
@@ -22,11 +12,7 @@
     <WordSelectionRectangle />
 
     <!-- Translated Phrase -->
-    <div
-      class="translated-word flex justify-center"
-      :style="translateStyle"
-      :dir="dir"
-    >
+    <div class="translated-word flex justify-center" :style="translateStyle" :dir="dir">
       <TranslatedPhrase :textStyle="style" />
     </div>
   </div>
@@ -43,9 +29,8 @@ import { Interval } from "../../common/helper/promise";
 import SubtitleComponent from "./components/Subtitle.vue";
 import TranslatedPhrase from "../components/specific/TranslatedPhrase.vue";
 import WordSelectionRectangle from "../components/specific/WordSelectionRectangle.vue";
-import { mapStyleString, getComputedStyles } from "../../common/helper/object";
 import { log } from "../../common/helper/log";
-import { getDir, rtls } from "../../common/helper/text";
+import { getDir } from "../../common/helper/text";
 
 const markerStore = useMarkerStore();
 
@@ -76,7 +61,7 @@ const translateStyle = computed((): StyleValue => {
   if (bounds && hasSelection) {
     const translationWidth = bounds.width * 3; // Or a fixed width/max-width
     const translationLeft = bounds.left + bounds.width / 2 - translationWidth / 2;
-    
+
     // Position above the selection
     // We use fixed positioning relative to the viewport, similar to WordSelectionRectangle
     return {
@@ -112,8 +97,8 @@ const updateDialogues = () => {
 
   captionTexts.forEach((textEl) => {
     const el = textEl as HTMLElement;
-    const targetParent = el.parentElement; 
-    
+    const targetParent = el.parentElement;
+
     if (!targetParent) return;
 
     let dialogueId = targetParent.id;
@@ -123,7 +108,7 @@ const updateDialogues = () => {
       if (!dialogueId) {
         dialogueId = generateId();
         targetParent.id = dialogueId;
-        targetParent.style.position = "relative"; 
+        targetParent.style.position = "relative";
       }
 
       dialogue = {
@@ -134,7 +119,7 @@ const updateDialogues = () => {
         text: [el.textContent || ""],
         textClasses: el.className || "",
       };
-      
+
       dialogues.value.push(dialogue);
 
       el.style.opacity = "0";
@@ -143,10 +128,10 @@ const updateDialogues = () => {
       const newText = el.textContent || "";
       const newClasses = el.className || "";
       if (dialogue.text[0] !== newText) {
-         dialogue.text = [newText];
+        dialogue.text = [newText];
       }
       if (dialogue.textClasses !== newClasses) {
-         dialogue.textClasses = newClasses;
+        dialogue.textClasses = newClasses;
       }
     }
   });
@@ -177,7 +162,7 @@ const onSeekForSubtitle = (int: Interval) => {
 
     if (!exists) {
       active.value = false;
-      dialogues.value = []; 
+      dialogues.value = [];
       markerStore.clear();
     } else if (exists) {
       active.value = true;
