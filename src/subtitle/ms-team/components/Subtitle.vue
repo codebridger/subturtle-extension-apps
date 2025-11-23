@@ -6,7 +6,7 @@
       <div v-if="textList?.length" class="w-full">
         <div ref="subturtleSubtitle" :dir="sourceDir" class="text-left">
           <div v-for="(line, i) in textList" :key="i">
-            <p class="pb-0 subtitle-line" :style="textStyle">
+            <p :class="['pb-0', 'subtitle-line', props.textClasses]" :style="textStyle">
               <word
                 v-for="(word, i2) in line.split(' ')"
                 :key="i2"
@@ -32,6 +32,7 @@ const props = defineProps<{
   textList?: string[];
   textStyle?: any;
   wrapperStyle?: any;
+  textClasses?: string;
   dialogueIndex: number;
 }>();
 

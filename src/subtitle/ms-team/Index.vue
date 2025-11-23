@@ -12,6 +12,7 @@
           :wrapperStyle="wrapperStyle"
           :textList="dialogue.text"
           :textStyle="style"
+          :textClasses="dialogue.textClasses"
           :dialogueIndex="dialogue.index"
         />
       </div>
@@ -54,6 +55,7 @@ interface Dialogue {
   element: HTMLElement;
   textElement: HTMLElement;
   text: string[];
+  textClasses: string;
 }
 
 const active = ref(false);
@@ -130,26 +132,21 @@ const updateDialogues = () => {
         element: targetParent,
         textElement: el,
         text: [el.textContent || ""],
+        textClasses: el.className || "",
       };
-      dialogues.value.push(dialogue);
       
-      if (Object.keys(style.value).length === 0) {
-         let styleStr = el.getAttribute("style");
-         style.value = mapStyleString(styleStr || "");
-         if (!style.value.fontSize) {
-             style.value = { 
-                 ...style.value, 
-                 ...getComputedStyles(["font-size", "color", "font-family", "line-height"], el) 
-             };
-         }
-      }
+      dialogues.value.push(dialogue);
 
       el.style.opacity = "0";
 
     } else {
       const newText = el.textContent || "";
+      const newClasses = el.className || "";
       if (dialogue.text[0] !== newText) {
          dialogue.text = [newText];
+      }
+      if (dialogue.textClasses !== newClasses) {
+         dialogue.textClasses = newClasses;
       }
     }
   });
