@@ -15,6 +15,8 @@
     <div class="translated-word flex justify-center" :style="translateStyle" :dir="dir">
       <TranslatedPhrase :textStyle="style" />
     </div>
+
+    <ConsoleCrane />
   </div>
 </template>
 
@@ -29,6 +31,7 @@ import { Interval } from "../../common/helper/promise";
 import SubtitleComponent from "./components/Subtitle.vue";
 import TranslatedPhrase from "../components/specific/TranslatedPhrase.vue";
 import WordSelectionRectangle from "../components/specific/WordSelectionRectangle.vue";
+import ConsoleCrane from "../../console-crane/index.vue";
 import { log } from "../../common/helper/log";
 import { getDir } from "../../common/helper/text";
 

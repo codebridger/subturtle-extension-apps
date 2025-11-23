@@ -15,7 +15,7 @@ export const youtube: AppInitializer = {
     await waitUntil(() => !!document.querySelector(SUBTILE_CONTAINER_CLASS));
 
     let appDiv = document.createElement("div");
-    appDiv.id = "app";
+    appDiv.id = "subturtle-app";
 
     document.body.insertAdjacentElement("afterbegin", appDiv);
 

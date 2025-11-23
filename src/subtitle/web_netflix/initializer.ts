@@ -19,7 +19,7 @@ export const netflix: AppInitializer = {
 
     videoContainer?.insertBefore(appDiv, videoContainer.firstChild);
 
-    appDiv.id = "app";
+    appDiv.id = "subturtle-app";
     appDiv.style.position = "relative";
     appDiv.style.zIndex = "9999";
 

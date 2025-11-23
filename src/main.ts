@@ -1,3 +1,5 @@
+import "./trusted-types-polyfill";
+
 log("Using version", VERSION);
 
 import "./animation.scss";
