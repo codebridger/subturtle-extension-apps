@@ -69,10 +69,9 @@ interface State {
    */
   hoveredWordId: string | null;
   /**
-   * Position update counter - increments when word positions should be recalculated.
-   * Used to trigger reactive updates in components that depend on rectangleBounds.
+   * Trigger for position updates.
    */
-  positionUpdateCounter: number;
+  positionUpdateTrigger: number;
 }
 
 /**
@@ -107,11 +106,14 @@ export const useMarkerStore = defineStore("marker", {
     /**
      * ID of the currently hovered word.
      */
+    /**
+     * ID of the currently hovered word.
+     */
     hoveredWordId: null,
     /**
-     * Position update counter for triggering reactive updates.
+     * Trigger for position updates (incremented to force reactivity).
      */
-    positionUpdateCounter: 0,
+    positionUpdateTrigger: 0,
   }),
 
   getters: {
@@ -165,6 +167,9 @@ export const useMarkerStore = defineStore("marker", {
      * Returns null if no words are marked.
      */
     rectangleBounds: (state) => {
+      // Access positionUpdateTrigger to ensure reactivity when positions change
+      const _ = state.positionUpdateTrigger;
+
       if (state.markedWords.length === 0) return null;
 
       // Get current DOM positions
@@ -427,11 +432,11 @@ export const useMarkerStore = defineStore("marker", {
     },
 
     /**
-     * Triggers a position update by incrementing the counter.
-     * Components can watch this to reactively update when word positions change.
+     * Triggers a position update for components relying on rectangleBounds.
+     * Increments positionUpdateTrigger to force getter re-evaluation.
      */
     triggerPositionUpdate() {
-      this.positionUpdateCounter++;
+      this.positionUpdateTrigger++;
     },
   },
 });

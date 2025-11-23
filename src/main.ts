@@ -10,6 +10,7 @@ import ConsoleCrane from "./console-crane/index.vue";
 
 import { netflix } from "./subtitle/web_netflix/initializer";
 import { youtube } from "./subtitle/web_youtube/initializer";
+import { msTeam } from "./subtitle/ms-team/initializer";
 import { AppInitializer } from "./common/types/general.type";
 import { cleanText } from "./common/helper/text";
 import { analytic } from "./plugins/mixpanel";
@@ -29,7 +30,7 @@ let initialized = false;
 
 // Select an app initializer from existing modules
 //
-[youtube, netflix].forEach((item) => {
+[youtube, netflix, msTeam].forEach((item) => {
   if (location.hostname.includes(item.website.host)) {
     appInitializer = item;
   }
