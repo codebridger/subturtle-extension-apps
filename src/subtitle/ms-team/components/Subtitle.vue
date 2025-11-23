@@ -47,15 +47,7 @@ const sourceDir = computed(() => {
   return dir;
 });
 
-watch(
-  () => props.textList,
-  (value, old) => {
-    if (JSON.stringify(value) == JSON.stringify(old)) return;
 
-    markerStore.clear();
-  },
-  { deep: true }
-);
 
 const getWordId = (i: number, i2: number) => {
     return markerStore.getWordId(props.dialogueIndex, i, i2);
