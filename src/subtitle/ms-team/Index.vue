@@ -12,6 +12,7 @@
           :wrapperStyle="wrapperStyle"
           :textList="dialogue.text"
           :textStyle="style"
+          :dialogueIndex="dialogue.index"
         />
       </div>
     </teleport>
@@ -49,6 +50,7 @@ const markerStore = useMarkerStore();
 
 interface Dialogue {
   id: string;
+  index: number;
   element: HTMLElement;
   textElement: HTMLElement;
   text: string[];
@@ -60,6 +62,7 @@ const style = ref<CSSStyleDeclaration | { [key: string]: string }>({});
 const wrapperStyle = ref({});
 const subtitleContainer = ref<HTMLElement | null>(null);
 let interval: Interval | undefined;
+let dialogueCounter = 0;
 
 // Translation Logic
 const dir = computed(() => getDir());
@@ -120,6 +123,7 @@ const updateDialogues = () => {
 
       dialogue = {
         id: dialogueId,
+        index: dialogueCounter++,
         element: targetParent,
         textElement: el,
         text: [el.textContent || ""],

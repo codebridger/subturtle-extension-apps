@@ -134,24 +134,31 @@ export const useMarkerStore = defineStore("marker", {
      * Words are sorted by their DOM position (left to right, top to bottom) to ensure correct order.
      */
     selectedPhrase: (state) => {
-      // Sort words by ID order (line, then wordIndex) to ensure correct reading order
+      // Sort words by ID order (dialogueIndex, line, then wordIndex) to ensure correct reading order
       const sortedWords = [...state.markedWords].sort((a, b) => {
-        // Parse IDs to get line and wordIndex (reading order)
+        // Parse IDs to get dialogueIndex, line and wordIndex (reading order)
         const aParts = a.id.split("-").map(Number);
         const bParts = b.id.split("-").map(Number);
 
-        if (aParts.length >= 2 && bParts.length >= 2) {
-          const aLine = aParts[0];
-          const bLine = bParts[0];
-          const aWordIndex = aParts[1];
-          const bWordIndex = bParts[1];
+        if (aParts.length >= 3 && bParts.length >= 3) {
+          const aDialogueIndex = aParts[0];
+          const bDialogueIndex = bParts[0];
+          const aLine = aParts[1];
+          const bLine = bParts[1];
+          const aWordIndex = aParts[2];
+          const bWordIndex = bParts[2];
 
-          // First sort by line (reading order across lines)
+          // First sort by dialogueIndex
+          if (aDialogueIndex !== bDialogueIndex) {
+            return aDialogueIndex - bDialogueIndex;
+          }
+
+          // Then sort by line
           if (aLine !== bLine) {
             return aLine - bLine;
           }
 
-          // Then sort by wordIndex within the same line
+          // Then sort by wordIndex
           return aWordIndex - bWordIndex;
         }
 
@@ -270,12 +277,15 @@ export const useMarkerStore = defineStore("marker", {
       this.markedWords.push({ id, word, domeRect });
       // Sort base id
       this.markedWords = this.markedWords.sort((a, b) => {
-        // id format is [line]-[wordIndex]-[line * wordIndex]
-        // So, we can split the id by "-" and get the last element
-        const aid = a.id.split("-").map(Number)[2];
-        const bid = b.id.split("-").map(Number)[2];
+        const aParts = a.id.split("-").map(Number);
+        const bParts = b.id.split("-").map(Number);
 
-        return aid - bid;
+        if (aParts.length >= 3 && bParts.length >= 3) {
+            if (aParts[0] !== bParts[0]) return aParts[0] - bParts[0];
+            if (aParts[1] !== bParts[1]) return aParts[1] - bParts[1];
+            return aParts[2] - bParts[2];
+        }
+        return 0;
       });
 
       // Translate the selected phrase
@@ -303,13 +313,14 @@ export const useMarkerStore = defineStore("marker", {
     },
 
     /**
-     * Generates a unique word id based on line and word index.
+     * Generates a unique word id based on dialogue index, line and word index.
+     * @param dialogueIndex The dialogue index
      * @param line The line number
      * @param wordIndex The word index in the line
      * @returns The generated id string
      */
-    getWordId(line: number, wordIndex: number) {
-      return line + "-" + wordIndex + "-" + line * wordIndex;
+    getWordId(dialogueIndex: number, line: number, wordIndex: number) {
+      return dialogueIndex + "-" + line + "-" + wordIndex;
     },
 
     /**

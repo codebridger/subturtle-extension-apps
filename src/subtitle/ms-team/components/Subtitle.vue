@@ -32,6 +32,7 @@ const props = defineProps<{
   textList?: string[];
   textStyle?: any;
   wrapperStyle?: any;
+  dialogueIndex: number;
 }>();
 
 const markerStore = useMarkerStore();
@@ -57,7 +58,7 @@ watch(
 );
 
 const getWordId = (i: number, i2: number) => {
-    return markerStore.getWordId(i, i2);
+    return markerStore.getWordId(props.dialogueIndex, i, i2);
 }
 
 const cleanText = (text: string) => {
