@@ -36,6 +36,13 @@ The MS Teams integration provides interactive subtitles with word translation an
 4. **Word Selection**: Clicking a word triggers `OpenWordDetail` in `Word.vue`
 5. **Modal Display**: `ConsoleCrane` shows translation and learning options
 
+### Interaction Enhancements
+
+The MS Teams overlay uses two key interaction affordances to keep the UI predictable when captions constantly re-render:
+
+- **Selection lifecycle**: `markerStore` owns the auto-clear lifecycle. When the pointer leaves the selection and the user is no longer marking, the store starts a timeout (≈2.5 s for single-word, ≈5 s for multi-word). Because the logic lives in the store rather than in DOM-bound components, selections expire reliably even while Teams injects new caption nodes.
+- **Translation placement**: `Index.vue` exposes `translationSpacingPx`, a single constant that defines how far above the selection the translated phrase floats. Adjusting this value lets us react to future Teams layout changes while keeping the overlay below the selection rectangle’s z-index so the highlight stays visible.
+
 ## MS Teams-Specific Challenges
 
 ### Content Security Policy (CSP)
@@ -118,24 +125,6 @@ Enable console logs to see:
 - Check that `textClasses` are being passed correctly
 - Verify caption CSS classes are being extracted
 - Inspect computed styles on caption elements
-
-## Key Differences from YouTube/Netflix
-
-| Feature | MS Teams | YouTube/Netflix |
-|---------|----------|-----------------|
-| Caption Detection | `MutationObserver` polling | Direct subtitle API |
-| Styling | Copy native classes | Custom styling |
-| CSP | Strict (Trusted Types) | Moderate |
-| DOM Structure | Per-dialogue overlays | Single overlay |
-| Modal Mounting | Within app container | Teleport to body |
-
-## Future Improvements
-
-- [ ] Support for multiple caption languages
-- [ ] Better handling of caption position changes
-- [ ] Offline mode for caption history
-- [ ] Integration with Teams chat for word sharing
-- [ ] Support for breakout rooms
 
 ## Related Files
 

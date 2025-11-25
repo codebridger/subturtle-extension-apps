@@ -36,6 +36,7 @@ import { log } from "../../common/helper/log";
 import { getDir } from "../../common/helper/text";
 
 const markerStore = useMarkerStore();
+const translationSpacingPx = 96; // Vertical gap between selection and translation bubble
 
 interface Dialogue {
   id: string;
@@ -64,6 +65,7 @@ const translateStyle = computed((): StyleValue => {
   if (bounds && hasSelection) {
     const translationWidth = bounds.width * 3; // Or a fixed width/max-width
     const translationLeft = bounds.left + bounds.width / 2 - translationWidth / 2;
+    const translationTop = Math.max(12, bounds.top - translationSpacingPx);
 
     // Position above the selection
     // We use fixed positioning relative to the viewport, similar to WordSelectionRectangle
@@ -74,10 +76,10 @@ const translateStyle = computed((): StyleValue => {
       width: translationWidth + "px",
       textAlign: "center",
       opacity: 1,
-      top: `calc(${bounds.top}px - 4rem)`, // Position above the word
+      top: translationTop + "px",
       transition: "all ease 200ms",
       pointerEvents: "auto",
-      zIndex: 9999, // Ensure it's on top
+      zIndex: 998,
     };
   }
 

@@ -27,6 +27,10 @@
 import { defineStore } from "pinia";
 import { TranslateService } from "../common/services/translate.service";
 
+const SINGLE_SELECTION_AUTO_CLEAR_MS = 2500;
+const MULTI_SELECTION_AUTO_CLEAR_MS = 5000;
+let selectionAutoClearTimer: number | null = null;
+
 /**
  * Represents a word that has been marked by the user, including its unique id, text, and DOM rectangle for UI positioning.
  */
@@ -214,6 +218,49 @@ export const useMarkerStore = defineStore("marker", {
   },
 
   actions: {
+    startAutoClearTimer(delay: number) {
+      if (typeof window === "undefined") {
+        return;
+      }
+
+      this.stopAutoClearTimer();
+      selectionAutoClearTimer = window.setTimeout(() => {
+        selectionAutoClearTimer = null;
+        this.clear();
+        this.setHoveredWordId(null);
+      }, delay);
+    },
+
+    stopAutoClearTimer() {
+      if (selectionAutoClearTimer !== null) {
+        if (typeof window !== "undefined") {
+          window.clearTimeout(selectionAutoClearTimer);
+        } else {
+          clearTimeout(selectionAutoClearTimer);
+        }
+        selectionAutoClearTimer = null;
+      }
+    },
+
+    evaluateAutoClearTimer() {
+      if (this.markedWords.length === 0) {
+        this.stopAutoClearTimer();
+        return;
+      }
+
+      if (this.marking || this.hoveredWordId !== null) {
+        this.stopAutoClearTimer();
+        return;
+      }
+
+      const delay =
+        this.markedWords.length > 1
+          ? MULTI_SELECTION_AUTO_CLEAR_MS
+          : SINGLE_SELECTION_AUTO_CLEAR_MS;
+
+      this.startAutoClearTimer(delay);
+    },
+
     /**
      * Translates the currently selected phrase using the context, and stores the result in translatedWords.
      */
@@ -243,6 +290,8 @@ export const useMarkerStore = defineStore("marker", {
       if (value == false) {
         this.translate();
       }
+
+      this.evaluateAutoClearTimer();
     },
 
     /**
@@ -262,6 +311,8 @@ export const useMarkerStore = defineStore("marker", {
           { once: true }
         );
       }
+
+      this.evaluateAutoClearTimer();
     },
 
     /**
@@ -294,13 +345,17 @@ export const useMarkerStore = defineStore("marker", {
       } else {
         // when marking changed the translate will be triggered
       }
+
+      this.evaluateAutoClearTimer();
     },
 
     /**
      * Clears all marked words.
      */
     clear() {
+      this.stopAutoClearTimer();
       this.markedWords = [];
+      this.evaluateAutoClearTimer();
     },
 
     /**
@@ -346,6 +401,7 @@ export const useMarkerStore = defineStore("marker", {
      */
     setHoveredWordId(id: string | null) {
       this.hoveredWordId = id;
+      this.evaluateAutoClearTimer();
     },
 
     /**
