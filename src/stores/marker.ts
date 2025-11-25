@@ -27,6 +27,10 @@
 import { defineStore } from "pinia";
 import { TranslateService } from "../common/services/translate.service";
 
+const SINGLE_SELECTION_AUTO_CLEAR_MS = 2500;
+const MULTI_SELECTION_AUTO_CLEAR_MS = 5000;
+let selectionAutoClearTimer: number | null = null;
+
 /**
  * Represents a word that has been marked by the user, including its unique id, text, and DOM rectangle for UI positioning.
  */
@@ -69,10 +73,9 @@ interface State {
    */
   hoveredWordId: string | null;
   /**
-   * Position update counter - increments when word positions should be recalculated.
-   * Used to trigger reactive updates in components that depend on rectangleBounds.
+   * Trigger for position updates.
    */
-  positionUpdateCounter: number;
+  positionUpdateTrigger: number;
 }
 
 /**
@@ -107,11 +110,14 @@ export const useMarkerStore = defineStore("marker", {
     /**
      * ID of the currently hovered word.
      */
+    /**
+     * ID of the currently hovered word.
+     */
     hoveredWordId: null,
     /**
-     * Position update counter for triggering reactive updates.
+     * Trigger for position updates (incremented to force reactivity).
      */
-    positionUpdateCounter: 0,
+    positionUpdateTrigger: 0,
   }),
 
   getters: {
@@ -132,24 +138,31 @@ export const useMarkerStore = defineStore("marker", {
      * Words are sorted by their DOM position (left to right, top to bottom) to ensure correct order.
      */
     selectedPhrase: (state) => {
-      // Sort words by ID order (line, then wordIndex) to ensure correct reading order
+      // Sort words by ID order (dialogueIndex, line, then wordIndex) to ensure correct reading order
       const sortedWords = [...state.markedWords].sort((a, b) => {
-        // Parse IDs to get line and wordIndex (reading order)
+        // Parse IDs to get dialogueIndex, line and wordIndex (reading order)
         const aParts = a.id.split("-").map(Number);
         const bParts = b.id.split("-").map(Number);
 
-        if (aParts.length >= 2 && bParts.length >= 2) {
-          const aLine = aParts[0];
-          const bLine = bParts[0];
-          const aWordIndex = aParts[1];
-          const bWordIndex = bParts[1];
+        if (aParts.length >= 3 && bParts.length >= 3) {
+          const aDialogueIndex = aParts[0];
+          const bDialogueIndex = bParts[0];
+          const aLine = aParts[1];
+          const bLine = bParts[1];
+          const aWordIndex = aParts[2];
+          const bWordIndex = bParts[2];
 
-          // First sort by line (reading order across lines)
+          // First sort by dialogueIndex
+          if (aDialogueIndex !== bDialogueIndex) {
+            return aDialogueIndex - bDialogueIndex;
+          }
+
+          // Then sort by line
           if (aLine !== bLine) {
             return aLine - bLine;
           }
 
-          // Then sort by wordIndex within the same line
+          // Then sort by wordIndex
           return aWordIndex - bWordIndex;
         }
 
@@ -165,6 +178,9 @@ export const useMarkerStore = defineStore("marker", {
      * Returns null if no words are marked.
      */
     rectangleBounds: (state) => {
+      // Access positionUpdateTrigger to ensure reactivity when positions change
+      const _ = state.positionUpdateTrigger;
+
       if (state.markedWords.length === 0) return null;
 
       // Get current DOM positions
@@ -202,6 +218,49 @@ export const useMarkerStore = defineStore("marker", {
   },
 
   actions: {
+    startAutoClearTimer(delay: number) {
+      if (typeof window === "undefined") {
+        return;
+      }
+
+      this.stopAutoClearTimer();
+      selectionAutoClearTimer = window.setTimeout(() => {
+        selectionAutoClearTimer = null;
+        this.clear();
+        this.setHoveredWordId(null);
+      }, delay);
+    },
+
+    stopAutoClearTimer() {
+      if (selectionAutoClearTimer !== null) {
+        if (typeof window !== "undefined") {
+          window.clearTimeout(selectionAutoClearTimer);
+        } else {
+          clearTimeout(selectionAutoClearTimer);
+        }
+        selectionAutoClearTimer = null;
+      }
+    },
+
+    evaluateAutoClearTimer() {
+      if (this.markedWords.length === 0) {
+        this.stopAutoClearTimer();
+        return;
+      }
+
+      if (this.marking || this.hoveredWordId !== null) {
+        this.stopAutoClearTimer();
+        return;
+      }
+
+      const delay =
+        this.markedWords.length > 1
+          ? MULTI_SELECTION_AUTO_CLEAR_MS
+          : SINGLE_SELECTION_AUTO_CLEAR_MS;
+
+      this.startAutoClearTimer(delay);
+    },
+
     /**
      * Translates the currently selected phrase using the context, and stores the result in translatedWords.
      */
@@ -231,6 +290,8 @@ export const useMarkerStore = defineStore("marker", {
       if (value == false) {
         this.translate();
       }
+
+      this.evaluateAutoClearTimer();
     },
 
     /**
@@ -250,6 +311,8 @@ export const useMarkerStore = defineStore("marker", {
           { once: true }
         );
       }
+
+      this.evaluateAutoClearTimer();
     },
 
     /**
@@ -265,12 +328,15 @@ export const useMarkerStore = defineStore("marker", {
       this.markedWords.push({ id, word, domeRect });
       // Sort base id
       this.markedWords = this.markedWords.sort((a, b) => {
-        // id format is [line]-[wordIndex]-[line * wordIndex]
-        // So, we can split the id by "-" and get the last element
-        const aid = a.id.split("-").map(Number)[2];
-        const bid = b.id.split("-").map(Number)[2];
+        const aParts = a.id.split("-").map(Number);
+        const bParts = b.id.split("-").map(Number);
 
-        return aid - bid;
+        if (aParts.length >= 3 && bParts.length >= 3) {
+            if (aParts[0] !== bParts[0]) return aParts[0] - bParts[0];
+            if (aParts[1] !== bParts[1]) return aParts[1] - bParts[1];
+            return aParts[2] - bParts[2];
+        }
+        return 0;
       });
 
       // Translate the selected phrase
@@ -279,13 +345,17 @@ export const useMarkerStore = defineStore("marker", {
       } else {
         // when marking changed the translate will be triggered
       }
+
+      this.evaluateAutoClearTimer();
     },
 
     /**
      * Clears all marked words.
      */
     clear() {
+      this.stopAutoClearTimer();
       this.markedWords = [];
+      this.evaluateAutoClearTimer();
     },
 
     /**
@@ -298,13 +368,14 @@ export const useMarkerStore = defineStore("marker", {
     },
 
     /**
-     * Generates a unique word id based on line and word index.
+     * Generates a unique word id based on dialogue index, line and word index.
+     * @param dialogueIndex The dialogue index
      * @param line The line number
      * @param wordIndex The word index in the line
      * @returns The generated id string
      */
-    getWordId(line: number, wordIndex: number) {
-      return line + "-" + wordIndex + "-" + line * wordIndex;
+    getWordId(dialogueIndex: number, line: number, wordIndex: number) {
+      return dialogueIndex + "-" + line + "-" + wordIndex;
     },
 
     /**
@@ -330,6 +401,7 @@ export const useMarkerStore = defineStore("marker", {
      */
     setHoveredWordId(id: string | null) {
       this.hoveredWordId = id;
+      this.evaluateAutoClearTimer();
     },
 
     /**
@@ -427,11 +499,11 @@ export const useMarkerStore = defineStore("marker", {
     },
 
     /**
-     * Triggers a position update by incrementing the counter.
-     * Components can watch this to reactively update when word positions change.
+     * Triggers a position update for components relying on rectangleBounds.
+     * Increments positionUpdateTrigger to force getter re-evaluation.
      */
     triggerPositionUpdate() {
-      this.positionUpdateCounter++;
+      this.positionUpdateTrigger++;
     },
   },
 });

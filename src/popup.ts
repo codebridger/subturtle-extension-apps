@@ -38,4 +38,4 @@ vueApp.config.globalProperties = {
   $getAsset: getAsset,
 };
 
-vueApp.mount("#app");
+vueApp.mount("#subturtle-popup");

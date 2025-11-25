@@ -21,7 +21,7 @@ export const initConfig: AppInitializer = {
     // Insert the app div somewhere in the page
     // @TODO: Find a better way to do this
 
-    appDiv.id = "app";
+    appDiv.id = "subturtle-app";
     appDiv.style.position = "relative";
     appDiv.style.zIndex = "9999";
 
