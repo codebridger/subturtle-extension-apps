@@ -37,7 +37,7 @@ import { CLOSE_ICON, TRANSLATE_ICON } from "../../common/icons/icons";
 import { TranslateService } from "../../common/services/translate.service";
 import { Definition } from "../../common/types/dictionaryapi.type";
 import { analytic } from "../../plugins/mixpanel";
-import Divider from "primevue/divider";
+import Divider from "../../common/components/Divider.vue";
 
 export default defineComponent({
   components: {

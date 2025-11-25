@@ -1,7 +1,7 @@
 <template>
   <transition name="fade">
     <div
-      class="min-h-[600px] w-[800px] bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 overflow-y-auto"
+      class="min-h-[600px] w-[800px] bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 overflow-y-auto"
     >
       <!-- Hero Section -->
       <div class="relative overflow-hidden">
@@ -11,7 +11,7 @@
         <div class="relative px-6 py-4">
           <div class="flex items-center justify-between">
             <div class="flex-1">
-              <h1 class="text-xl font-bold text-white mb-1">
+              <h1 class="text-xl font-bold text-gray-900 dark:text-white mb-1">
                 Learn English by streaming your&nbsp;
                 <span
                   class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400"
@@ -19,7 +19,7 @@
                   favorite shows
                 </span>
               </h1>
-              <p class="text-gray-300 text-sm max-w-md">
+              <p class="text-gray-700 dark:text-gray-300 text-sm max-w-md">
                 From subtitles to fluency. Learn from real-life, native content.
               </p>
             </div>
@@ -34,18 +34,18 @@
       <div class="p-6 space-y-6">
         <!-- Control Panel -->
         <div
-          class="bg-white/[0.03] backdrop-blur-xl rounded-xl p-4 border border-white/[0.08] shadow-xl hover:border-white/[0.12] transition-all duration-300"
+          class="bg-gray-50 dark:bg-white/[0.03] backdrop-blur-xl rounded-xl p-4 border border-gray-200 dark:border-white/[0.08] shadow-xl hover:border-gray-300 dark:hover:border-white/[0.12] transition-all duration-300"
         >
           <div class="flex items-stretch gap-8">
             <!-- Language Selection -->
             <div class="flex-1 relative group">
               <h3
-                class="text-lg font-medium mb-4 text-white flex items-center gap-2"
+                class="text-lg font-medium mb-4 text-gray-900 dark:text-white flex items-center gap-2"
               >
                 My language
                 <div class="tooltip-container">
                   <span
-                    class="text-gray-400 hover:text-gray-300 cursor-help text-sm"
+                    class="text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 cursor-help text-sm"
                     >(?)</span
                   >
                   <div class="tooltip">
@@ -55,7 +55,7 @@
               </h3>
               <div class="flex flex-col space-y-4 items-start justify-between">
                 <span
-                  class="text-gray-400 text-sm whitespace-nowrap group-hover:text-gray-300 transition-colors"
+                  class="text-gray-600 dark:text-gray-400 text-sm whitespace-nowrap group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors"
                 >
                   Choose your language, so we can help you learn better.
                 </span>
@@ -67,16 +67,16 @@
 
             <!-- Separator -->
             <div
-              class="w-px bg-gradient-to-b from-white/[0.05] via-white/10 to-white/[0.05]"
+              class="w-px bg-gradient-to-b from-gray-200/[0.5] via-gray-300/10 to-gray-200/[0.5] dark:from-white/[0.05] dark:via-white/10 dark:to-white/[0.05]"
             ></div>
 
             <!-- Dashboard Section -->
             <div class="flex-2">
-              <h3 class="text-lg font-medium text-white mb-4">
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
                 Access Your Dashboard
               </h3>
               <div class="flex flex-col space-y-4 items-start justify-between">
-                <p class="text-gray-400 text-sm">
+                <p class="text-gray-600 dark:text-gray-400 text-sm">
                   Manage your saved phrases and track your progress
                 </p>
                 <button
@@ -158,7 +158,7 @@
                 >
               </div>
               <div
-                class="flex items-center gap-1 text-gray-400 group-hover:text-purple-300 transition-colors duration-300"
+                class="flex items-center gap-1 text-gray-600 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-300 transition-colors duration-300"
               >
                 <span class="text-sm">Click Here</span>
                 <svg
@@ -182,10 +182,10 @@
 
         <!-- Platforms Section -->
         <div
-          class="bg-white/[0.03] backdrop-blur-xl rounded-xl px-4 py-6 border border-white/[0.08]"
+          class="bg-gray-50 dark:bg-white/[0.03] backdrop-blur-xl rounded-xl px-4 py-6 border border-gray-200 dark:border-white/[0.08]"
         >
           <div class="flex items-center justify-between">
-            <h3 class="text-lg font-medium text-white">Supported Platforms</h3>
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Supported Platforms</h3>
             <div class="flex items-center gap-8">
               <a
                 href="https://www.netflix.com"
@@ -218,11 +218,11 @@
           <div v-if="isLogin" class="relative group">
             <button
               @click="showLogoutConfirm = true"
-              class="text-gray-400 group-hover:text-gray-300 text-sm transition-colors duration-200"
+              class="text-gray-600 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300 text-sm transition-colors duration-200"
             >
               Want to
               <span
-                class="text-red-400 group-hover:text-red-300 underline decoration-dotted underline-offset-4 ml-1"
+                class="text-red-500 dark:text-red-400 group-hover:text-red-600 dark:group-hover:text-red-300 underline decoration-dotted underline-offset-4 ml-1"
               >
                 &nbsp;Log out?
               </span>
@@ -231,15 +231,15 @@
             <!-- Logout Confirmation -->
             <div
               v-if="showLogoutConfirm"
-              class="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-800 rounded-xl p-4 shadow-xl border border-white/10 w-64"
+              class="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-white dark:bg-gray-800 rounded-xl p-4 shadow-xl border border-gray-200 dark:border-white/10 w-64"
             >
-              <p class="text-sm text-gray-300 mb-3">
+              <p class="text-sm text-gray-700 dark:text-gray-300 mb-3">
                 Are you sure you want to log out?
               </p>
               <div class="flex justify-end gap-2">
                 <button
                   @click="showLogoutConfirm = false"
-                  class="px-3 py-1 text-sm text-gray-400 hover:text-gray-300"
+                  class="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                 >
                   Cancel
                 </button>

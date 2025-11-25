@@ -1,46 +1,58 @@
 <template>
-  <MultiSelect
-    option-label="title"
-    option-value="_id"
-    placeholder="Select a Phrase Bundle to save..."
-    :selection-limit="1"
+  <Select
+    v-model="selected"
     :options="options"
-    :loading="isFetching"
-    :model-value="props.selectedBundles"
-    @update:model-value="emit('update:selectedBundles', $event)"
+    custom
+    labelKey="title"
+    valueKey="_id"
+    placeholder="Select a Phrase Bundle to save..."
   >
-    <template #header="{ options, value }">
+    <template #header>
       <div class="p-4">
         <label class="font-medium text-900 block mb-2">
           Search or create a new bundle:
         </label>
-
         <InputGroup>
-          <InputText
+          <Input
             v-model="searchedBundleName"
-            @update:model-value="fetchOptions"
+            :disabled="isFetching"
+            placeholder="Search bundles..."
           />
           <Button
             label="Create"
-            severity="secondary"
+            color="secondary"
             :disabled="!isCreateNewAllowed"
-            :loading="isCreating"
+            :is-loading="isCreating"
             @click="createNewBundle"
           />
         </InputGroup>
       </div>
     </template>
-  </MultiSelect>
+    <template #each="{ option, isSelected, setSelected }">
+      <div
+        :class="[
+          'px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150',
+          isSelected
+            ? 'bg-primary text-white hover:bg-primary/90'
+            : 'text-gray-900 dark:text-gray-100',
+        ]"
+        role="option"
+        :aria-selected="isSelected"
+        @click="setSelected"
+      >
+        {{ (option as unknown as PhraseBundleType).title }}
+      </div>
+    </template>
+  </Select>
 </template>
 
 <script lang="ts" setup>
 import { dataProvider, authentication } from "@modular-rest/client";
-import MultiSelect from "primevue/multiselect";
-import InputText from "primevue/inputtext";
-import InputGroup from "primevue/inputgroup";
-import Button from "primevue/button";
+import { Select, Input } from "@codebridger/lib-vue-components";
+import InputGroup from "../../common/components/InputGroup.vue";
+import { Button } from "@codebridger/lib-vue-components/elements";
 
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
 import { COLLECTIONS, DATABASE } from "../../common/static/global";
 import { PhraseBundleType } from "../../common/types/phrase.type";
@@ -59,11 +71,23 @@ const isCreating = ref(false);
 const searchedBundleName = ref("");
 const options = ref<PhraseBundleType[]>([]);
 
+const selected = computed<string | undefined>({
+  get() {
+    return props.selectedBundles.length > 0 ? props.selectedBundles[0] : undefined;
+  },
+  set(v) {
+    emit("update:selectedBundles", v ? [v] : []);
+  },
+});
+
+// Debounce timer for search
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
 const isCreateNewAllowed = computed(() => {
   return (
-    searchedBundleName.value.length &&
+    searchedBundleName.value.trim().length > 0 &&
     !isFetching.value &&
-    options.value.every((option) => option.title !== searchedBundleName.value)
+    options.value.every((option) => option.title !== searchedBundleName.value.trim())
   );
 });
 
@@ -72,7 +96,7 @@ function createNewBundle() {
     return;
   }
 
-  const title = searchedBundleName.value;
+  const title = searchedBundleName.value.trim();
 
   dataProvider
     .insertOne({
@@ -83,7 +107,7 @@ function createNewBundle() {
         refId: authentication.user?.id,
       },
     })
-    .then((newBundle) => {
+    .then(() => {
       searchedBundleName.value = "";
       fetchOptions();
     })
@@ -95,24 +119,18 @@ function createNewBundle() {
 function fetchOptions() {
   if (isFetching.value) {
     return;
-  } else {
-    isFetching.value = true;
   }
+  isFetching.value = true;
 
-  const title = searchedBundleName.value;
-  const query = {
-    refId: authentication.user?.id,
-  };
-
-  if (searchedBundleName.value) {
-    query["title"] = { $regex: title, $options: "i" };
-  }
+  const title = searchedBundleName.value.trim();
+  const query: any = { refId: authentication.user?.id };
+  if (title) query["title"] = { $regex: title, $options: "i" };
 
   return dataProvider
     .find<PhraseBundleType>({
       database: DATABASE.USER_CONTENT,
       collection: COLLECTIONS.PHRASE_BUNDLE,
-      query: query,
+      query,
       options: {
         sort: "-_id",
       },
@@ -120,24 +138,28 @@ function fetchOptions() {
     .then((data) => {
       options.value = data;
     })
-    .finally(async () => {
+    .finally(() => {
       isFetching.value = false;
     });
 }
 
+// Watch searchedBundleName with debounce to prevent focus loss
+watch(searchedBundleName, () => {
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer);
+  }
+  searchDebounceTimer = setTimeout(() => {
+    fetchOptions();
+  }, 300); // 300ms debounce
+});
+
 onMounted(() => {
   fetchOptions();
 });
+
+onBeforeUnmount(() => {
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer);
+  }
+});
 </script>
-
-<style scoped>
-:deep(.p-multiselect-label) {
-  font-size: 14px !important;
-}
-</style>
-
-<style>
-.p-multiselect-panel {
-  z-index: 9999 !important;
-}
-</style>

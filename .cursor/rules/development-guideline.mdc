@@ -1,0 +1,96 @@
+---
+description: Main guideline for extension-apps development including Chrome Extension specific patterns.
+alwaysApply: false
+---
+# Development Guideline for Chrome Extension (LLM)
+
+## Project Overview
+Chrome Extension (Manifest V3) for Subturtle. Uses Vue 3, Webpack 5, and Tailwind CSS.
+The extension consists of a browser popup and an injected "Console Crane" (in-page app) for Netflix/YouTube.
+
+## Key Technologies
+- **Core**: Vue 3 Composition API, TypeScript, Webpack 5
+- **Extension Model**: Manifest V3 (Service Worker background)
+- **UI Library**: `@codebridger/lib-vue-components` - ALWAYS fetch docs from: https://codebridger.github.io/lib-vue-components/llm.md
+- **Backend Client**: `@modular-rest/client` - ALWAYS fetch docs from:
+  - https://modular-rest.github.io/modular-rest/js-client/install.html
+  - https://modular-rest.github.io/modular-rest/js-client/authentication.html
+- **Styling**: Tailwind CSS
+- **State**: Pinia stores
+
+## Project Structure
+```
+src/
+├── background.ts       # Service Worker (background script)
+├── popup/              # Extension Popup App (Vue)
+├── console-crane/      # In-page Overlay App (Vue) - "Console Crane"
+├── subtitle/           # Content scripts for Netflix/YouTube
+├── common/             # Shared utils, types, components
+├── main.ts             # Content script entry point (AppInitializer)
+└── plugins/            # Vue plugins (mixpanel, modular-rest)
+```
+
+## Coding Standards
+
+### Component Structure
+Use `<script setup lang="ts">` and Composition API.
+```vue
+<template>
+  <Button @click="save">Save</Button>
+</template>
+
+<script setup lang="ts">
+import { Button } from '@codebridger/lib-vue-components/elements';
+const save = () => console.log('saved');
+</script>
+```
+
+### Modularity & Responsibility
+- **Single Responsibility**: Logic MUST be broken down into small, single-responsibility scripts and components.
+- **Refactoring**: Avoid monolithic files; extract shared logic to `src/common/helper` or `src/common/components`.
+- **Separation**: Keep business logic, UI, and data fetching separate.
+
+### Messaging Pattern
+ALWAYS use typed message classes from `common/types/messaging` and the `sendMessage` helper from `common/helper/massage`.
+
+```typescript
+import { sendMessage } from '../common/helper/massage'; // Helper wrapper
+import { GetLoginStatusMessage } from '../common/types/messaging'; // Typed message
+
+// Sending (Async/Await)
+try {
+  const response = await sendMessage(new GetLoginStatusMessage());
+  if (GetLoginStatusMessage.checkResponse(response)) {
+    // Handle valid response
+  }
+} catch (error) {
+  console.error('Messaging error:', error);
+}
+
+// Sending to all tabs
+import { sendMessageToTabs } from '../common/helper/massage';
+sendMessageToTabs(new SettingsSyncMessage(settings));
+
+// Receiving (background.ts)
+if (GetLoginStatusMessage.is(request)) {
+  // Handle request
+}
+```
+
+### App Initialization (Content Script)
+The extension uses an `AppInitializer` pattern in `src/main.ts` to detect the current site (Netflix/YouTube) and mount the appropriate Vue app injected into the DOM.
+
+### In-Page Overlay ("Console Crane")
+- **Definition**: A Vue application injected directly into the webpage's DOM (using `<teleport to="body">`) to overlay on top of the video player.
+- **Location**: `src/console-crane`
+- **Purpose**: Provides complex UI (Word Details, Settings) without leaving the video context.
+- **Routing**: Uses `createMemoryHistory` for internal navigation (does not affect browser URL).
+
+## Critical Rules
+1. **Manifest V3**: No persistent background pages. Use `chrome.storage` for state persistence.
+2. **UI Components**: ALWAYS use `@codebridger/lib-vue-components`.
+3. **API**: ALWAYS use `@modular-rest/client`.
+4. **Messaging**: ALWAYS use `sendMessage` from `common/helper/massage` and `BaseMessage` classes for type-safe communication.
+5. **Modularity**: NEVER create large files. Break logic into single-responsibility units.
+6. **Async**: Prefer async/await. Note that some Chrome APIs return Promises in MV3, while others use callbacks.
+7. **Imports**: Use relative paths (e.g., `../common/`) as no path aliases are configured in `tsconfig.json`.

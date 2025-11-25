@@ -47,6 +47,11 @@ module.exports = {
 
   resolve: {
     extensions: [".ts", ".js"],
+    alias: {
+      vue: path.resolve(__dirname, "node_modules/vue/dist/vue.runtime.esm-bundler.js"),
+      pinia: path.resolve(__dirname, "node_modules/pinia"),
+      "vue-router": path.resolve(__dirname, "node_modules/vue-router"),
+    },
   },
 
   plugins: [

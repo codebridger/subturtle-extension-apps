@@ -11,7 +11,7 @@
  *
  * ## Usage
  * - **Word.vue**: Handles mouse events to mark single or multiple words, clear selections, and open word detail modals using marked words and context.
- * - **MarkerBorder.vue**: Renders visual borders around contiguous marked words using the store's state and helper actions.
+ * - **WordSelectionRectangle.vue**: Renders visual borders around marked words and selection anchors using the store's state and helper actions.
  * - **TranslatedPhrase.vue**: Displays translations for the currently selected phrase and provides contextual UI actions.
  * - **web_youtube/Index.vue**: Integrates the store at the page level, updating context with the current subtitle text and ensuring the store is available for all subtitle-related components.
  * - **helpers/global-events.ts**: Registers global keyboard events to trigger marking mode via the store's exported functions.
@@ -26,6 +26,10 @@
  */
 import { defineStore } from "pinia";
 import { TranslateService } from "../common/services/translate.service";
+
+const SINGLE_SELECTION_AUTO_CLEAR_MS = 2500;
+const MULTI_SELECTION_AUTO_CLEAR_MS = 5000;
+let selectionAutoClearTimer: number | null = null;
 
 /**
  * Represents a word that has been marked by the user, including its unique id, text, and DOM rectangle for UI positioning.
@@ -64,6 +68,14 @@ interface State {
    * Context string (e.g., full subtitle text) for translation accuracy.
    */
   context: string;
+  /**
+   * ID of the currently hovered word (for showing selection rectangle).
+   */
+  hoveredWordId: string | null;
+  /**
+   * Trigger for position updates.
+   */
+  positionUpdateTrigger: number;
 }
 
 /**
@@ -95,6 +107,17 @@ export const useMarkerStore = defineStore("marker", {
      * Context string for translation.
      */
     context: "",
+    /**
+     * ID of the currently hovered word.
+     */
+    /**
+     * ID of the currently hovered word.
+     */
+    hoveredWordId: null,
+    /**
+     * Trigger for position updates (incremented to force reactivity).
+     */
+    positionUpdateTrigger: 0,
   }),
 
   getters: {
@@ -112,13 +135,132 @@ export const useMarkerStore = defineStore("marker", {
     words: (state) => state.markedWords,
     /**
      * Returns the currently selected phrase (all marked words joined by space).
+     * Words are sorted by their DOM position (left to right, top to bottom) to ensure correct order.
      */
     selectedPhrase: (state) => {
-      return state.markedWords.map((item) => item.word).join(" ");
+      // Sort words by ID order (dialogueIndex, line, then wordIndex) to ensure correct reading order
+      const sortedWords = [...state.markedWords].sort((a, b) => {
+        // Parse IDs to get dialogueIndex, line and wordIndex (reading order)
+        const aParts = a.id.split("-").map(Number);
+        const bParts = b.id.split("-").map(Number);
+
+        if (aParts.length >= 3 && bParts.length >= 3) {
+          const aDialogueIndex = aParts[0];
+          const bDialogueIndex = bParts[0];
+          const aLine = aParts[1];
+          const bLine = bParts[1];
+          const aWordIndex = aParts[2];
+          const bWordIndex = bParts[2];
+
+          // First sort by dialogueIndex
+          if (aDialogueIndex !== bDialogueIndex) {
+            return aDialogueIndex - bDialogueIndex;
+          }
+
+          // Then sort by line
+          if (aLine !== bLine) {
+            return aLine - bLine;
+          }
+
+          // Then sort by wordIndex
+          return aWordIndex - bWordIndex;
+        }
+
+        // Fallback to string comparison if ID format is invalid
+        return a.id.localeCompare(b.id);
+      });
+
+      return sortedWords.map((item) => item.word).join(" ");
+    },
+
+    /**
+     * Returns the bounding rectangle of all marked words.
+     * Returns null if no words are marked.
+     */
+    rectangleBounds: (state) => {
+      // Access positionUpdateTrigger to ensure reactivity when positions change
+      const _ = state.positionUpdateTrigger;
+
+      if (state.markedWords.length === 0) return null;
+
+      // Get current DOM positions
+      const rects = state.markedWords
+        .map((word) => {
+          const el = document.getElementById(word.id);
+          return el ? el.getBoundingClientRect() : word.domeRect;
+        })
+        .filter((r): r is DOMRect => r !== null);
+
+      if (rects.length === 0) return null;
+
+      // Calculate bounding box
+      let minLeft = rects[0].left;
+      let maxRight = rects[0].right;
+      let minTop = rects[0].top;
+      let maxBottom = rects[0].bottom;
+
+      rects.forEach((rect) => {
+        if (rect.left < minLeft) minLeft = rect.left;
+        if (rect.right > maxRight) maxRight = rect.right;
+        if (rect.top < minTop) minTop = rect.top;
+        if (rect.bottom > maxBottom) maxBottom = rect.bottom;
+      });
+
+      return {
+        left: minLeft,
+        right: maxRight,
+        top: minTop,
+        bottom: maxBottom,
+        width: maxRight - minLeft,
+        height: maxBottom - minTop,
+      };
     },
   },
 
   actions: {
+    startAutoClearTimer(delay: number) {
+      if (typeof window === "undefined") {
+        return;
+      }
+
+      this.stopAutoClearTimer();
+      selectionAutoClearTimer = window.setTimeout(() => {
+        selectionAutoClearTimer = null;
+        this.clear();
+        this.setHoveredWordId(null);
+      }, delay);
+    },
+
+    stopAutoClearTimer() {
+      if (selectionAutoClearTimer !== null) {
+        if (typeof window !== "undefined") {
+          window.clearTimeout(selectionAutoClearTimer);
+        } else {
+          clearTimeout(selectionAutoClearTimer);
+        }
+        selectionAutoClearTimer = null;
+      }
+    },
+
+    evaluateAutoClearTimer() {
+      if (this.markedWords.length === 0) {
+        this.stopAutoClearTimer();
+        return;
+      }
+
+      if (this.marking || this.hoveredWordId !== null) {
+        this.stopAutoClearTimer();
+        return;
+      }
+
+      const delay =
+        this.markedWords.length > 1
+          ? MULTI_SELECTION_AUTO_CLEAR_MS
+          : SINGLE_SELECTION_AUTO_CLEAR_MS;
+
+      this.startAutoClearTimer(delay);
+    },
+
     /**
      * Translates the currently selected phrase using the context, and stores the result in translatedWords.
      */
@@ -148,6 +290,8 @@ export const useMarkerStore = defineStore("marker", {
       if (value == false) {
         this.translate();
       }
+
+      this.evaluateAutoClearTimer();
     },
 
     /**
@@ -167,6 +311,8 @@ export const useMarkerStore = defineStore("marker", {
           { once: true }
         );
       }
+
+      this.evaluateAutoClearTimer();
     },
 
     /**
@@ -182,12 +328,15 @@ export const useMarkerStore = defineStore("marker", {
       this.markedWords.push({ id, word, domeRect });
       // Sort base id
       this.markedWords = this.markedWords.sort((a, b) => {
-        // id format is [line]-[wordIndex]-[line * wordIndex]
-        // So, we can split the id by "-" and get the last element
-        const aid = a.id.split("-").map(Number)[2];
-        const bid = b.id.split("-").map(Number)[2];
+        const aParts = a.id.split("-").map(Number);
+        const bParts = b.id.split("-").map(Number);
 
-        return aid - bid;
+        if (aParts.length >= 3 && bParts.length >= 3) {
+            if (aParts[0] !== bParts[0]) return aParts[0] - bParts[0];
+            if (aParts[1] !== bParts[1]) return aParts[1] - bParts[1];
+            return aParts[2] - bParts[2];
+        }
+        return 0;
       });
 
       // Translate the selected phrase
@@ -196,13 +345,17 @@ export const useMarkerStore = defineStore("marker", {
       } else {
         // when marking changed the translate will be triggered
       }
+
+      this.evaluateAutoClearTimer();
     },
 
     /**
      * Clears all marked words.
      */
     clear() {
+      this.stopAutoClearTimer();
       this.markedWords = [];
+      this.evaluateAutoClearTimer();
     },
 
     /**
@@ -215,13 +368,14 @@ export const useMarkerStore = defineStore("marker", {
     },
 
     /**
-     * Generates a unique word id based on line and word index.
+     * Generates a unique word id based on dialogue index, line and word index.
+     * @param dialogueIndex The dialogue index
      * @param line The line number
      * @param wordIndex The word index in the line
      * @returns The generated id string
      */
-    getWordId(line: number, wordIndex: number) {
-      return line + "-" + wordIndex + "-" + line * wordIndex;
+    getWordId(dialogueIndex: number, line: number, wordIndex: number) {
+      return dialogueIndex + "-" + line + "-" + wordIndex;
     },
 
     /**
@@ -239,6 +393,117 @@ export const useMarkerStore = defineStore("marker", {
      */
     setContext(context: string) {
       this.context = context;
+    },
+
+    /**
+     * Sets the currently hovered word ID (for showing selection rectangle).
+     * @param id The word ID, or null to clear
+     */
+    setHoveredWordId(id: string | null) {
+      this.hoveredWordId = id;
+      this.evaluateAutoClearTimer();
+    },
+
+    /**
+     * Gets the ID of the adjacent word in the specified direction based on ID order (reading order across lines).
+     * @param direction 'left' for previous word, 'right' for next word
+     * @returns The adjacent word ID, or null if not found
+     */
+    getAdjacentWordId(direction: "left" | "right"): string | null {
+      if (this.markedWords.length === 0) return null;
+
+      // Get all word elements with IDs
+      const allWordElements = Array.from(
+        document.querySelectorAll("span[id]")
+      ) as HTMLElement[];
+
+      // Parse all words and sort by ID order (line, then wordIndex)
+      const allWords = allWordElements
+        .map((el) => {
+          const id = el.id;
+          if (!id) return null;
+          const parts = id.split("-").map(Number);
+          if (parts.length >= 3 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+            const line = parts[0];
+            const wordIndex = parts[1];
+            const sequentialId = parts[2];
+            return { id, element: el, line, wordIndex, sequentialId };
+          }
+          return null;
+        })
+        .filter((w): w is NonNullable<typeof w> => w !== null);
+
+      if (allWords.length === 0) return null;
+
+      // Sort words by reading order: first by line, then by wordIndex
+      allWords.sort((a, b) => {
+        if (a.line !== b.line) {
+          return a.line - b.line;
+        }
+        return a.wordIndex - b.wordIndex;
+      });
+
+      // Find edge marked word based on direction in sorted order
+      const markedIds = new Set(this.markedWords.map((w) => w.id));
+
+      let edgeIndex = -1;
+      if (direction === "left") {
+        // Find the leftmost (first in reading order) marked word
+        edgeIndex = allWords.findIndex((w) => markedIds.has(w.id));
+      } else {
+        // Find the rightmost (last in reading order) marked word
+        for (let i = allWords.length - 1; i >= 0; i--) {
+          if (markedIds.has(allWords[i].id)) {
+            edgeIndex = i;
+            break;
+          }
+        }
+      }
+
+      if (edgeIndex === -1) return null;
+
+      // Find adjacent word in sorted order
+      if (direction === "left") {
+        // Look for previous unmarked word
+        for (let i = edgeIndex - 1; i >= 0; i--) {
+          if (!markedIds.has(allWords[i].id)) {
+            return allWords[i].id;
+          }
+        }
+      } else {
+        // Look for next unmarked word
+        for (let i = edgeIndex + 1; i < allWords.length; i++) {
+          if (!markedIds.has(allWords[i].id)) {
+            return allWords[i].id;
+          }
+        }
+      }
+
+      return null;
+    },
+
+    /**
+     * Marks a word by its ID. Finds the word element and calls markWord.
+     * @param id The word ID to mark
+     */
+    markWordById(id: string) {
+      const wordElement = document.getElementById(id);
+      if (!wordElement) return;
+
+      const boundingRect = wordElement.getBoundingClientRect();
+      const wordText = wordElement.textContent?.trim() || "";
+
+      if (wordText) {
+        this.markWord(id, wordText, boundingRect);
+      }
+    },
+
+    /**
+     * Triggers a position update for components relying on rectangleBounds.
+     * Increments positionUpdateTrigger to force getter re-evaluation.
+     */
+    triggerPositionUpdate() {
+      this.positionUpdateTrigger++;
     },
   },
 });

@@ -9,8 +9,6 @@
           :textList="text"
           :textStyle="style"
         />
-
-        <marker-border />
       </div>
     </teleport>
   </div>

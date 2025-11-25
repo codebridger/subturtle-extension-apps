@@ -6,10 +6,10 @@
         <Button
           v-for="theme in themes"
           :key="theme.value"
-          :severity="currentTheme === theme.value ? 'primary' : 'secondary'"
+          :color="currentTheme === theme.value ? 'primary' : 'secondary'"
           :label="theme.label"
           @click="setTheme(theme.value as Theme)"
-          size="small"
+          size="sm"
         />
       </div>
     </div>
@@ -18,7 +18,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import Button from "primevue/button";
+import { Button } from "@codebridger/lib-vue-components/elements";
 import { useSettingsStore } from "../../store/settings";
 import { Theme } from "../../types/general.type";
 

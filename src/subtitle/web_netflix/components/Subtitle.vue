@@ -64,6 +64,9 @@
         </template>
       </div>
     </transition>
+
+    <!-- Word Selection Rectangle with Anchors -->
+    <WordSelectionRectangle />
   </div>
 </template>
 
@@ -102,7 +105,11 @@ export default defineComponent({
   },
 
   computed: {
-    ...mapState(useMarkerStore, ["selectedPhrase", "sourceLanguage"]),
+    ...mapState(useMarkerStore, [
+      "selectedPhrase",
+      "sourceLanguage",
+      "rectangleBounds",
+    ]),
 
     loadingIcon() {
       return LOADING_ICON;
@@ -130,17 +137,48 @@ export default defineComponent({
     translateStyle(): StyleValue {
       if (!this.positionRect) return {};
 
-      let top =
-        this.positionRect.top - clamp(this.positionRect.height, 50, 100);
+      const bounds = this.rectangleBounds;
+      const hasSelection = this.selectedPhrase.length > 0;
 
+      // Get subtitle container bounds
+      const subtitleTop = this.positionRect.top;
+      const subtitleLeft = this.positionRect.left;
+      const subtitleWidth = this.positionRect.width;
+      // Fixed offset: 6rem
+      const offset = "6rem";
+
+      // If we have rectangle bounds and selection, center translation on the marked rectangle
+      // but position it above the whole caption area
+      // Width is 3x rectangle width to prevent wrapping
+      if (bounds && hasSelection) {
+        const translationWidth = bounds.width * 3;
+        // Center translation box on rectangle center
+        // Rectangle center: bounds.left + bounds.width / 2
+        // Translation left: rectangle center - translation width / 2
+        const translationLeft =
+          bounds.left + bounds.width / 2 - translationWidth / 2;
+
+        return {
+          position: "fixed",
+          fontSize: this.textStyle?.fontSize || "22px",
+          left: translationLeft + "px",
+          width: translationWidth + "px",
+          textAlign: "center",
+          opacity: hasSelection ? 1 : 0,
+          top: `calc(${subtitleTop}px - ${offset})`,
+          transition: "all ease 200ms",
+        };
+      }
+
+      // Fallback: position above subtitle container
       return {
-        position: "absolute",
+        position: "fixed",
         fontSize: this.textStyle?.fontSize || "22px",
-        left: this.positionRect.left - 8 + "px",
-        top: top + "px",
-        width: this.positionRect.width + "px",
+        left: subtitleLeft + "px",
+        width: subtitleWidth + "px",
         textAlign: "center",
-        opacity: this.selectedPhrase.length ? 1 : 0,
+        opacity: hasSelection ? 1 : 0,
+        top: `calc(${subtitleTop}px - ${offset})`,
         transition: "all ease 200ms",
       };
     },

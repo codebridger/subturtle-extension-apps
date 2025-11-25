@@ -2,15 +2,14 @@ import { waitUntil } from "../../common/helper/promise";
 import { AppInitializer } from "../../common/types/general.type";
 import { SUBTILE_CONTAINER_CLASS } from "./static";
 
-import youtubeComponent from "./Index.vue";
-import { analytic } from "../../plugins/mixpanel";
+import msTeamComponent from "./Index.vue";
 
-export const youtube: AppInitializer = {
+export const msTeam: AppInitializer = {
   website: {
-    host: "youtube.com",
-    path: "/watch",
+    host: "teams.microsoft.com",
+    path: "/light-meetings/launch",
   },
-  component: youtubeComponent as any,
+  component: msTeamComponent as any,
   start: async (app) => {
     await waitUntil(() => !!document.querySelector(SUBTILE_CONTAINER_CLASS));
 

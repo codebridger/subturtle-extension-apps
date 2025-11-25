@@ -14,12 +14,14 @@
               <div
                 class="absolute top-12 flex justify-between left-0 right-0 px-12"
               >
-                <h1 class="text-xl font-extrabold text-white mb-2">
+                <h1 class="text-xl font-extrabold text-white mb-2 px-4">
                   Subturtle
                 </h1>
-                <section class="rounded-full bg-gray-900 p-2">
+                <h1
+                  class="rounded-full bg-gray-100 dark:bg-gray-900 flex items-center justify-center w-10 h-10 mr-2"
+                >
                   <Logo :size="20" onlyLogo />
-                </section>
+                </h1>
               </div>
             </div>
           </template>
@@ -28,14 +30,16 @@
     </div>
 
     <section
-      class="px-12 flex flex-col gap-4 bg-gray-950 flex-1 justify-center"
+      class="px-12 flex flex-col gap-4 bg-white dark:bg-gray-950 flex-1 justify-center"
     >
       <!-- Description -->
       <div>
-        <h2 class="text-gray-300 text-lg font-semibold text-primary">
+        <h2
+          class="text-gray-700 dark:text-gray-300 text-lg font-semibold text-primary"
+        >
           Turn captions into conversations.
         </h2>
-        <p class="text-gray-300 text-base mb-6">
+        <p class="text-gray-700 dark:text-gray-300 text-base mb-6">
           Your favorite shows are now your personal language coaches. Learn
           words in their true context as you stream, then practice speaking them
           with our AI.
@@ -44,12 +48,22 @@
 
       <!-- Login button -->
       <div class="flex flex-row items-center justify-between gap-4">
-        <div class="flex items-center gap-2">
-          <label class="text-gray-300 text-sm">My language</label>
-          <SelectTarget class="w-28" />
+        <div class="flex items-center gap-3">
+          <label
+            class="text-gray-700 dark:text-gray-300 text-sm font-medium whitespace-nowrap"
+          >
+            My language
+          </label>
+          <SelectTarget class="w-32" />
         </div>
-        <Button :disabled="isLogin" label="Login" @click="openLogin">
-          <template #icon> <span class="i-solar-login-3-bold" /> </template>
+        <Button
+          :disabled="isLogin"
+          :color="'primary'"
+          label="Login"
+          @click="openLogin"
+          :iconName="'i-solar-login-3-bold'"
+          :iconPosition="'right'"
+        >
         </Button>
       </div>
     </section>
@@ -57,8 +71,8 @@
 </template>
 
 <script lang="ts" setup>
-import Carousel from "primevue/carousel";
-import Button from "primevue/button";
+import Carousel from "../../common/components/Carousel.vue";
+import { Button } from "@codebridger/lib-vue-components/elements";
 import SelectTarget from "../../common/components/inputs/SelectTarget.vue";
 import { OpenLoginWindowMessage } from "../../common/types/messaging";
 import { isLogin } from "../../plugins/modular-rest";

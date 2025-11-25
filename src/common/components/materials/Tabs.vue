@@ -3,17 +3,17 @@
     <Button
       v-for="tab of list"
       :key="tab"
-      :outlined="active != tab"
+      :outline="active != tab"
       @click.stop="activateTab(tab)"
     >
-      {{ title(tab) }}
-    </Button>
+      {{ title(tab) }}</Button
+    >
   </InputGroup>
 </template>
 
 <script lang="ts">
-import Button from "primevue/button";
-import InputGroup from "primevue/inputgroup";
+import { Button } from "@codebridger/lib-vue-components/elements";
+import InputGroup from "../InputGroup.vue";
 import { defineComponent } from "vue";
 
 export default defineComponent({

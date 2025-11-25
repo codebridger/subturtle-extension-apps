@@ -31,14 +31,13 @@
       </div>
     </div>
     <!-- Slot for word saver UI -->
-    <div>
-      <slot />
-    </div>
+
+    <slot />
   </div>
 </template>
 
 <script setup lang="ts">
-import Button from "primevue/button";
+import { Button } from "@codebridger/lib-vue-components/elements";
 import { computed } from "vue";
 
 const props = defineProps<{
