@@ -45,6 +45,10 @@ export const useSettingsStore = defineStore("settings", () => {
     el.classList.add(currentEffectiveTheme);
   }
 
+  // The `dark` class lives on every `.subturtle-scope` element rather than
+  // `<html>`, because postcss-prefix-selector rewrites Tailwind's dark rules to
+  // the compound form `.subturtle-scope.dark ...` — so the same element must
+  // carry both classes for dark utilities to take effect.
   function applyThemeToDOM(themeValue: Theme) {
     currentEffectiveTheme = resolveTheme(themeValue);
 
@@ -52,6 +56,9 @@ export const useSettingsStore = defineStore("settings", () => {
       .querySelectorAll(".subturtle-scope")
       .forEach(applyToScopeElement);
 
+    // Vue teleports (e.g. WordSelectionRectangle, the YouTube caption
+    // container) mount `.subturtle-scope` wrappers after this initial pass,
+    // so an observer keeps later additions in sync with the active theme.
     if (!scopeObserver && typeof MutationObserver !== "undefined") {
       scopeObserver = new MutationObserver((mutations) => {
         for (const m of mutations) {

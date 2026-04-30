@@ -1,5 +1,7 @@
 <template>
   <div>
+    <!-- Teleported into the host's caption nodes, outside `#subturtle-app`,
+         so each dialogue wrapper needs its own `.subturtle-scope`. -->
     <teleport v-for="dialogue in dialogues" :key="dialogue.id" :to="'#' + dialogue.id">
       <div class="subturtle-ms-team-container subturtle-scope">
         <SubtitleComponent :id="'subturtle-caption-' + dialogue.id" class="caption-window" :wrapperStyle="wrapperStyle"

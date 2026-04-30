@@ -1,5 +1,7 @@
 <template>
   <div>
+    <!-- Teleported into YouTube's player, outside `#subturtle-app`, so the
+         caption container needs its own `.subturtle-scope` for prefixed CSS. -->
     <teleport to="#movie_player">
       <div class="ytp-caption-window-container subturtle-scope">
         <SubtitleComponent id="subturtle-caption"

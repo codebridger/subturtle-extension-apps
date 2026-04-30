@@ -1,6 +1,11 @@
 const tailwindcss = require("tailwindcss");
 const prefixSelector = require("postcss-prefix-selector");
 
+// Confines all extension CSS (Tailwind preflight + utilities, lib-vue-components
+// styles, SFC blocks) to descendants of `.subturtle-scope`. Without this, the
+// universal selectors in Tailwind preflight (`*, ::before, ::after`, `button`,
+// `img`, ...) bleed onto the host page and break YouTube's icon rendering and
+// video grid layout.
 const SCOPE = ".subturtle-scope";
 
 module.exports = {
@@ -12,6 +17,9 @@ module.exports = {
       transform(prefix, selector, prefixedSelector) {
         const trimmed = selector.trim();
 
+        // Idempotent guard: lib-vue-components CSS gets visited more than once
+        // by the loader chain, which would otherwise produce double/triple
+        // prefixes (`.subturtle-scope .subturtle-scope ...`) that never match.
         if (trimmed.startsWith(prefix)) {
           const charAfter = trimmed[prefix.length];
           if (charAfter === undefined || /[\s.:>+~\[]/.test(charAfter)) {
@@ -26,6 +34,8 @@ module.exports = {
           return ":not(*)";
         }
 
+        // Map root-level selectors onto the scope so CSS custom properties
+        // and typography defaults still cascade into the extension UI.
         if (/^(html|:root)$/.test(trimmed)) {
           return prefix;
         }

@@ -15,14 +15,13 @@ export const netflix: AppInitializer = {
     await waitUntil(() => !!document.querySelector(SUBTITLE_CLASS));
 
     let appDiv = document.createElement("div");
-    let videoContainer = document.querySelector(".watch-video");
-
-    videoContainer?.insertBefore(appDiv, videoContainer.firstChild);
-
     appDiv.id = "subturtle-app";
     appDiv.classList.add("subturtle-scope");
     appDiv.style.position = "relative";
     appDiv.style.zIndex = "9999";
+
+    let videoContainer = document.querySelector(".watch-video");
+    videoContainer?.insertBefore(appDiv, videoContainer.firstChild);
 
     app.mount(appDiv);
 

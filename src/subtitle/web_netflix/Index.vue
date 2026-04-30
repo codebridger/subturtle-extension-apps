@@ -1,9 +1,6 @@
 <template>
-  <SubtitleComponent
-    :positionRect="position"
-    :textList="text"
-    :textStyle="style"
-  />
+  <SubtitleComponent :positionRect="position" :textList="text" :textStyle="style" />
+
   <ConsoleCrane />
 </template>
 
