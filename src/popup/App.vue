@@ -7,15 +7,3 @@
 <script lang="ts" setup>
 import { RouterView } from "vue-router";
 </script>
-
-<style>
-body {
-  width: 800px;
-  height: 600px;
-  overflow: hidden !important;
-}
-
-html {
-  overflow: hidden !important;
-}
-</style>

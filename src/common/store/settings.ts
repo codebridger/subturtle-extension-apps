@@ -28,15 +28,55 @@ export const useSettingsStore = defineStore("settings", () => {
     }
   }
 
-  function applyThemeToDOM(themeValue: Theme) {
-    document.documentElement.classList.remove("light", "dark");
+  let scopeObserver: MutationObserver | null = null;
+  let currentEffectiveTheme: "dark" | "light" = "dark";
+
+  function resolveTheme(themeValue: Theme): "dark" | "light" {
     if (themeValue === "auto") {
-      const prefersDark = window.matchMedia(
-        "(prefers-color-scheme: dark)"
-      ).matches;
-      document.documentElement.classList.add(prefersDark ? "dark" : "light");
-    } else {
-      document.documentElement.classList.add(themeValue);
+      return window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light";
+    }
+    return themeValue;
+  }
+
+  function applyToScopeElement(el: Element) {
+    el.classList.remove("light", "dark");
+    el.classList.add(currentEffectiveTheme);
+  }
+
+  // The `dark` class lives on every `.subturtle-scope` element rather than
+  // `<html>`, because postcss-prefix-selector rewrites Tailwind's dark rules to
+  // the compound form `.subturtle-scope.dark ...` — so the same element must
+  // carry both classes for dark utilities to take effect.
+  function applyThemeToDOM(themeValue: Theme) {
+    currentEffectiveTheme = resolveTheme(themeValue);
+
+    document
+      .querySelectorAll(".subturtle-scope")
+      .forEach(applyToScopeElement);
+
+    // Vue teleports (e.g. WordSelectionRectangle, the YouTube caption
+    // container) mount `.subturtle-scope` wrappers after this initial pass,
+    // so an observer keeps later additions in sync with the active theme.
+    if (!scopeObserver && typeof MutationObserver !== "undefined") {
+      scopeObserver = new MutationObserver((mutations) => {
+        for (const m of mutations) {
+          m.addedNodes.forEach((node) => {
+            if (!(node instanceof Element)) return;
+            if (node.classList?.contains("subturtle-scope")) {
+              applyToScopeElement(node);
+            }
+            node
+              .querySelectorAll?.(".subturtle-scope")
+              .forEach(applyToScopeElement);
+          });
+        }
+      });
+      scopeObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
+      });
     }
   }
 

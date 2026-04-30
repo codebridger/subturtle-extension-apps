@@ -1,6 +1,8 @@
 <template>
+  <!-- Teleport target is `body`, which is outside `#subturtle-app`, so this
+       subtree must carry its own `.subturtle-scope` for prefixed CSS to apply. -->
   <Teleport to="body">
-    <template v-if="isVisible">
+    <div v-if="isVisible" class="subturtle-scope">
       <!-- Multiple rectangles, one per line -->
       <div
         v-for="(lineRect, index) in lineRectangles"
@@ -35,7 +37,7 @@
       >
         <span class="close-icon">×</span>
       </div>
-    </template>
+    </div>
   </Teleport>
 </template>
 
