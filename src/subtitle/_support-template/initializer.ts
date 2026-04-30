@@ -22,6 +22,7 @@ export const initConfig: AppInitializer = {
     // @TODO: Find a better way to do this
 
     appDiv.id = "subturtle-app";
+    appDiv.classList.add("subturtle-scope");
     appDiv.style.position = "relative";
     appDiv.style.zIndex = "9999";
 

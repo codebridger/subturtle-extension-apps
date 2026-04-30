@@ -1,7 +1,7 @@
 <template>
   <div>
     <teleport v-for="dialogue in dialogues" :key="dialogue.id" :to="'#' + dialogue.id">
-      <div class="subturtle-ms-team-container">
+      <div class="subturtle-ms-team-container subturtle-scope">
         <SubtitleComponent :id="'subturtle-caption-' + dialogue.id" class="caption-window" :wrapperStyle="wrapperStyle"
           :textList="dialogue.text" :textStyle="style" :textClasses="dialogue.textClasses"
           :dialogueIndex="dialogue.index" />

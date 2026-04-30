@@ -1,6 +1,6 @@
 <template>
   <Teleport to="body">
-    <template v-if="isVisible">
+    <div v-if="isVisible" class="subturtle-scope">
       <!-- Multiple rectangles, one per line -->
       <div
         v-for="(lineRect, index) in lineRectangles"
@@ -35,7 +35,7 @@
       >
         <span class="close-icon">×</span>
       </div>
-    </template>
+    </div>
   </Teleport>
 </template>
 

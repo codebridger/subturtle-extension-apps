@@ -1,19 +1,17 @@
 <template>
   <div>
     <teleport to="#movie_player">
-      <div class="ytp-caption-window-container">
-        <SubtitleComponent
-          id="subturtle-caption"
-          class="caption-window ytp-caption-window-bottom ytp-caption-window-rollup"
-          :wrapperStyle="wrapperStyle"
-          :textList="text"
-          :textStyle="style"
-        />
+      <div class="ytp-caption-window-container subturtle-scope">
+        <SubtitleComponent id="subturtle-caption"
+          class="caption-window ytp-caption-window-bottom ytp-caption-window-rollup" :wrapperStyle="wrapperStyle"
+          :textList="text" :textStyle="style" />
       </div>
     </teleport>
   </div>
 
-  <ConsoleCrane />
+  <div class="subturtle-scope">
+    <ConsoleCrane />
+  </div>
 </template>
 
 <script lang="ts">

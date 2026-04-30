@@ -15,6 +15,7 @@ export const msTeam: AppInitializer = {
 
     let appDiv = document.createElement("div");
     appDiv.id = "subturtle-app";
+    appDiv.classList.add("subturtle-scope");
 
     document.body.insertAdjacentElement("afterbegin", appDiv);
 
