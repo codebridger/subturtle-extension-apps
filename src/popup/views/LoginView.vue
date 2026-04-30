@@ -14,11 +14,11 @@
         <!-- Login with Chrome -->
         <button
           :disabled="!chromeUserRes || !chromeUserRes.token || pending"
-          class="flex items-center justify-center text-white bg-gray-100 dark:bg-gray-800 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          class="flex items-center justify-center text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-800 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
           @click="loginWithChrome"
         >
           <div
-            class="p-2 py-3 flex justify-center items-center border-r-[1px] border-gray-300 dark:border-gray-900"
+            class="p-2 py-3 flex justify-center items-center border-r-[1px] border-gray-300 dark:border-gray-700"
           >
             <span class="i-logos-chrome" />
           </div>
@@ -29,10 +29,10 @@
         <button
           :disabled="pending"
           @click="loginWithGoogle"
-          class="flex items-center justify-center text-white bg-gray-100 dark:bg-gray-800 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          class="flex items-center justify-center text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-800 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <div
-            class="p-2 py-3 flex justify-center items-center border-r-[1px] border-gray-300 dark:border-gray-900"
+            class="p-2 py-3 flex justify-center items-center border-r-[1px] border-gray-300 dark:border-gray-700"
           >
             <span class="i-flat-color-icons-google" />
           </div>
@@ -42,10 +42,10 @@
         <!-- Login with Phone -->
         <button
           disabled
-          class="flex items-center justify-center text-white bg-gray-100 dark:bg-gray-800 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          class="flex items-center justify-center text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-800 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <div
-            class="p-2 py-3 flex justify-center items-center border-r-[1px] border-gray-300 dark:border-gray-900"
+            class="p-2 py-3 flex justify-center items-center border-r-[1px] border-gray-300 dark:border-gray-700"
           >
             <span class="i-flat-color-icons-phone" />
           </div>
