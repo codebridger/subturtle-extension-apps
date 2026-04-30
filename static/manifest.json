@@ -36,8 +36,7 @@
 		{
 			"matches": [
 				"https://www.netflix.com/*",
-				"https://www.youtube.com/*",
-				"https://teams.microsoft.com/*"
+				"https://www.youtube.com/watch?*"
 			],
 			"css": [],
 			"js": [

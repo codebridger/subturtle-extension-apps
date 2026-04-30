@@ -1,7 +1,7 @@
 # Subtitle Platform
 
 ## Purpose
-Content scripts under `src/subtitle` power Subturtle’s on-page subtitle overlays for every supported surface (Netflix, YouTube, MS Teams, future providers). Each integration shares the same learning experience—word selection, translation, and Console Crane—while adapting to the target site’s DOM and policies.
+Content scripts under `src/subtitle` power Subturtle’s on-page subtitle overlays for every supported surface (Netflix, YouTube, future providers). Each integration shares the same learning experience—word selection, translation, and Console Crane—while adapting to the target site’s DOM and policies.
 
 ### High-Level Flow
 1. **Initializer (per surface)** mounts a Vue app once the host caption container appears.
@@ -12,7 +12,7 @@ Content scripts under `src/subtitle` power Subturtle’s on-page subtitle overla
 ## Directory Map
 | Path | Description |
 | --- | --- |
-| `ms-team`, `web_youtube`, `web_netflix` | Production integrations. Each folder contains `Index.vue`, `initializer.ts`, `static.ts`, and any extra assets unique to that platform. |
+| `web_youtube`, `web_netflix` | Production integrations. Each folder contains `Index.vue`, `initializer.ts`, `static.ts`, and any extra assets unique to that platform. |
 | `_support-template` | Boilerplate for new providers. Copy this folder when bootstrapping another site—then adjust selectors, DOM strategy, and policies. |
 | `components/` | Cross-surface Vue components. `specific/Word.vue`, `WordSelectionRectangle.vue`, `TranslatedPhrase.vue`, `SelectionAnchor.vue`, and `SvgLoader.vue` compose the interactive overlay. |
 | `components/components.ts` | Barrel file for exporting shared components to site entries. |
@@ -23,7 +23,7 @@ Content scripts under `src/subtitle` power Subturtle’s on-page subtitle overla
 - **Marker Store (`src/stores/marker.ts`)** – central authority for marked words, hover state, and auto-clear timers (2.5s single, 5s multi). Integrations should only invoke store actions; never manage timers inside view components.
 - **Word Rendering** – `Subtitle.vue` (per surface) splits caption text into `<Word>` components, each wired to `markerStore` for hover/selection state.
 - **Selection Rectangle** – `WordSelectionRectangle.vue` reads `markerStore` positions to draw DOM overlays that follow host captions even while they animate.
-- **Translation Bubble** – `TranslatedPhrase.vue` shows the latest translated text. Surfaces can offset its placement via local constants (e.g., `translationSpacingPx` in MS Teams).
+- **Translation Bubble** – `TranslatedPhrase.vue` shows the latest translated text. Surfaces can offset its placement via local constants.
 - **Console Crane** – `src/console-crane` is mounted alongside subtitle overlays to display word details; surfaces only need to ensure the crane container stays connected and receives context.
 
 ## Adding a New Surface

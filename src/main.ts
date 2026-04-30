@@ -1,7 +1,5 @@
 import "./trusted-types-polyfill";
 
-log("Using version", VERSION);
-
 import "./animation.scss";
 import "./tailwind.css";
 
@@ -12,7 +10,6 @@ import ConsoleCrane from "./console-crane/index.vue";
 
 import { netflix } from "./subtitle/web_netflix/initializer";
 import { youtube } from "./subtitle/web_youtube/initializer";
-import { msTeam } from "./subtitle/ms-team/initializer";
 import { AppInitializer } from "./common/types/general.type";
 import { cleanText } from "./common/helper/text";
 import { analytic } from "./plugins/mixpanel";
@@ -26,13 +23,15 @@ import {
 import { loginWithLastSession } from "./plugins/modular-rest";
 import { useSettingsStore } from "./common/store/settings";
 
+log("Using version", VERSION);
+
 let vueApp!: App;
 let appInitializer!: AppInitializer;
 let initialized = false;
 
 // Select an app initializer from existing modules
 //
-[youtube, netflix, msTeam].forEach((item) => {
+[youtube, netflix].forEach((item) => {
   if (location.hostname.includes(item.website.host)) {
     appInitializer = item;
   }
