@@ -28,15 +28,48 @@ export const useSettingsStore = defineStore("settings", () => {
     }
   }
 
-  function applyThemeToDOM(themeValue: Theme) {
-    document.documentElement.classList.remove("light", "dark");
+  let scopeObserver: MutationObserver | null = null;
+  let currentEffectiveTheme: "dark" | "light" = "dark";
+
+  function resolveTheme(themeValue: Theme): "dark" | "light" {
     if (themeValue === "auto") {
-      const prefersDark = window.matchMedia(
-        "(prefers-color-scheme: dark)"
-      ).matches;
-      document.documentElement.classList.add(prefersDark ? "dark" : "light");
-    } else {
-      document.documentElement.classList.add(themeValue);
+      return window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light";
+    }
+    return themeValue;
+  }
+
+  function applyToScopeElement(el: Element) {
+    el.classList.remove("light", "dark");
+    el.classList.add(currentEffectiveTheme);
+  }
+
+  function applyThemeToDOM(themeValue: Theme) {
+    currentEffectiveTheme = resolveTheme(themeValue);
+
+    document
+      .querySelectorAll(".subturtle-scope")
+      .forEach(applyToScopeElement);
+
+    if (!scopeObserver && typeof MutationObserver !== "undefined") {
+      scopeObserver = new MutationObserver((mutations) => {
+        for (const m of mutations) {
+          m.addedNodes.forEach((node) => {
+            if (!(node instanceof Element)) return;
+            if (node.classList?.contains("subturtle-scope")) {
+              applyToScopeElement(node);
+            }
+            node
+              .querySelectorAll?.(".subturtle-scope")
+              .forEach(applyToScopeElement);
+          });
+        }
+      });
+      scopeObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
+      });
     }
   }
 
