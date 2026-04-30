@@ -22,6 +22,9 @@ export const initConfig: AppInitializer = {
     // @TODO: Find a better way to do this
 
     appDiv.id = "subturtle-app";
+    // `subturtle-scope` is the anchor the postcss prefix-selector targets;
+    // every Subturtle-rendered subtree must carry this class to receive styles.
+    appDiv.classList.add("subturtle-scope");
     appDiv.style.position = "relative";
     appDiv.style.zIndex = "9999";
 
