@@ -2,16 +2,11 @@
   <transition>
     <div class="fixed bg-[#000000cc] z-[9999] w-screen h-screen" @click.self="close" v-if="modelValue">
       <section
-        class="absolute rounded-md mx-auto my-32 top-0 left-0 right-0 bottom-0 bg-white dark:bg-blue-900 flex flex-col"
+        class="absolute rounded-xl shadow-2xl mx-auto my-16 top-0 left-0 right-0 bottom-0 bg-white dark:bg-gray-950 flex flex-col overflow-hidden"
         :style="modalStyle" ref="modalContentContainer">
-        <!-- Close button -->
-        <div class="absolute right-[32px] left-[calc(100%-16px)] top-[-16px]">
-          <IconButton size="md" rounded="full" icon="i-mdi-close" @click="close" color="danger" />
-        </div>
-
         <!-- Content -->
         <div class="flex-1 overflow-y-auto w-full" v-if="contentSize.width">
-          <slot :width="contentSize.width" :height="contentSize.height" />
+          <slot :width="contentSize.width" :height="contentSize.height" :close="close" />
         </div>
       </section>
     </div>

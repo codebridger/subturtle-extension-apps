@@ -1,5 +1,5 @@
 <template>
-  <div class="my-2 bg-white dark:bg-blue-900 rounded-xl">
+  <div class="my-2 bg-white dark:bg-gray-900 rounded-xl">
     <FreemiumLimitCounter v-if="showFreemiumCounter" :used="usedCount" :total="totalCount" :isAtLimit="!!isAtLimit"
       :isDisabled="!!(isSaving || isAtLimit)" @action="savePhrase" @upgrade="handleUpgrade" class="mb-4">
       <InputGroup>
@@ -37,7 +37,7 @@
       </div>
     </template>
     <!-- Existing Bundles as Fieldset -->
-    <Fieldset v-if="existingBundles.length > 0" class="saved-bundles-fieldset bg-white dark:bg-blue-900"
+    <Fieldset v-if="existingBundles.length > 0" class="saved-bundles-fieldset bg-white dark:bg-gray-900"
       legend="Saved in">
       <div class="flex flex-wrap gap-1.5">
         <Button v-for="bundle in existingBundles" :key="bundle._id" :label="bundle.title" chip rounded="full" size="sm"

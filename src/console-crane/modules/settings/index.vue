@@ -1,6 +1,6 @@
 <template>
   <div
-    class="flex flex-col items-center justify-start overflow-y-auto min-h-full dark:bg-blue-900"
+    class="flex flex-col items-center justify-start overflow-y-auto min-h-full dark:bg-gray-950"
   >
     <div
       class="select-text flex flex-col px-20 justify-start items-center text-gray-900 dark:text-gray-100"
@@ -19,12 +19,12 @@
       <!-- Settings Content -->
       <section class="w-full mt-10 px-[40px]">
         <!-- Theme Settings -->
-        <Fieldset class="mb-6 dark:bg-blue-900" legend="Theme">
+        <Fieldset class="mb-6 dark:bg-gray-900" legend="Theme">
           <ThemeSwitcher />
         </Fieldset>
 
         <!-- Language Settings -->
-        <Fieldset class="mb-6 dark:bg-blue-900" legend="Language">
+        <Fieldset class="mb-6 dark:bg-gray-900" legend="Language">
           <div class="flex flex-col space-y-4">
             <div class="flex items-center justify-between">
               <span class="text-lg dark:text-gray-100">Interface Language</span>

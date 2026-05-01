@@ -6,7 +6,7 @@ const CopyPlugin = require("copy-webpack-plugin");
 
 const { VueLoaderPlugin } = require("vue-loader");
 
-const isProduction = process.env.NODE_ENV === "production";
+const isProduction = process.env.NODE_ENV === "production" || false;
 
 module.exports = {
   mode: "development",
@@ -74,6 +74,7 @@ module.exports = {
 
   entry: {
     main: "./src/main.ts",
+    nibble: "./src/nibble.ts",
     background: "./src/background.ts",
     popup: "./src/popup.ts",
   },

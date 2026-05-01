@@ -14,6 +14,7 @@ export type LoginStatusResponse = {
 export type SettingsObject = {
   theme: string;
   language: string;
+  nibbleDisabledDomains?: string[];
 };
 
 export class BaseMessage {
