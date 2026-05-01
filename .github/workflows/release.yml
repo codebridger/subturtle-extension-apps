@@ -21,6 +21,9 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Checkout sibling dashboard-app
+        run: git clone --depth 1 https://github.com/codebridger/subturtle-dashboard-app.git ../dashboard-app
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
