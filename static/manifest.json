@@ -14,6 +14,7 @@
 		"identity"
 	],
 	"host_permissions": [
+		"<all_urls>",
 		"https://www.subturtle.app/",
 		"https://www.dashboard.subturtle.app/",
 		"https://translation.googleapis.com/",
@@ -35,10 +36,8 @@
 	"content_scripts": [
 		{
 			"matches": [
-				"https://www.netflix.com/*",
-				"https://www.youtube.com/watch?*"
+				"https://www.netflix.com/*"
 			],
-			"css": [],
 			"js": [
 				"main.js"
 			]
@@ -49,6 +48,9 @@
 			],
 			"css": [
 				"/assets/style/youtube.css"
+			],
+			"js": [
+				"main.js"
 			]
 		},
 		{
