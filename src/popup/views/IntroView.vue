@@ -5,21 +5,14 @@
         <Carousel :value="slides">
           <template #item="{ data }">
             <div class="w-full h-full relative">
-              <img
-                :src="data.image"
-                class="w-full h-full object-cover rounded-xl"
-              />
+              <img :src="data.image" class="w-full h-full object-cover rounded-xl" />
 
               <!-- Slider overlay header -->
-              <div
-                class="absolute top-12 flex justify-between left-0 right-0 px-12"
-              >
+              <div class="absolute top-12 flex justify-between left-0 right-0 px-12">
                 <h1 class="text-xl font-extrabold text-white mb-2 px-4">
                   Subturtle
                 </h1>
-                <h1
-                  class="rounded-full bg-gray-100 dark:bg-gray-900 flex items-center justify-center w-10 h-10 mr-2"
-                >
+                <h1 class="rounded-full bg-gray-100 dark:bg-gray-900 flex items-center justify-center w-10 h-10 mr-2">
                   <Logo :size="20" onlyLogo />
                 </h1>
               </div>
@@ -29,14 +22,10 @@
       </div>
     </div>
 
-    <section
-      class="px-12 flex flex-col gap-4 bg-white dark:bg-gray-950 flex-1 justify-center"
-    >
+    <section class="px-12 flex flex-col gap-4 bg-white dark:bg-gray-950 flex-1 justify-center">
       <!-- Description -->
       <div>
-        <h2
-          class="text-gray-700 dark:text-gray-300 text-lg font-semibold text-primary"
-        >
+        <h2 class="text-gray-700 dark:text-gray-300 text-lg font-semibold text-primary">
           Turn captions into conversations.
         </h2>
         <p class="text-gray-700 dark:text-gray-300 text-base mb-6">
@@ -49,21 +38,13 @@
       <!-- Login button -->
       <div class="flex flex-row items-center justify-between gap-4">
         <div class="flex items-center gap-3">
-          <label
-            class="text-gray-700 dark:text-gray-300 text-sm font-medium whitespace-nowrap"
-          >
+          <label class="text-gray-700 dark:text-gray-300 text-sm font-medium whitespace-nowrap">
             My language
           </label>
           <SelectTarget class="w-32" />
         </div>
-        <Button
-          :disabled="isLogin"
-          :color="'primary'"
-          label="Login"
-          @click="openLogin"
-          :iconName="'i-solar-login-3-bold'"
-          :iconPosition="'right'"
-        >
+        <Button :disabled="isLogin" :color="'primary'" label="Login" @click="openLogin"
+          :iconName="'i-solar-login-3-bold'" :iconPosition="'right'">
         </Button>
       </div>
     </section>
@@ -72,7 +53,7 @@
 
 <script lang="ts" setup>
 import Carousel from "../../common/components/Carousel.vue";
-import { Button } from "@codebridger/lib-vue-components/elements";
+import { Button } from "pilotui/elements";
 import SelectTarget from "../../common/components/inputs/SelectTarget.vue";
 import { OpenLoginWindowMessage } from "../../common/types/messaging";
 import { isLogin } from "../../plugins/modular-rest";

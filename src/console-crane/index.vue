@@ -12,7 +12,7 @@ import { useConsoleCraneStore } from "./stores/console-crane";
 import { RouterView, useRouter } from "vue-router";
 import Modal from "./components/Modal.vue";
 import { getSubturtleDashboardUrlWithToken } from "../common/static/global";
-import { Button, IconButton, App } from "@codebridger/lib-vue-components";
+import { Button, IconButton, App } from "pilotui";
 import { watch, onMounted, onUnmounted, ref, computed } from "vue";
 import { analytic } from "../plugins/mixpanel";
 

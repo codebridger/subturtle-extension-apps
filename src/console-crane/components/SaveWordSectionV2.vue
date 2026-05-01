@@ -1,39 +1,19 @@
 <template>
   <div class="my-2 bg-white dark:bg-blue-900 rounded-xl">
-    <FreemiumLimitCounter
-      v-if="showFreemiumCounter"
-      :used="usedCount"
-      :total="totalCount"
-      :isAtLimit="!!isAtLimit"
-      :isDisabled="!!(isSaving || isAtLimit)"
-      @action="savePhrase"
-      @upgrade="handleUpgrade"
-      class="mb-4"
-    >
+    <FreemiumLimitCounter v-if="showFreemiumCounter" :used="usedCount" :total="totalCount" :isAtLimit="!!isAtLimit"
+      :isDisabled="!!(isSaving || isAtLimit)" @action="savePhrase" @upgrade="handleUpgrade" class="mb-4">
       <InputGroup>
-        <SelectPhraseBundleV2
-          class="flex-1"
-          ref="selectBundleRef"
-          v-model:selected-bundles="selectedBundles"
-          :excluded-bundle-ids="existingBundles.map((b) => b._id)"
-        />
-        <Button
-          :label="
-            isAtLimit
-              ? 'Upgrade'
-              : !selectedBundles.length
+        <SelectPhraseBundleV2 class="flex-1" ref="selectBundleRef" v-model:selected-bundles="selectedBundles"
+          :excluded-bundle-ids="existingBundles.map((b) => b._id)" />
+        <Button :label="isAtLimit
+            ? 'Upgrade'
+            : !selectedBundles.length
               ? 'Add to Bundles'
-              : `Add to ${selectedBundles.length} Bundle${
-                  selectedBundles.length > 1 ? 's' : ''
-                }`
-          "
-          :icon-name="isAtLimit ? 'pi pi-crown' : ''"
-          size="lg"
-          @click="isAtLimit ? handleUpgrade() : savePhrase()"
-          :disabled="!selectedBundles.length || isSaving"
-          :is-loading="isSaving"
-          class="border-none bg-gradient-to-r from-pink-500 to-purple-600 shadow-md hover:from-pink-600 hover:to-purple-700 text-white font-semibold dark:from-pink-700 dark:to-purple-900"
-        >
+              : `Add to ${selectedBundles.length} Bundle${selectedBundles.length > 1 ? 's' : ''
+              }`
+          " :icon-name="isAtLimit ? 'pi pi-crown' : ''" size="lg" @click="isAtLimit ? handleUpgrade() : savePhrase()"
+          :disabled="!selectedBundles.length || isSaving" :is-loading="isSaving"
+          class="border-none bg-gradient-to-r from-pink-500 to-purple-600 shadow-md hover:from-pink-600 hover:to-purple-700 text-white font-semibold dark:from-pink-700 dark:to-purple-900">
           <template #icon>
             <i :class="isAtLimit ? 'pi pi-crown' : 'mr-4 i-ep-collection'" />
           </template>
@@ -42,25 +22,14 @@
     </FreemiumLimitCounter>
     <template v-else>
       <div class="flex w-full">
-        <SelectPhraseBundleV2
-          ref="selectBundleRef"
-          v-model:selected-bundles="selectedBundles"
-          :excluded-bundle-ids="existingBundles.map((b) => b._id)"
-        />
-        <Button
-          :label="
-            !selectedBundles.length
-              ? 'Add to Bundles'
-              : `Add to ${selectedBundles.length} Bundle${
-                  selectedBundles.length > 1 ? 's' : ''
-                }`
-          "
-          size="lg"
-          @click="savePhrase"
-          :disabled="!selectedBundles.length || isSaving"
-          :is-loading="isSaving"
-          class="border-none bg-gradient-to-r from-pink-500 to-purple-600 shadow-md hover:from-pink-600 hover:to-purple-700 text-white font-semibold dark:from-pink-700 dark:to-purple-900"
-        >
+        <SelectPhraseBundleV2 ref="selectBundleRef" v-model:selected-bundles="selectedBundles"
+          :excluded-bundle-ids="existingBundles.map((b) => b._id)" />
+        <Button :label="!selectedBundles.length
+            ? 'Add to Bundles'
+            : `Add to ${selectedBundles.length} Bundle${selectedBundles.length > 1 ? 's' : ''
+            }`
+          " size="lg" @click="savePhrase" :disabled="!selectedBundles.length || isSaving" :is-loading="isSaving"
+          class="border-none bg-gradient-to-r from-pink-500 to-purple-600 shadow-md hover:from-pink-600 hover:to-purple-700 text-white font-semibold dark:from-pink-700 dark:to-purple-900">
           <template #icon>
             <i class="mr-4 i-ep-collection" />
           </template>
@@ -68,29 +37,18 @@
       </div>
     </template>
     <!-- Existing Bundles as Fieldset -->
-    <Fieldset
-      v-if="existingBundles.length > 0"
-      class="saved-bundles-fieldset bg-white dark:bg-blue-900"
-      legend="Saved in"
-    >
+    <Fieldset v-if="existingBundles.length > 0" class="saved-bundles-fieldset bg-white dark:bg-blue-900"
+      legend="Saved in">
       <div class="flex flex-wrap gap-1.5">
-        <Button
-          v-for="bundle in existingBundles"
-          :key="bundle._id"
-          :label="bundle.title"
-          chip
-          rounded="full"
-          size="sm"
-          @chip-click="removePhraseFromBundle(bundle._id)"
-          class="saved-chip"
-        />
+        <Button v-for="bundle in existingBundles" :key="bundle._id" :label="bundle.title" chip rounded="full" size="sm"
+          @chip-click="removePhraseFromBundle(bundle._id)" class="saved-chip" />
       </div>
     </Fieldset>
   </div>
 </template>
 
 <script setup lang="ts">
-import { InputGroup, Button } from "@codebridger/lib-vue-components";
+import { InputGroup, Button } from "pilotui";
 import Fieldset from "../../common/components/Fieldset.vue";
 import SelectPhraseBundleV2 from "./SelectPhraseBundleV2.vue";
 import { onMounted, ref, watch, computed } from "vue";

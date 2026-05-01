@@ -11,7 +11,7 @@ The extension consists of a browser popup and an injected "Console Crane" (in-pa
 ## Key Technologies
 - **Core**: Vue 3 Composition API, TypeScript, Webpack 5
 - **Extension Model**: Manifest V3 (Service Worker background)
-- **UI Library**: `@codebridger/lib-vue-components` - ALWAYS fetch docs from: https://codebridger.github.io/lib-vue-components/llm.md
+- **UI Library**: `pilotui` - ALWAYS fetch docs from: https://codebridger.github.io/lib-vue-components/llm.md
 - **Backend Client**: `@modular-rest/client` - ALWAYS fetch docs from:
   - https://modular-rest.github.io/modular-rest/js-client/install.html
   - https://modular-rest.github.io/modular-rest/js-client/authentication.html
@@ -40,7 +40,7 @@ Use `<script setup lang="ts">` and Composition API.
 </template>
 
 <script setup lang="ts">
-import { Button } from '@codebridger/lib-vue-components/elements';
+import { Button } from 'pilotui/elements';
 const save = () => console.log('saved');
 </script>
 ```
@@ -88,7 +88,7 @@ The extension uses an `AppInitializer` pattern in `src/main.ts` to detect the cu
 
 ## Critical Rules
 1. **Manifest V3**: No persistent background pages. Use `chrome.storage` for state persistence.
-2. **UI Components**: ALWAYS use `@codebridger/lib-vue-components`.
+2. **UI Components**: ALWAYS use `pilotui`.
 3. **API**: ALWAYS use `@modular-rest/client`.
 4. **Messaging**: ALWAYS use `sendMessage` from `common/helper/massage` and `BaseMessage` classes for type-safe communication.
 5. **Modularity**: NEVER create large files. Break logic into single-responsibility units.

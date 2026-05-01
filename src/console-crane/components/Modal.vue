@@ -1,24 +1,12 @@
 <template>
   <transition>
-    <div
-      class="fixed bg-[#000000cc] z-[9999] w-screen h-screen"
-      @click.self="close"
-      v-if="modelValue"
-    >
+    <div class="fixed bg-[#000000cc] z-[9999] w-screen h-screen" @click.self="close" v-if="modelValue">
       <section
         class="absolute rounded-md mx-auto my-32 top-0 left-0 right-0 bottom-0 bg-white dark:bg-blue-900 flex flex-col"
-        :style="modalStyle"
-        ref="modalContentContainer"
-      >
+        :style="modalStyle" ref="modalContentContainer">
         <!-- Close button -->
         <div class="absolute right-[32px] left-[calc(100%-16px)] top-[-16px]">
-          <IconButton
-            size="md"
-            rounded="full"
-            icon="i-mdi-close"
-            @click="close"
-            color="danger"
-          />
+          <IconButton size="md" rounded="full" icon="i-mdi-close" @click="close" color="danger" />
         </div>
 
         <!-- Content -->
@@ -31,7 +19,7 @@
 </template>
 
 <script setup lang="ts">
-import { Button, IconButton } from "@codebridger/lib-vue-components/elements";
+import { Button, IconButton } from "pilotui/elements";
 import {
   ref,
   watch,
@@ -122,20 +110,18 @@ function close() {
 
 <style lang="scss" scoped>
 .gradient-background {
-  background-image: linear-gradient(
-    to right top,
-    #d16ba5,
-    #c777b9,
-    #ba83ca,
-    #aa8fd8,
-    #9a9ae1,
-    #8aa7ec,
-    #79b3f4,
-    #69bff8,
-    #52cffe,
-    #41dfff,
-    #46eefa,
-    #5ffbf1
-  );
+  background-image: linear-gradient(to right top,
+      #d16ba5,
+      #c777b9,
+      #ba83ca,
+      #aa8fd8,
+      #9a9ae1,
+      #8aa7ec,
+      #79b3f4,
+      #69bff8,
+      #52cffe,
+      #41dfff,
+      #46eefa,
+      #5ffbf1);
 }
 </style>

@@ -1,22 +1,13 @@
 <template>
   <!-- Main word detail component - displays dictionary information and translation for a selected word -->
-  <div
-    class="flex flex-col items-center justify-start overflow-y-auto min-h-full dark:bg-blue-900"
-    :key="key"
-  >
-    <div
-      class="select-text flex flex-col px-20 justify-start items-center text-gray-900 dark:text-gray-100"
-      :style="{
-        height: '100%',
-        width: `${Math.min(780, frameSize?.width!)}px`,
-      }"
-    >
+  <div class="flex flex-col items-center justify-start overflow-y-auto min-h-full dark:bg-blue-900" :key="key">
+    <div class="select-text flex flex-col px-20 justify-start items-center text-gray-900 dark:text-gray-100" :style="{
+      height: '100%',
+      width: `${Math.min(780, frameSize?.width!)}px`,
+    }">
       <!-- WORD HEADER SECTION - Displays the word, phonetic pronunciation, and translation -->
       <section class="px-[40px] my-14 flex flex-col w-full" @click.stop>
-        <div
-          class="p-5 flex flex-col justify-center items-center"
-          :dir="wordData?.direction?.source"
-        >
+        <div class="p-5 flex flex-col justify-center items-center" :dir="wordData?.direction?.source">
           <h1 class="text-6xl mb-2 dark:text-gray-100">
             {{ title }}
           </h1>
@@ -26,36 +17,20 @@
         </div>
 
         <!-- Translation box showing the word in target language -->
-        <Fieldset
-          class="mb-4 dark:bg-blue-900"
-          :legend="targetLanguageTitle as string"
-        >
-          <h1
-            class="text-5xl text-center mb-8 dark:text-gray-100"
-            :dir="wordData?.direction?.target"
-          >
+        <Fieldset class="mb-4 dark:bg-blue-900" :legend="targetLanguageTitle as string">
+          <h1 class="text-5xl text-center mb-8 dark:text-gray-100" :dir="wordData?.direction?.target">
             {{ cleanText(wordData?.translation?.phrase || "") }}
           </h1>
         </Fieldset>
 
         <!-- Save word functionality - only shown to logged in users -->
-        <SaveWordSectionV2
-          v-if="isLogin && wordData?.translation?.phrase"
-          :phrase="cleanText(getProps().word!)"
-          :translation="cleanText(wordData?.translation?.phrase || '')"
-          :context="wordData?.context"
-          :direction="wordData?.direction"
-          :language_info="wordData?.language_info"
-          :linguistic_data="wordData?.linguistic_data"
-        />
+        <SaveWordSectionV2 v-if="isLogin && wordData?.translation?.phrase" :phrase="cleanText(getProps().word!)"
+          :translation="cleanText(wordData?.translation?.phrase || '')" :context="wordData?.context"
+          :direction="wordData?.direction" :language_info="wordData?.language_info"
+          :linguistic_data="wordData?.linguistic_data" />
 
         <!-- Login prompt if user is not logged in -->
-        <Button
-          v-else
-          color="secondary"
-          class="my-2 text-center dark:text-gray-100"
-          @click="handleLoginRequest"
-        >
+        <Button v-else color="secondary" class="my-2 text-center dark:text-gray-100" @click="handleLoginRequest">
           <div class="w-full flex justify-center items-center">
             <i class="mr-2 text-xl i-solar-login-3-bold" />
             <span>Login To Save This Phrase</span>
@@ -68,27 +43,16 @@
         <section class="w-full mt-5 px-[40px]">
           <!-- Main definition card -->
           <Fieldset class="mb-4 dark:bg-blue-900" legend="Definition">
-            <p
-              class="text-2xl mb-6 text-gray-900 dark:text-gray-100"
-              :dir="wordData?.direction?.target"
-            >
+            <p class="text-2xl mb-6 text-gray-900 dark:text-gray-100" :dir="wordData?.direction?.target">
               {{ wordData.linguistic_data.definition }}
             </p>
 
             <!-- Type and formality level -->
             <div class="flex gap-2">
-              <IconButton
-                v-if="wordData.linguistic_data.type"
-                badge
-                size="sm"
-                :label="wordData.linguistic_data.type.toUpperCase()"
-              />
-              <IconButton
-                v-if="wordData.linguistic_data.formality_level"
-                badge
-                size="sm"
-                :label="wordData.linguistic_data.formality_level.toUpperCase()"
-              />
+              <IconButton v-if="wordData.linguistic_data.type" badge size="sm"
+                :label="wordData.linguistic_data.type.toUpperCase()" />
+              <IconButton v-if="wordData.linguistic_data.formality_level" badge size="sm"
+                :label="wordData.linguistic_data.formality_level.toUpperCase()" />
             </div>
           </Fieldset>
 
@@ -97,81 +61,46 @@
               <p class="text-2xl italic text-gray-500 dark:text-gray-300">
                 {{ wordData?.linguistic_data?.phonetic.ipa || "" }}
               </p>
-              <p
-                class="text-2xl italic mb-2 text-gray-900 dark:text-gray-100"
-                :dir="wordData?.direction?.target"
-              >
+              <p class="text-2xl italic mb-2 text-gray-900 dark:text-gray-100" :dir="wordData?.direction?.target">
                 {{ wordData.linguistic_data.phonetic.transliteration }}
               </p>
             </div>
           </Fieldset>
 
           <!-- Example sentences -->
-          <Fieldset
-            class="mb-4 dark:bg-blue-900"
-            v-if="
-              wordData.linguistic_data.examples &&
-              wordData.linguistic_data.examples.length
-            "
-            legend="Examples"
-          >
-            <div
-              v-for="(example, index) in wordData.linguistic_data.examples"
-              :key="index"
-              class="mb-4"
-            >
-              <p
-                class="text-2xl italic mb-2 text-gray-900 dark:text-gray-100"
-                :dir="wordData?.direction?.target"
-              >
+          <Fieldset class="mb-4 dark:bg-blue-900" v-if="
+            wordData.linguistic_data.examples &&
+            wordData.linguistic_data.examples.length
+          " legend="Examples">
+            <div v-for="(example, index) in wordData.linguistic_data.examples" :key="index" class="mb-4">
+              <p class="text-2xl italic mb-2 text-gray-900 dark:text-gray-100" :dir="wordData?.direction?.target">
                 {{ example.target }}
               </p>
-              <p
-                class="text-2xl italic text-gray-500 dark:text-gray-300"
-                :dir="wordData?.direction?.source"
-              >
+              <p class="text-2xl italic text-gray-500 dark:text-gray-300" :dir="wordData?.direction?.source">
                 {{ example.source }}
               </p>
-              <Divider
-                v-if="index < wordData.linguistic_data.examples.length - 1"
-              />
+              <Divider v-if="index < wordData.linguistic_data.examples.length - 1" />
             </div>
           </Fieldset>
 
           <!-- Related expressions -->
-          <Fieldset
-            class="mb-4 dark:bg-blue-900"
-            v-if="
-              wordData.linguistic_data.related_expressions &&
-              wordData.linguistic_data.related_expressions.length
-            "
-            legend="Related Expressions"
-          >
+          <Fieldset class="mb-4 dark:bg-blue-900" v-if="
+            wordData.linguistic_data.related_expressions &&
+            wordData.linguistic_data.related_expressions.length
+          " legend="Related Expressions">
             <div class="p-4">
-              <div
-                v-for="(expression, index) in wordData.linguistic_data
-                  .related_expressions"
-                :key="index"
-                class="mb-4"
-              >
-                <p
-                  class="text-2xl mb-2 text-gray-900 dark:text-gray-100"
-                  :dir="wordData?.direction?.target"
-                >
+              <div v-for="(expression, index) in wordData.linguistic_data
+                .related_expressions" :key="index" class="mb-4">
+                <p class="text-2xl mb-2 text-gray-900 dark:text-gray-100" :dir="wordData?.direction?.target">
                   {{ expression.target }}
                 </p>
-                <p
-                  class="text-2xl italic text-gray-500 dark:text-gray-300"
-                  :dir="wordData?.direction?.source"
-                >
+                <p class="text-2xl italic text-gray-500 dark:text-gray-300" :dir="wordData?.direction?.source">
                   {{ expression.source }}
                 </p>
-                <Divider
-                  v-if="
-                    index <
-                    wordData.linguistic_data.related_expressions.length - 1
-                  "
-                />
+                <Divider v-if="
+                  index <
+                  wordData.linguistic_data.related_expressions.length - 1
+                " />
               </div>
             </div>
           </Fieldset>
@@ -180,22 +109,16 @@
 
       <!-- Loading state while fetching word data -->
       <template v-else-if="pending">
-        <div
-          class="my-32 text-3xl text-center text-yellow-600 dark:text-yellow-200"
-        >
+        <div class="my-32 text-3xl text-center text-yellow-600 dark:text-yellow-200">
           <span>Loading...</span>
         </div>
       </template>
 
       <!-- Error state when no definitions are found -->
       <template v-else>
-        <div
-          class="my-32 text-3xl text-center text-yellow-600 dark:text-yellow-200"
-        >
-          <span
-            >There is not any linguistic data for
-            {{ cleanText(getProps().word!) }}</span
-          >
+        <div class="my-32 text-3xl text-center text-yellow-600 dark:text-yellow-200">
+          <span>There is not any linguistic data for
+            {{ cleanText(getProps().word!) }}</span>
         </div>
       </template>
     </div>
@@ -213,7 +136,7 @@ import SaveWordSectionV2 from "../../components/SaveWordSectionV2.vue";
 
 import Fieldset from "../../../common/components/Fieldset.vue";
 import Divider from "../../../common/components/Divider.vue";
-import { Button, IconButton } from "@codebridger/lib-vue-components/elements";
+import { Button, IconButton } from "pilotui/elements";
 
 import { useRoute } from "vue-router";
 import { sendMessage } from "../../../common/helper/massage";
