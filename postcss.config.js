@@ -8,6 +8,31 @@ const prefixSelector = require("postcss-prefix-selector");
 // video grid layout.
 const SCOPE = ".subturtle-scope";
 
+// Tailwind emits sizes in `rem`, but `rem` is always relative to the host
+// page's <html> font-size — which themes (e.g. WordPress) routinely set to
+// 18-24px. The result: every label in ConsoleCrane scales with the page.
+// We freeze the extension UI to a fixed base by rewriting `rem` to `px` in
+// the final CSS, both in declarations and at-rule params. Using 14 here
+// because the ConsoleCrane was visually tuned against the smaller effective
+// sizes that previously came through host-page inheritance — 16 (Tailwind
+// default) renders too large in this context.
+const REM_BASE_PX = 14;
+function remToPxPlugin() {
+  const remRegex = /(-?\d*\.?\d+)rem\b/g;
+  const rewrite = (s) =>
+    s.replace(remRegex, (_, n) => `${parseFloat(n) * REM_BASE_PX}px`);
+  return {
+    postcssPlugin: "subturtle-rem-to-px",
+    Declaration(decl) {
+      if (decl.value.includes("rem")) decl.value = rewrite(decl.value);
+    },
+    AtRule(rule) {
+      if (rule.params.includes("rem")) rule.params = rewrite(rule.params);
+    },
+  };
+}
+remToPxPlugin.postcss = true;
+
 module.exports = {
   plugins: [
     "postcss-preset-env",
@@ -52,5 +77,6 @@ module.exports = {
         return prefixedSelector;
       },
     }),
+    remToPxPlugin(),
   ],
 };

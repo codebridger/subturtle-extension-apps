@@ -8,10 +8,10 @@
       <!-- WORD HEADER SECTION - Displays the word, phonetic pronunciation, and translation -->
       <section class="px-[40px] my-14 flex flex-col w-full" @click.stop>
         <div class="p-5 flex flex-col justify-center items-center" :dir="wordData?.direction?.source">
-          <h1 class="text-6xl mb-2 dark:text-gray-100">
+          <h1 class="text-6xl dark:text-gray-100">
             {{ title }}
           </h1>
-          <p class="text-base max-w-96 italic text-gray-500 dark:text-gray-300">
+          <p class="text-sm my-2 italic text-gray-500 dark:text-gray-300">
             {{ context }}
           </p>
         </div>
