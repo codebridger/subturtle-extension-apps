@@ -142,6 +142,7 @@ import { useRoute } from "vue-router";
 import { sendMessage } from "../../../common/helper/massage";
 import { OpenLoginWindowMessage } from "../../../common/types/messaging";
 import { analytic } from "../../../plugins/mixpanel";
+import { decodeRouteParams } from "../../stores/console-crane";
 
 const route = useRoute();
 
@@ -154,12 +155,11 @@ onMounted(() => {
  * The data is base64 encoded in the URL
  */
 function getProps() {
-  const data = JSON.parse(window.atob(route.params.data as string));
+  const data = decodeRouteParams<{ word: string; context?: string }>(
+    route.params.data as string
+  );
 
-  return data as unknown as {
-    word: string;
-    context?: string;
-  };
+  return data;
 }
 
 // Injected frame size from parent component to control responsive layout

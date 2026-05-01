@@ -50,6 +50,24 @@
 			"css": [
 				"/assets/style/youtube.css"
 			]
+		},
+		{
+			"matches": [
+				"<all_urls>"
+			],
+			"js": [
+				"nibble.js"
+			]
+		}
+	],
+	"web_accessible_resources": [
+		{
+			"resources": [
+				"assets/*"
+			],
+			"matches": [
+				"<all_urls>"
+			]
 		}
 	]
 }

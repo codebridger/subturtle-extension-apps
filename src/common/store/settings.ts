@@ -13,7 +13,26 @@ import { Theme } from "../types/general.type";
 export const useSettingsStore = defineStore("settings", () => {
   const theme = ref<Theme>("dark");
   const language = ref<string>("");
+  const nibbleDisabledDomains = ref<string[]>([]);
   const initialized = ref<boolean>(false);
+
+  function normalizeHost(host: string): string {
+    return host.toLowerCase().replace(/^www\./, "");
+  }
+
+  function isNibbleDisabledForHost(host: string): boolean {
+    return nibbleDisabledDomains.value.includes(normalizeHost(host));
+  }
+
+  function setNibbleDisabledForHost(host: string, disabled: boolean) {
+    const normalized = normalizeHost(host);
+    const list = nibbleDisabledDomains.value.slice();
+    const idx = list.indexOf(normalized);
+    if (disabled && idx === -1) list.push(normalized);
+    else if (!disabled && idx !== -1) list.splice(idx, 1);
+    nibbleDisabledDomains.value = list;
+    syncSettingsToBackground();
+  }
 
   function broadcastLanguageChange(lang: string) {
     log("begin broadcastLanguageChange", lang);
@@ -116,6 +135,7 @@ export const useSettingsStore = defineStore("settings", () => {
     const settings: SettingsObject = {
       theme: theme.value,
       language: language.value,
+      nibbleDisabledDomains: nibbleDisabledDomains.value,
     };
 
     analytic.register({ target_language: language.value, theme: theme.value });
@@ -143,6 +163,9 @@ export const useSettingsStore = defineStore("settings", () => {
           applyThemeToDOM(settings.theme as Theme);
         }
         if (settings.language) language.value = settings.language;
+        if (Array.isArray(settings.nibbleDisabledDomains)) {
+          nibbleDisabledDomains.value = settings.nibbleDisabledDomains;
+        }
 
         analytic.register({
           target_language: language.value,
@@ -168,6 +191,9 @@ export const useSettingsStore = defineStore("settings", () => {
         }
         if (message.settings.language)
           language.value = message.settings.language;
+        if (Array.isArray(message.settings.nibbleDisabledDomains)) {
+          nibbleDisabledDomains.value = message.settings.nibbleDisabledDomains;
+        }
       }
     });
   }
@@ -187,6 +213,9 @@ export const useSettingsStore = defineStore("settings", () => {
             applyThemeToDOM(newSettings.theme as Theme);
           }
           if (newSettings.language) language.value = newSettings.language;
+          if (Array.isArray(newSettings.nibbleDisabledDomains)) {
+            nibbleDisabledDomains.value = newSettings.nibbleDisabledDomains;
+          }
         }
       }
     });
@@ -195,6 +224,7 @@ export const useSettingsStore = defineStore("settings", () => {
   return {
     theme,
     language,
+    nibbleDisabledDomains,
     setTheme,
     setLanguage,
     initialize,
@@ -202,5 +232,7 @@ export const useSettingsStore = defineStore("settings", () => {
     broadcastLanguageChange,
     syncSettingsToBackground,
     fetchSettingsFromBackground,
+    isNibbleDisabledForHost,
+    setNibbleDisabledForHost,
   };
 });

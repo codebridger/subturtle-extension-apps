@@ -128,6 +128,40 @@
           </div>
         </div>
 
+        <!-- Per-site Nibble toggle -->
+        <div
+          v-if="currentHost"
+          class="bg-gray-50 dark:bg-white/[0.03] backdrop-blur-xl rounded-xl p-4 border border-gray-200 dark:border-white/[0.08] shadow-xl"
+        >
+          <div class="flex items-center justify-between gap-4">
+            <div class="flex-1 min-w-0">
+              <h3
+                class="text-lg font-medium text-gray-900 dark:text-white mb-1"
+              >
+                Phrase capture on this site
+              </h3>
+              <p class="text-gray-600 dark:text-gray-400 text-sm">
+                Highlight any text on
+                <span
+                  class="font-mono text-gray-800 dark:text-gray-200 break-all"
+                  >{{ currentHost }}</span
+                >
+                to translate and save phrases.
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              :aria-checked="nibbleEnabledHere"
+              class="nibble-toggle"
+              :class="nibbleEnabledHere ? 'nibble-toggle--on' : 'nibble-toggle--off'"
+              @click="nibbleEnabledHere = !nibbleEnabledHere"
+            >
+              <span class="nibble-toggle__thumb" />
+            </button>
+          </div>
+        </div>
+
         <!-- Interactive Help Section -->
         <div class="flex flex-col items-center">
           <router-link
@@ -259,15 +293,44 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { getAsset } from "../helper/assets";
 import { isLogin, logout } from "../../plugins/modular-rest";
 import { useRouter } from "vue-router";
 import { getSubturtleDashboardUrlWithToken } from "../../common/static/global";
+import { useSettingsStore } from "../../common/store/settings";
 
 const router = useRouter();
 const isLoading = ref(false);
 const showLogoutConfirm = ref(false);
+
+const settings = useSettingsStore();
+const currentHost = ref<string>("");
+
+const HIDDEN_PROTOCOLS = /^(chrome|chrome-extension|edge|about|file):/;
+
+onMounted(() => {
+  if (typeof chrome === "undefined" || !chrome.tabs) return;
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const url = tabs[0]?.url || "";
+    if (!url || HIDDEN_PROTOCOLS.test(url)) return;
+    try {
+      currentHost.value = new URL(url).hostname;
+    } catch {
+      currentHost.value = "";
+    }
+  });
+});
+
+const nibbleEnabledHere = computed<boolean>({
+  get: () =>
+    !currentHost.value ||
+    !settings.isNibbleDisabledForHost(currentHost.value),
+  set: (enabled: boolean) => {
+    if (!currentHost.value) return;
+    settings.setNibbleDisabledForHost(currentHost.value, !enabled);
+  },
+});
 
 async function openDashboard() {
   isLoading.value = true;
@@ -396,5 +459,38 @@ button {
 
 .animate-spin {
   animation: spin 1s linear infinite;
+}
+
+/* Per-site toggle */
+.nibble-toggle {
+  position: relative;
+  flex: none;
+  width: 44px;
+  height: 24px;
+  border-radius: 9999px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 200ms ease;
+  padding: 0;
+}
+.nibble-toggle--on {
+  background: linear-gradient(90deg, #6366f1, #a855f7);
+}
+.nibble-toggle--off {
+  background: rgba(120, 120, 130, 0.35);
+}
+.nibble-toggle__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 200ms ease;
+}
+.nibble-toggle--on .nibble-toggle__thumb {
+  transform: translateX(20px);
 }
 </style>
