@@ -20,15 +20,13 @@
     <!-- Loading mode: spinner -->
     <div v-else-if="mode === 'loading'" class="nibble-loading">
       <span class="nibble-spinner" />
-      <span class="nibble-source" :title="text">{{ truncate(text, 40) }}</span>
+      <span class="nibble-loading-label">Translating…</span>
     </div>
 
     <!-- Translated mode: translation + save -->
     <div v-else-if="mode === 'translated'" class="nibble-translated">
-      <span class="nibble-source" :title="text">{{ truncate(text, 40) }}</span>
-      <span class="nibble-arrow">→</span>
       <span class="nibble-translation" :title="translation">{{
-        truncate(translation, 60)
+        translation
       }}</span>
       <button
         type="button"
@@ -83,6 +81,8 @@ type Mode = "icon" | "loading" | "translated" | "error";
 
 const mode = ref<Mode>("icon");
 const translation = ref<string>("");
+const frozenLeft = ref<number | null>(null);
+const frozenTop = ref<number | null>(null);
 
 const consoleCrane = useConsoleCraneStore();
 
@@ -94,26 +94,41 @@ const logoUrl = computed(() =>
 
 const POPUP_W_ICON = 36;
 const POPUP_H_ICON = 36;
-const POPUP_W_TEXT = 360;
-const POPUP_H_TEXT = 44;
+const POPUP_MAX_W_TEXT = 520;
+const MARGIN = 8;
 
 const positionStyle = computed(() => {
+  const isExpanded = mode.value !== "icon";
+
+  // Expanded modes anchor to where the icon was clicked, so the pill
+  // grows out from that point instead of re-centering on the selection
+  // (which shifted the click point off-screen for long phrases).
+  if (isExpanded && frozenLeft.value != null && frozenTop.value != null) {
+    const maxAvailableRight = window.innerWidth - MARGIN;
+    const maxLeft = maxAvailableRight - POPUP_MAX_W_TEXT;
+    const left = Math.max(MARGIN, Math.min(frozenLeft.value, maxLeft));
+
+    return {
+      top: `${frozenTop.value}px`,
+      left: `${left}px`,
+      maxWidth: `${Math.min(
+        POPUP_MAX_W_TEXT,
+        window.innerWidth - left - MARGIN
+      )}px`,
+    };
+  }
+
   const r = props.rect;
   if (!r) return { display: "none" };
 
-  const isExpanded = mode.value !== "icon";
-  const w = isExpanded ? POPUP_W_TEXT : POPUP_W_ICON;
-  const h = isExpanded ? POPUP_H_TEXT : POPUP_H_ICON;
-  const margin = 8;
+  const w = POPUP_W_ICON;
+  const h = POPUP_H_ICON;
 
-  let top = r.top - h - margin;
-  if (top < margin) top = r.bottom + margin;
+  let top = r.top - h - MARGIN;
+  if (top < MARGIN) top = r.bottom + MARGIN;
 
   let left = r.left + r.width / 2 - w / 2;
-  left = Math.max(
-    margin,
-    Math.min(left, window.innerWidth - w - margin)
-  );
+  left = Math.max(MARGIN, Math.min(left, window.innerWidth - w - MARGIN));
 
   return {
     top: `${top}px`,
@@ -127,11 +142,22 @@ watch(
     if (newText !== oldText) {
       mode.value = "icon";
       translation.value = "";
+      frozenLeft.value = null;
+      frozenTop.value = null;
     }
   }
 );
 
-async function onIconClick() {
+async function onIconClick(e: MouseEvent) {
+  // Freeze the pill's anchor at the icon's current screen position so
+  // expanding to loading/translated keeps the click point in place.
+  const target = e.currentTarget as HTMLElement | null;
+  const r = target?.getBoundingClientRect();
+  if (r) {
+    frozenLeft.value = r.left - 6;
+    frozenTop.value = r.top;
+  }
+
   mode.value = "loading";
   try {
     const result = await TranslateService.instance.fetchSimpleTranslation(
@@ -156,11 +182,6 @@ function onSaveClick() {
   );
   window.getSelection()?.removeAllRanges();
   emit("dismiss");
-}
-
-function truncate(value: string, max: number): string {
-  if (!value) return "";
-  return value.length > max ? value.slice(0, max - 1) + "…" : value;
 }
 </script>
 
@@ -220,14 +241,15 @@ function truncate(value: string, max: number): string {
 .nibble-error {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: 10px;
+  padding: 8px 8px 8px 14px;
   background: #fff;
   color: #1f2937;
   border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 9999px;
+  border-radius: 18px;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
-  max-width: 360px;
+  width: max-content;
+  max-width: 100%;
 }
 
 .nibble-spinner {
@@ -246,27 +268,25 @@ function truncate(value: string, max: number): string {
   }
 }
 
-.nibble-source {
+.nibble-loading-label {
   color: #6b7280;
+  font-size: 13px;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 110px;
-}
-
-.nibble-arrow {
-  color: #9ca3af;
-  flex: none;
 }
 
 .nibble-translation {
   color: #111827;
   font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 180px;
   flex: 1 1 auto;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.35;
 }
 
 .nibble-save-btn {
