@@ -12,7 +12,7 @@
         <span class="text-xs text-gray-500 dark:text-gray-400">Selected:</span>
         <div class="flex items-center gap-1 flex-wrap">
           <span v-for="(option, index) in selectedOptions.slice(0, 2)" :key="index"
-            class="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">
+            class="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-500/20 text-blue-800 dark:text-blue-300 rounded">
             {{ getOptionLabel(option) }}
           </span>
           <span v-if="selectedCount > 2"

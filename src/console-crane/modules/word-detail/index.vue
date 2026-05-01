@@ -1,12 +1,12 @@
 <template>
   <!-- Main word detail component - displays dictionary information and translation for a selected word -->
-  <div class="flex flex-col items-center overflow-y-auto min-h-full dark:bg-blue-900" :key="key">
+  <div class="flex flex-col items-center overflow-y-auto min-h-full dark:bg-gray-950" :key="key">
     <div class="select-text flex flex-col px-6 sm:px-8 py-6 gap-4 text-gray-900 dark:text-gray-100 w-full" :style="{
       maxWidth: '720px',
     }">
       <!-- TRANSLATION CARD - Source phrase and translation in one cohesive block -->
       <section
-        class="rounded-xl border border-gray-200 dark:border-blue-800 bg-white dark:bg-blue-900 overflow-hidden"
+        class="rounded-xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-gray-900 overflow-hidden"
         @click.stop>
         <!-- Source phrase -->
         <div class="px-6 pt-6 pb-4" :dir="wordData?.direction?.source">
@@ -25,10 +25,10 @@
         </div>
 
         <!-- Divider line -->
-        <div class="border-t border-gray-100 dark:border-blue-800"></div>
+        <div class="border-t border-gray-100 dark:border-white/[0.08]"></div>
 
         <!-- Translation -->
-        <div class="px-6 pt-4 pb-6 bg-gray-50 dark:bg-blue-950/40" :dir="wordData?.direction?.target">
+        <div class="px-6 pt-4 pb-6 bg-gray-50 dark:bg-white/[0.02]" :dir="wordData?.direction?.target">
           <p class="text-[10px] uppercase tracking-wider font-semibold text-gray-400 dark:text-gray-400 mb-2">
             {{ targetLanguageTitle }}
           </p>
@@ -36,8 +36,8 @@
             {{ cleanText(wordData?.translation?.phrase || "") }}
           </h2>
           <div v-else-if="pending" class="space-y-2">
-            <div class="h-7 w-3/4 rounded bg-gray-200 dark:bg-blue-800 animate-pulse"></div>
-            <div class="h-7 w-1/2 rounded bg-gray-200 dark:bg-blue-800 animate-pulse"></div>
+            <div class="h-7 w-3/4 rounded bg-gray-200 dark:bg-white/[0.08] animate-pulse"></div>
+            <div class="h-7 w-1/2 rounded bg-gray-200 dark:bg-white/[0.08] animate-pulse"></div>
           </div>
           <p v-else-if="error" class="text-sm text-gray-500 dark:text-gray-400 italic">
             Translation unavailable
@@ -90,7 +90,7 @@
       <template v-if="wordData && wordData.linguistic_data">
         <section class="w-full flex flex-col gap-3">
           <!-- Main definition card -->
-          <Fieldset class="dark:bg-blue-900" legend="Definition">
+          <Fieldset class="dark:bg-gray-900" legend="Definition">
             <p class="text-base mb-3 text-gray-900 dark:text-gray-100" :dir="wordData?.direction?.target">
               {{ wordData.linguistic_data.definition }}
             </p>
@@ -104,7 +104,7 @@
             </div>
           </Fieldset>
 
-          <Fieldset class="dark:bg-blue-900" legend="Phonetic">
+          <Fieldset class="dark:bg-gray-900" legend="Phonetic">
             <div class="flex justify-between gap-4">
               <p class="text-base italic text-gray-500 dark:text-gray-300">
                 {{ wordData?.linguistic_data?.phonetic.ipa || "" }}
@@ -116,7 +116,7 @@
           </Fieldset>
 
           <!-- Example sentences -->
-          <Fieldset class="dark:bg-blue-900" v-if="
+          <Fieldset class="dark:bg-gray-900" v-if="
             wordData.linguistic_data.examples &&
             wordData.linguistic_data.examples.length
           " legend="Examples">
@@ -132,7 +132,7 @@
           </Fieldset>
 
           <!-- Related expressions -->
-          <Fieldset class="dark:bg-blue-900" v-if="
+          <Fieldset class="dark:bg-gray-900" v-if="
             wordData.linguistic_data.related_expressions &&
             wordData.linguistic_data.related_expressions.length
           " legend="Related Expressions">
@@ -157,10 +157,10 @@
       <template v-else-if="pending">
         <section class="w-full flex flex-col gap-3" aria-busy="true" aria-label="Loading linguistic data">
           <div v-for="n in 3" :key="n"
-            class="rounded-md border border-gray-200 dark:border-gray-600 p-4 bg-white dark:bg-blue-900">
-            <div class="h-3 w-24 bg-gray-200 dark:bg-blue-800 rounded animate-pulse mb-3"></div>
-            <div class="h-4 w-full bg-gray-200 dark:bg-blue-800 rounded animate-pulse mb-2"></div>
-            <div class="h-4 w-5/6 bg-gray-200 dark:bg-blue-800 rounded animate-pulse"></div>
+            class="rounded-md border border-gray-200 dark:border-white/[0.08] p-4 bg-white dark:bg-gray-900">
+            <div class="h-3 w-24 bg-gray-200 dark:bg-white/[0.08] rounded animate-pulse mb-3"></div>
+            <div class="h-4 w-full bg-gray-200 dark:bg-white/[0.08] rounded animate-pulse mb-2"></div>
+            <div class="h-4 w-5/6 bg-gray-200 dark:bg-white/[0.08] rounded animate-pulse"></div>
           </div>
         </section>
       </template>

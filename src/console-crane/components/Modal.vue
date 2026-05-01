@@ -2,7 +2,7 @@
   <transition>
     <div class="fixed bg-[#000000cc] z-[9999] w-screen h-screen" @click.self="close" v-if="modelValue">
       <section
-        class="absolute rounded-xl shadow-2xl mx-auto my-16 top-0 left-0 right-0 bottom-0 bg-white dark:bg-blue-900 flex flex-col overflow-hidden"
+        class="absolute rounded-xl shadow-2xl mx-auto my-16 top-0 left-0 right-0 bottom-0 bg-white dark:bg-gray-950 flex flex-col overflow-hidden"
         :style="modalStyle" ref="modalContentContainer">
         <!-- Content -->
         <div class="flex-1 overflow-y-auto w-full" v-if="contentSize.width">
