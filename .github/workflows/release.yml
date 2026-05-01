@@ -92,7 +92,7 @@ jobs:
       - name: Release
         if: steps.version.outputs.skip != 'true'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: yarn release
 
       - name: Upload zip artifact
