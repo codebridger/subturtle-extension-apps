@@ -4,27 +4,31 @@ import {
   isLogin,
   loginWithLastSession,
 } from "../plugins/modular-rest";
+import HomeView from "./views/HomeView.vue";
+import LoginView from "./views/LoginView.vue";
+import IntroView from "./views/IntroView.vue";
+import HelpView from "./views/HelpView.vue";
 
 const routes: RouteRecordRaw[] = [
   {
     path: "/",
     name: "home",
-    component: () => import("./views/HomeView.vue"),
+    component: HomeView,
   },
   {
     path: "/login",
     name: "login",
-    component: () => import("./views/LoginView.vue"),
+    component: LoginView,
   },
   {
     path: "/intro",
     name: "intro",
-    component: () => import("./views/IntroView.vue"),
+    component: IntroView,
   },
   {
     path: "/help",
     name: "help",
-    component: () => import("./views/HelpView.vue"),
+    component: HelpView,
   },
 ];
 
