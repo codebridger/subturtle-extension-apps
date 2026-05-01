@@ -4,6 +4,5 @@ dist
 .env*
 .DS_Store
 static/key-file.json
-yarn.lock
 *.zip
 .npmrc
