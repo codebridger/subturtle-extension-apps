@@ -1,6 +1,6 @@
 <template>
   <div
-    class="rounded-md px-6 py-7 relative flex items-start space-x-8 bg-white dark:bg-blue-900 text-gray-800 dark:text-gray-100"
+    class="rounded-md px-6 py-7 relative flex items-start space-x-8 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100"
   >
     <!-- ICON 
     -->

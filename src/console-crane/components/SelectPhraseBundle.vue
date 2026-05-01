@@ -1,45 +1,25 @@
 <template>
-  <Select
-    v-model="selected"
-    :options="options"
-    custom
-    labelKey="title"
-    valueKey="_id"
-    placeholder="Select a Phrase Bundle to save..."
-  >
+  <Select v-model="selected" :options="options" custom labelKey="title" valueKey="_id"
+    placeholder="Select a Phrase Bundle to save...">
     <template #header>
       <div class="p-4">
         <label class="font-medium text-900 block mb-2">
           Search or create a new bundle:
         </label>
         <InputGroup>
-          <Input
-            v-model="searchedBundleName"
-            :disabled="isFetching"
-            placeholder="Search bundles..."
-          />
-          <Button
-            label="Create"
-            color="secondary"
-            :disabled="!isCreateNewAllowed"
-            :is-loading="isCreating"
-            @click="createNewBundle"
-          />
+          <Input v-model="searchedBundleName" :disabled="isFetching" placeholder="Search bundles..." />
+          <Button label="Create" color="secondary" :disabled="!isCreateNewAllowed" :is-loading="isCreating"
+            @click="createNewBundle" />
         </InputGroup>
       </div>
     </template>
     <template #each="{ option, isSelected, setSelected }">
-      <div
-        :class="[
-          'px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150',
-          isSelected
-            ? 'bg-primary text-white hover:bg-primary/90'
-            : 'text-gray-900 dark:text-gray-100',
-        ]"
-        role="option"
-        :aria-selected="isSelected"
-        @click="setSelected"
-      >
+      <div :class="[
+        'px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150',
+        isSelected
+          ? 'bg-primary text-white hover:bg-primary/90'
+          : 'text-gray-900 dark:text-gray-100',
+      ]" role="option" :aria-selected="isSelected" @click="setSelected">
         {{ (option as unknown as PhraseBundleType).title }}
       </div>
     </template>
@@ -48,9 +28,9 @@
 
 <script lang="ts" setup>
 import { dataProvider, authentication } from "@modular-rest/client";
-import { Select, Input } from "@codebridger/lib-vue-components";
+import { Select, Input } from "pilotui";
 import InputGroup from "../../common/components/InputGroup.vue";
-import { Button } from "@codebridger/lib-vue-components/elements";
+import { Button } from "pilotui/elements";
 
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 

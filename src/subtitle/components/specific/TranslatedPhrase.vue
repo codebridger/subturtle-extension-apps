@@ -1,18 +1,8 @@
 <template>
-  <div
-    v-if="activeTranslate"
-    class="relative flex-row-reverse flex items-center justify-center space-x-2"
-  >
+  <div v-if="activeTranslate" class="relative flex-row-reverse flex items-center justify-center space-x-2">
     <div class="flex justify-end">
-      <IconButton
-        v-for="item in items"
-        size="sm"
-        class="mx-1"
-        :icon="item.icon"
-        :key="item.label"
-        :color="(item.color as any) || 'info'"
-        @click="item.command"
-      />
+      <IconButton v-for="item in items" size="sm" class="mx-1" :icon="item.icon" :key="item.label"
+        :color="(item.color as any) || 'info'" @click="item.command" />
     </div>
 
     <div class="p-2 rounded-md" :style="props.textStyle">
@@ -29,7 +19,7 @@ import { computed, defineProps, onMounted, ref, watch } from "vue";
 import { useMarkerStore } from "../../../stores/marker";
 import { useConsoleCraneStore } from "../../../console-crane/stores/console-crane";
 
-import { IconButton } from "@codebridger/lib-vue-components/elements";
+import { IconButton } from "pilotui/elements";
 
 const markerStore = useMarkerStore();
 const consoleCraneStore = useConsoleCraneStore();

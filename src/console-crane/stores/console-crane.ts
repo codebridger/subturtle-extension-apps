@@ -9,6 +9,23 @@ interface PageEntry {
   params?: Record<string, any>;
 }
 
+// Unicode-safe base64. `btoa` only accepts Latin1 — any non-Latin1 character
+// (e.g. accented Latin, Persian, Chinese, emoji) throws InvalidCharacterError.
+// We encode via TextEncoder so route params can carry any text.
+export function encodeRouteParams(params: any): string {
+  const bytes = new TextEncoder().encode(JSON.stringify(params));
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
+export function decodeRouteParams<T = any>(data: string): T {
+  const binary = atob(data);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+
 export const useConsoleCraneStore = defineStore("console-crane", () => {
   const isActive = ref(false);
   const history = ref<PageEntry[]>([]);
@@ -38,7 +55,7 @@ export const useConsoleCraneStore = defineStore("console-crane", () => {
     }
     router.push({
       name: page,
-      params: { data: window.btoa(JSON.stringify(params)) },
+      params: { data: encodeRouteParams(params) },
     });
   }
 
@@ -48,7 +65,7 @@ export const useConsoleCraneStore = defineStore("console-crane", () => {
       const prev = history.value[history.value.length - 1];
       router.push({
         name: prev.name,
-        params: { data: window.btoa(JSON.stringify(prev.params)) },
+        params: { data: encodeRouteParams(prev.params) },
       });
     }
   }

@@ -1,47 +1,28 @@
 <template>
-  <Select
-    v-model="selected"
-    :options="options"
-    multiple
-    custom
-    labelKey="title"
-    valueKey="_id"
-    placeholder="Select Phrase Bundles to save..."
-  >
-    <template
-      #selected="{
-        selectedOption,
-        selectedOptions,
-        multiple,
-        getOptionLabel,
-        selectedCount,
-      }"
-    >
-      <div
-        v-if="multiple && selectedOptions.length > 0"
-        class="flex items-center gap-2 flex-wrap"
-      >
+  <Select v-model="selected" :options="options" multiple custom labelKey="title" valueKey="_id"
+    placeholder="Select Phrase Bundles to save...">
+    <template #selected="{
+      selectedOption,
+      selectedOptions,
+      multiple,
+      getOptionLabel,
+      selectedCount,
+    }">
+      <div v-if="multiple && selectedOptions.length > 0" class="flex items-center gap-2 flex-wrap">
         <span class="text-xs text-gray-500 dark:text-gray-400">Selected:</span>
         <div class="flex items-center gap-1 flex-wrap">
-          <span
-            v-for="(option, index) in selectedOptions.slice(0, 2)"
-            :key="index"
-            class="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded"
-          >
+          <span v-for="(option, index) in selectedOptions.slice(0, 2)" :key="index"
+            class="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-500/20 text-blue-800 dark:text-blue-300 rounded">
             {{ getOptionLabel(option) }}
           </span>
-          <span
-            v-if="selectedCount > 2"
-            class="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded"
-          >
+          <span v-if="selectedCount > 2"
+            class="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded">
             +{{ selectedCount - 2 }} more
           </span>
         </div>
       </div>
       <span v-else-if="!multiple" class="flex items-center gap-2">
-        <span
-          class="inline-flex items-center justify-center w-5 h-5 text-xs text-blue-600"
-        >
+        <span class="inline-flex items-center justify-center w-5 h-5 text-xs text-blue-600">
           ✓
         </span>
         <span class="font-medium">{{ getOptionLabel(selectedOption) }}</span>
@@ -49,33 +30,18 @@
     </template>
     <template #header>
       <InputGroup class="w-full p-2">
-        <Input
-          v-model="searchedBundleName"
-          tabindex="0"
-          :disabled="isFetching"
-          placeholder="Search bundles..."
-        />
-        <Button
-          label="Create"
-          color="secondary"
-          :disabled="!isCreateNewAllowed || isFetching || isCreating"
-          :is-loading="isCreating"
-          @click="createNewBundle"
-        />
+        <Input v-model="searchedBundleName" tabindex="0" :disabled="isFetching" placeholder="Search bundles..." />
+        <Button label="Create" color="secondary" :disabled="!isCreateNewAllowed || isFetching || isCreating"
+          :is-loading="isCreating" @click="createNewBundle" />
       </InputGroup>
     </template>
     <template #each="{ option, isSelected, setSelected }">
-      <div
-        :class="[
-          'px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150',
-          isSelected
-            ? 'bg-primary text-white hover:bg-primary/90'
-            : 'text-gray-900 dark:text-gray-100',
-        ]"
-        role="option"
-        :aria-selected="isSelected"
-        @click="setSelected"
-      >
+      <div :class="[
+        'px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150',
+        isSelected
+          ? 'bg-primary text-white hover:bg-primary/90'
+          : 'text-gray-900 dark:text-gray-100',
+      ]" role="option" :aria-selected="isSelected" @click="setSelected">
         {{ (option as unknown as PhraseBundleType).title }}
       </div>
     </template>
@@ -84,8 +50,8 @@
 
 <script lang="ts" setup>
 import { dataProvider, authentication } from "@modular-rest/client";
-import { Button } from "@codebridger/lib-vue-components/elements";
-import { Select, Input, InputGroup } from "@codebridger/lib-vue-components";
+import { Button } from "pilotui/elements";
+import { Select, Input, InputGroup } from "pilotui";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
 import { COLLECTIONS, DATABASE } from "../../common/static/global";
@@ -215,7 +181,7 @@ onBeforeUnmount(() => {
 });
 
 // Expose method for compatibility (Select manages its own open state)
-function closeDropdown() {}
+function closeDropdown() { }
 
 defineExpose({
   closeDropdown,

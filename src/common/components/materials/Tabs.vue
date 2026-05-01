@@ -1,18 +1,12 @@
 <template>
   <InputGroup>
-    <Button
-      v-for="tab of list"
-      :key="tab"
-      :outline="active != tab"
-      @click.stop="activateTab(tab)"
-    >
-      {{ title(tab) }}</Button
-    >
+    <Button v-for="tab of list" :key="tab" :outline="active != tab" @click.stop="activateTab(tab)">
+      {{ title(tab) }}</Button>
   </InputGroup>
 </template>
 
 <script lang="ts">
-import { Button } from "@codebridger/lib-vue-components/elements";
+import { Button } from "pilotui/elements";
 import InputGroup from "../InputGroup.vue";
 import { defineComponent } from "vue";
 
@@ -65,6 +59,7 @@ export default defineComponent({
 :deep(.p-button.p-button-outlined) {
   color: var(--surface-border-color);
 }
+
 :deep(.p-button:focus) {
   box-shadow: unset;
 }
