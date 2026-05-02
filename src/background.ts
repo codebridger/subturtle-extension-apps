@@ -38,11 +38,16 @@ function getScreenSize() {
 function broadcastSettings(settings: SettingsObject) {
   chrome.tabs.query({}, (tabs) => {
     for (const tab of tabs) {
-      tab?.id &&
-        chrome.tabs.sendMessage(tab.id, {
+      if (!tab?.id) continue;
+      // Tabs without our content script (chrome://, web store, freshly
+      // installed pre-extension tabs, etc.) reject with "Receiving end does
+      // not exist". That's expected for a fire-and-forget broadcast.
+      chrome.tabs
+        .sendMessage(tab.id, {
           type: MESSAGE_TYPE.SYNC_SETTINGS,
           settings,
-        });
+        })
+        .catch(() => {});
     }
   });
 }

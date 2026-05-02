@@ -1,20 +1,14 @@
 <template>
-  <SelectionPopup
-    v-if="selection.isVisible.value && !consoleCrane.isActive"
-    :text="selection.text.value"
-    :rect="selection.rect.value"
-    :context="selection.contextText.value"
-    @dismiss="selection.clear"
-  />
-  <ConsoleCrane />
+  <NibbleSurface v-if="isEnabled" />
 </template>
 
 <script lang="ts" setup>
-import { useTextSelection } from "./composables/useTextSelection";
-import SelectionPopup from "./components/SelectionPopup.vue";
-import ConsoleCrane from "../console-crane/index.vue";
-import { useConsoleCraneStore } from "../console-crane/stores/console-crane";
+import { computed } from "vue";
+import NibbleSurface from "./components/NibbleSurface.vue";
+import { useSettingsStore } from "../common/store/settings";
 
-const selection = useTextSelection();
-const consoleCrane = useConsoleCraneStore();
+const settings = useSettingsStore();
+const isEnabled = computed(
+  () => !settings.isNibbleDisabledForHost(location.hostname)
+);
 </script>

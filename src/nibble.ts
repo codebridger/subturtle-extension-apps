@@ -26,10 +26,9 @@ log("Nibble using version", VERSION);
   const settings = useSettingsStore();
   await settings.initialize();
 
-  if (settings.isNibbleDisabledForHost(location.hostname)) {
-    log("Nibble disabled for host:", location.hostname);
-    return;
-  }
+  // Always mount. Index.vue gates rendering reactively via the settings
+  // store, so toggling the per-host switch in the popup takes effect in
+  // real time in both directions without a page refresh.
 
   loginWithLastSession();
 

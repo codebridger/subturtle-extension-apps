@@ -40,6 +40,9 @@ export async function sendMessage<T extends BaseMessage | LoginStatusResponse>(
 export function sendMessageToTabs<T extends BaseMessage | LoginStatusResponse>(
   message: T | any
 ) {
+  // it seems tabs loads with a delay, so we check if it's loaded
+  if (!chrome.tabs) return;
+
   chrome.tabs.query({}, (tabs) => {
     for (const tab of tabs) {
       tab?.id && chrome.tabs.sendMessage(tab.id, message);
