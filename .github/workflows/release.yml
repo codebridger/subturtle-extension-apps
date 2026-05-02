@@ -1,0 +1,103 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Checkout sibling dashboard-app
+        run: git clone --depth 1 https://github.com/codebridger/subturtle-dashboard-app.git ../dashboard-app
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Determine next version
+        id: version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          NEXT=$(node scripts/next-version.mjs)
+          if [ "$NEXT" = "NONE" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::No releasable commits since last tag — skipping release."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "version=$NEXT" >> "$GITHUB_OUTPUT"
+            echo "::notice::Next version will be $NEXT"
+          fi
+
+      - name: Write .env.production from secrets
+        if: steps.version.outputs.skip != 'true'
+        env:
+          MIXPANEL_PROJECT_TOKEN: ${{ secrets.MIXPANEL_PROJECT_TOKEN }}
+          GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
+          GOOGLE_TRANSLATE_KEY: ${{ secrets.GOOGLE_TRANSLATE_KEY }}
+          MIXPANEL_API_HOST: ${{ vars.MIXPANEL_API_HOST }}
+          GOOGLE_TRANSLATE_PROXY_URL: ${{ vars.GOOGLE_TRANSLATE_PROXY_URL }}
+          UNINSTALL_FORM_URL: ${{ vars.UNINSTALL_FORM_URL }}
+          SUBTURTLE_API_URL: ${{ vars.SUBTURTLE_API_URL }}
+          SUBTURTLE_DASHBOARD_URL: ${{ vars.SUBTURTLE_DASHBOARD_URL }}
+        run: |
+          cat > .env.production <<EOF
+          MIXPANEL_PROJECT_TOKEN=${MIXPANEL_PROJECT_TOKEN}
+          MIXPANEL_API_HOST=${MIXPANEL_API_HOST}
+          GOOGLE_TRANSLATE_KEY=${GOOGLE_TRANSLATE_KEY}
+          GOOGLE_TRANSLATE_PROXY_URL=${GOOGLE_TRANSLATE_PROXY_URL}
+          UNINSTALL_FORM_URL=${UNINSTALL_FORM_URL}
+          SUBTURTLE_API_URL=${SUBTURTLE_API_URL}
+          SUBTURTLE_DASHBOARD_URL=${SUBTURTLE_DASHBOARD_URL}
+          GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}
+          EOF
+
+      - name: Bump versions for build
+        if: steps.version.outputs.skip != 'true'
+        run: |
+          npm version "${{ steps.version.outputs.version }}" --no-git-tag-version --allow-same-version
+          node scripts/sync-manifest-version.mjs "${{ steps.version.outputs.version }}"
+
+      - name: Build
+        if: steps.version.outputs.skip != 'true'
+        run: yarn build
+
+      - name: Zip
+        if: steps.version.outputs.skip != 'true'
+        run: yarn zip
+
+      - name: Restore version files for clean release commit
+        if: steps.version.outputs.skip != 'true'
+        run: git checkout -- package.json static/manifest.json
+
+      - name: Release
+        if: steps.version.outputs.skip != 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: yarn release
+
+      - name: Upload zip artifact
+        if: steps.version.outputs.skip != 'true' && hashFiles('subturtle.zip') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: subturtle-extension
+          path: subturtle.zip
