@@ -1,7 +1,7 @@
 <template>
   <transition name="fade">
     <div
-      class="min-h-[600px] w-[800px] bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 overflow-y-auto"
+      class="min-h-[600px] w-full bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 overflow-y-auto"
     >
       <!-- Hero Section -->
       <div class="relative overflow-hidden">
