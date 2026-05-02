@@ -53,6 +53,7 @@ export const useProfileStore = defineStore("profile", () => {
       })
       .catch((res) => {
         console.error("Error fetching subscription:", res);
+        throw res;
       })
       .finally(() => {
         isSubscriptionFetching.value = false;
@@ -80,6 +81,7 @@ export const useProfileStore = defineStore("profile", () => {
       })
       .catch((error) => {
         console.error("Error fetching profile info:", error);
+        throw error;
       });
   }
 

@@ -29,14 +29,23 @@ function updateIsLogin() {
   // If user is logged in, fetch membership and freemium details
   if (loginInfo) {
     const profileStore = useProfileStore();
-    profileStore.bootstrap().catch((error) => {
-      console.error("Error bootstrapping profile store:", error);
-    });
 
-    analytic.identify(authentication.user?.id);
-    analytic.people.set({
-      $email: authentication.user?.email,
-    });
+    return profileStore.bootstrap()
+      .then(() => {
+        analytic.identify(authentication.user?.id);
+        analytic.people.set({
+          $email: authentication.user?.email,
+        });
+
+        return true;
+      })
+      .catch((error) => {
+        console.error("Error bootstrapping profile store:", error);
+        return false;
+      });
+  }
+  else {
+    return false;
   }
 }
 
@@ -66,18 +75,19 @@ export async function loginWithLastSession() {
       );
       return user;
     })
-    .then((user) => {
-      console.log("login success ", authentication.isLogin);
-      updateIsLogin();
+    .then((_user) => updateIsLogin())
+    .then(async (isSuccess) => {
 
-      return isLogin.value;
+      // if the login failed, it means token is invalid or expired.
+      // so the token should be removed from the storage.
+      if (!isSuccess) {
+        await logout();
+        return false;
+      }
+
+      return isSuccess;
     })
-    // if the login failed, it means token is invalid or expired.
-    // so the token should be removed from the storage.
-    .catch(async (err) => {
-      console.error("Subturtle login failed ", err);
-      sendMessage(new StoreUserTokenMessage(null));
-    })
+
     .finally(() => {
       if (!authentication.isLogin) {
         authentication
