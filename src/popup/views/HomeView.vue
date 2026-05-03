@@ -3,35 +3,11 @@
     <div
       class="min-h-[600px] w-full bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 overflow-y-auto"
     >
-      <!-- Hero Section -->
-      <div class="relative overflow-hidden">
-        <div
-          class="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20"
-        ></div>
-        <div class="relative px-6 py-4">
-          <div class="flex items-center justify-between">
-            <div class="flex-1">
-              <h1 class="text-xl font-bold text-gray-900 dark:text-white mb-1">
-                Learn English by streaming your&nbsp;
-                <span
-                  class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400"
-                >
-                  favorite shows
-                </span>
-              </h1>
-              <p class="text-gray-700 dark:text-gray-300 text-sm max-w-md">
-                From subtitles to fluency. Learn from real-life, native content.
-              </p>
-            </div>
-            <div class="transform hover:scale-105 transition-transform">
-              <logo></logo>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Main Content -->
       <div class="p-6 space-y-6">
+        <!-- Translate any text -->
+        <TranslateCard />
+
         <!-- Control Panel -->
         <div
           class="bg-gray-50 dark:bg-white/[0.03] backdrop-blur-xl rounded-xl p-4 border border-gray-200 dark:border-white/[0.08] shadow-xl hover:border-gray-300 dark:hover:border-white/[0.12] transition-all duration-300"
@@ -286,6 +262,19 @@
               </div>
             </div>
           </div>
+
+          <router-link
+            v-else
+            to="/intro"
+            class="text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 text-sm transition-colors duration-200"
+          >
+            Want to
+            <span
+              class="text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 underline decoration-dotted underline-offset-4 ml-1"
+            >
+              &nbsp;Log in?
+            </span>
+          </router-link>
         </div>
       </div>
     </div>
@@ -299,6 +288,7 @@ import { isLogin, logout } from "../../plugins/modular-rest";
 import { useRouter } from "vue-router";
 import { getSubturtleDashboardUrlWithToken } from "../../common/static/global";
 import { useSettingsStore } from "../../common/store/settings";
+import TranslateCard from "../components/TranslateCard.vue";
 
 const router = useRouter();
 const isLoading = ref(false);

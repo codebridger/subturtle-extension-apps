@@ -37,22 +37,19 @@ export const router = createRouter({
   routes: routes,
 });
 
-router.beforeEach(async (to, from) => {
-  // Allow access to intro and login pages regardless of login status
+router.beforeEach(async (to) => {
+  // Intro and login pages bypass the silent re-auth attempt entirely.
   if (to.name === "intro" || to.name === "login") {
     return true;
   }
 
-  // Try to login with last session if not already logged in
+  // Best-effort silent re-auth so logged-in users hit a populated state on
+  // first paint. We deliberately do NOT redirect on failure — the home view
+  // (and the new translation card on it) is reachable for logged-out users;
+  // auth-gated UI inside HomeView is hidden via `v-if="isLogin"`.
   if (!isLogin.value) {
     await loginWithLastSession();
-
-    // After trying to login, check again if successful
-    if (!isLogin.value) {
-      return { name: "intro" };
-    }
   }
 
-  // If we got here, user is logged in, allow navigation
   return true;
 });

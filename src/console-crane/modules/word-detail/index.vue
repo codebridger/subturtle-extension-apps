@@ -192,7 +192,12 @@ import { useRoute } from "vue-router";
 import { sendMessage } from "../../../common/helper/massage";
 import { OpenLoginWindowMessage } from "../../../common/types/messaging";
 import { analytic } from "../../../plugins/mixpanel";
-import { decodeRouteParams } from "../../stores/console-crane";
+import { decodeRouteParams } from "../../route-params";
+
+const props = defineProps<{
+  word?: string;
+  context?: string;
+}>();
 
 const route = useRoute();
 
@@ -201,10 +206,15 @@ onMounted(() => {
 });
 
 /**
- * Extracts word data from the route parameter
- * The data is base64 encoded in the URL
+ * Resolve word + context inputs. Prefers explicit props (used by the popup
+ * bundle, which mounts this module without a route param). Falls back to
+ * the base64-encoded `:data` route param used by the console-crane router.
  */
 function getProps() {
+  if (props.word) {
+    return { word: props.word, context: props.context ?? "" };
+  }
+
   const data = decodeRouteParams<{ word: string; context?: string }>(
     route.params.data as string
   );
