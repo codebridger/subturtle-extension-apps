@@ -19,13 +19,22 @@ type ExtensionFixtures = {
 export const test = base.extend<ExtensionFixtures>({
   context: async ({}, use) => {
     const pathToExtension = path.resolve(process.cwd(), "dist");
-    // Playwright 1.40+ + Chromium 121+ run extensions cleanly under
-    // managed headless. The previous `--headless=new` arg worked on
-    // macOS but fails on Ubuntu CI runners with the bundled Chromium
-    // 147, so we let Playwright pick the headless mode itself.
+
+    // Why these flags:
+    // - `--headless=new` forces the *full* Chromium binary in new-headless
+    //   mode. Without it, Playwright defers to `chrome-headless-shell`,
+    //   which is smaller and faster but does NOT load extensions — every
+    //   content-script root assertion times out on Linux CI as a result.
+    // - `--no-sandbox` + `--disable-setuid-sandbox` + `--disable-dev-shm-usage`
+    //   are standard CI hygiene for Chromium under containerised runners.
+    //   Harmless on macOS, required on some Linux setups.
     const context = await chromium.launchPersistentContext("", {
       channel: "chromium",
       args: [
+        "--headless=new",
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
         `--disable-extensions-except=${pathToExtension}`,
         `--load-extension=${pathToExtension}`,
       ],
