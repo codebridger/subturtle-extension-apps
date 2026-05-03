@@ -12,7 +12,11 @@ export default defineConfig({
   testMatch: ["**/*.spec.ts"],
   fullyParallel: false,
   workers: 1,
-  reporter: process.env.CI ? "list" : [["list"], ["html", { open: "never" }]],
+  // Always emit the HTML report so CI failures have an artifact we can
+  // upload and inspect (the verify workflow uploads playwright-report/
+  // when a step fails). The list reporter stays so terminal output
+  // remains readable.
+  reporter: [["list"], ["html", { open: "never" }]],
 
   use: {
     baseURL: "http://localhost:4173",
