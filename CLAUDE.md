@@ -12,18 +12,19 @@ npm run build    # NODE_ENV=production webpack --mode=production
 
 Load `dist/` as an unpacked extension at `chrome://extensions`. There is no separate dev server — the bundler writes straight to `dist/`, and Chrome reloads when you click the reload button on the extension card.
 
-## Three content surfaces (+ popup, background)
+## Bundles (+ popup, background)
 
 | Bundle | Entry | Runs on | Purpose |
 | --- | --- | --- | --- |
 | `main.js` | [src/main.ts](src/main.ts) | YouTube `/watch`, Netflix | Subtitle phrase collector — wraps caption words in `<Word>` spans, hover/anchor selection. |
 | `nibble.js` | [src/nibble.ts](src/nibble.ts) | `<all_urls>` | Web text phrase collector — native `Selection` → floating Subturtle icon → translation card. **Does not mutate page DOM.** |
+| `console-crane.js` | [src/console-crane.ts](src/console-crane.ts) | `<all_urls>` | The modal app (word-detail, settings, save flow). Owns its own Vue app + Pinia store + router. Feature bundles drive it via the [bridge](src/common/services/console-crane-bridge.ts). |
 | `popup.js` | [src/popup.ts](src/popup.ts) | Toolbar popup | Settings, language, dashboard link, per-site Nibble toggle. |
 | `background.js` | [src/background.ts](src/background.ts) | Service worker | OAuth, token storage, settings persistence to `chrome.storage.local`, broadcast `SYNC_SETTINGS` to tabs. |
 
-Manifest content_scripts split is in [static/manifest.json](static/manifest.json). Each surface gets its own bundle — they share Vue components and Pinia stores via the source tree, but no two surfaces ever load the same compiled JS on the same page.
+Manifest content_scripts split is in [static/manifest.json](static/manifest.json). On a YouTube `/watch` page all three content scripts run side-by-side in the same isolated world — `main.js`, `nibble.js`, and `console-crane.js` — so they coordinate through shared `chrome.storage` (settings) and `window` CustomEvents (the ConsoleCrane bridge).
 
-ConsoleCrane (the modal app at [src/console-crane/](src/console-crane/)) is mounted by every surface — subtitle, nibble, and the popup share it through component registration in their respective entry files.
+**ConsoleCrane is its own content script, not a component embedded in feature bundles.** There is exactly one ConsoleCrane instance per page regardless of which feature bundles are loaded. Feature bundles never `import` the ConsoleCrane component or its store directly; they call `emitOpen()` from [src/common/services/console-crane-bridge.ts](src/common/services/console-crane-bridge.ts) and listen to `onState()` for "is the modal open right now". See [Shared APIs § ConsoleCrane bridge](#consolecrane-bridge) below.
 
 ## Style isolation: the two non-negotiable rules
 
@@ -35,6 +36,7 @@ Bootstraps that already get this right:
 - [src/subtitle/web_youtube/initializer.ts](src/subtitle/web_youtube/initializer.ts) — appends `<div id="subturtle-app" class="subturtle-scope">`
 - [src/subtitle/web_netflix/initializer.ts](src/subtitle/web_netflix/initializer.ts) — same pattern
 - [src/nibble/initializer.ts](src/nibble/initializer.ts) — `<div id="subturtle-nibble-root" class="subturtle-scope">`
+- [src/console-crane/initializer.ts](src/console-crane/initializer.ts) — `<div id="subturtle-console-crane-root" class="subturtle-scope">`
 
 When adding a new mount point, copy this pattern. The class also drives dark mode — see `applyThemeToDOM` in [src/common/store/settings.ts](src/common/store/settings.ts).
 
@@ -55,16 +57,25 @@ Implications:
 
 ## Shared APIs
 
-### ConsoleCrane modal
+### ConsoleCrane bridge
+
+From any feature bundle (subtitle, nibble), open the modal by emitting a CustomEvent on `window`:
 
 ```ts
-import { useConsoleCraneStore } from "@/console-crane/stores/console-crane";
-useConsoleCraneStore().toggleConsoleCrane(
-  "word-detail",                            // page: "empty" | "word-detail" | "settings"
-  { word: phrase, context: paragraphText }, // params (any object)
-  true                                      // active: pass true to force-open (omit to toggle)
-);
+import { emitOpen } from "@/common/services/console-crane-bridge";
+emitOpen({
+  page: "word-detail",                      // "empty" | "word-detail" | "settings"
+  params: { word: phrase, context: paragraphText },
+  active: true,                              // pass true to force-open (omit to toggle)
+});
 ```
+
+The console-crane content script listens (`onOpen` in [src/console-crane.ts](src/console-crane.ts)) and calls `store.toggleConsoleCrane(...)` against its own Pinia store. Two complementary channels exist for state flowing the other way:
+
+- `onState((s) => ...)` — fires whenever `isActive` changes. Used by Nibble's [SelectionPopup](src/nibble/components/NibbleSurface.vue) to hide itself while the modal is open.
+- `requestState()` — feature bundle asks console-crane to re-emit its current state. A freshly mounted listener calls this to sync up rather than waiting for the next change.
+
+**Inside the console-crane bundle itself**, code can keep using `useConsoleCraneStore()` directly — it's the same Vue app. Bridge events are only the cross-bundle path.
 
 Params are encoded into the route via `encodeRouteParams` in [src/console-crane/stores/console-crane.ts](src/console-crane/stores/console-crane.ts) — Unicode-safe (uses TextEncoder). Decode with `decodeRouteParams`. **Never use `window.btoa(JSON.stringify(...))` directly** — it throws `InvalidCharacterError` on non-Latin1 input (Persian, CJK, emoji, accented Latin).
 
@@ -94,12 +105,12 @@ And the `SettingsObject` type in [src/common/types/messaging.ts](src/common/type
 
 ### Marker store (subtitle surfaces only)
 
-[src/stores/marker.ts](src/stores/marker.ts) — central authority for word marking, hover, anchors, auto-clear timers. Used by `<Word>` / `<WordSelectionRectangle>` / `<SelectionAnchor>` / `<TranslatedPhrase>` in [src/subtitle/components/specific/](src/subtitle/components/specific/). **Nibble does not use the marker store** — it gets `text` + `context` directly from `window.getSelection()` and passes them straight to ConsoleCrane.
+[src/stores/marker.ts](src/stores/marker.ts) — central authority for word marking, hover, anchors, auto-clear timers. Used by `<Word>` / `<WordSelectionRectangle>` / `<SelectionAnchor>` / `<TranslatedPhrase>` in [src/subtitle/components/specific/](src/subtitle/components/specific/). **Nibble does not use the marker store** — it reads `text` + `context` from `window.getSelection()` and forwards them through the ConsoleCrane bridge.
 
 ## Gotchas
 
 - **Pinia install order in entry scripts.** `useSettingsStore()` requires Pinia. Always run `addPlugins(app)` (see [src/plugins/install.ts](src/plugins/install.ts)) before any `useXxxStore()` call. The Nibble entry initializes Pinia, then settings, then gates the per-domain check, then mounts.
-- **Nibble root must NOT have `pointer-events: none`.** It's a 0×0 fixed element so it can't intercept clicks anyway, but `pointer-events: none` cascades into ConsoleCrane and swallows all modal clicks. Leave the root unspecified for pointer events.
+- **Nibble and ConsoleCrane roots must NOT have `pointer-events: none`.** Both are 0×0 fixed elements so they can't intercept clicks anyway, but `pointer-events: none` cascades into the modal and swallows all clicks. Leave the root unspecified for pointer events.
 - **Selection popup must `@mousedown.prevent.stop`.** Otherwise clicking the popup deselects the page text, the composable detects the empty selection, and the popup unmounts mid-click.
 - **The mount root in Nibble must not block the page.** Set `width: 0; height: 0; position: fixed; top: 0; left: 0`. Children use their own `position: fixed` to position themselves relative to the viewport.
 - **Theme dark class lives on `.subturtle-scope`, not `<html>`.** Tailwind's `dark:` rules are rewritten by `postcss-prefix-selector` to `.subturtle-scope.dark ...` — so the same element must carry both classes. The settings store handles this and a `MutationObserver` keeps Vue Teleport subtrees in sync.
@@ -117,7 +128,7 @@ Most additions go in [src/nibble/](src/nibble/) — composables, components, pop
 
 ### A new ConsoleCrane page
 
-Add the route to [src/console-crane/router.ts](src/console-crane/router.ts), add the page name to the `ConsolePage` type in [src/console-crane/types.ts](src/console-crane/types.ts), and call `toggleConsoleCrane(<page>, params, true)` from wherever you trigger it. Params are Unicode-safely encoded for free.
+Add the route to [src/console-crane/router.ts](src/console-crane/router.ts), add the page name to the `ConsolePage` type in [src/console-crane/types.ts](src/console-crane/types.ts), and trigger it via `emitOpen({ page: "<name>", params, active: true })` from any feature bundle (or `useConsoleCraneStore().toggleConsoleCrane(...)` if you're calling from inside the console-crane bundle itself). Params are Unicode-safely encoded for free.
 
 ### A new content script entry
 
@@ -125,6 +136,7 @@ Add the route to [src/console-crane/router.ts](src/console-crane/router.ts), add
 2. Add a `content_scripts` block in [static/manifest.json](static/manifest.json) with the right URL match.
 3. The entry script must mount its Vue root inside a `.subturtle-scope`-classed element (see Style isolation rule 1).
 4. Run `addPlugins(app)` before any store usage.
+5. To open the modal from the new bundle, use the [ConsoleCrane bridge](#consolecrane-bridge) — never import the ConsoleCrane component or store directly from another bundle.
 
 ## Release pipeline
 
@@ -191,10 +203,10 @@ This prints the version + notes that would be generated without writing anything
 
 When changes touch the bundle layout, content scripts, or shared CSS:
 
-- `dist/` contains exactly: `background.js`, `main.js`, `nibble.js`, `popup.js`, `popup.html`, `manifest.json`, `assets/` (no orphan numeric chunks).
-- On YouTube `/watch`: subtitle popup works; Nibble selection popup also works (both bundles run there since the manifest has overlapping matches).
-- On Wikipedia: only `nibble.js` runs; selection → icon → translation card → save flow opens ConsoleCrane.
-- In the popup: per-site toggle reads/writes `nibbleDisabledDomains` and survives a popup re-open.
+- `dist/` contains exactly: `background.js`, `main.js`, `nibble.js`, `console-crane.js`, `popup.js`, `popup.html`, `manifest.json`, `assets/` (no orphan numeric chunks).
+- On YouTube `/watch`: subtitle popup works; Nibble selection popup also works (all three content scripts run there). Exactly one `#subturtle-console-crane-root` in the DOM.
+- On Wikipedia: only `nibble.js` and `console-crane.js` run; selection → icon → translation card → save flow opens ConsoleCrane.
+- In the popup: per-site toggle reads/writes `nibbleDisabledDomains` and survives a popup re-open. Toggling Nibble OFF for a host **while ConsoleCrane is open** must NOT close the modal or lock page scroll — the modal lifecycle is decoupled from the Nibble per-host gate via the bridge.
 - In ConsoleCrane on a non-Latin page (e.g. Persian / Chinese article): no `InvalidCharacterError` from `btoa`.
 - Visual scale is consistent on a default-html-font-size site (YouTube) and a large-html-font-size site (typical WordPress blog).
 
@@ -206,6 +218,7 @@ When changes touch the bundle layout, content scripts, or shared CSS:
 - Vue plugin setup: [src/plugins/install.ts](src/plugins/install.ts)
 - Background message types: [src/common/types/messaging.ts](src/common/types/messaging.ts)
 - ConsoleCrane store: [src/console-crane/stores/console-crane.ts](src/console-crane/stores/console-crane.ts)
+- ConsoleCrane bridge: [src/common/services/console-crane-bridge.ts](src/common/services/console-crane-bridge.ts)
 - Settings store: [src/common/store/settings.ts](src/common/store/settings.ts)
 - Marker store: [src/stores/marker.ts](src/stores/marker.ts)
 - Translate service: [src/common/services/translate.service.ts](src/common/services/translate.service.ts)
