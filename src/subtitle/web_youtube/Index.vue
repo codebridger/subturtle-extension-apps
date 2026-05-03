@@ -10,10 +10,6 @@
       </div>
     </teleport>
   </div>
-
-  <div class="subturtle-scope">
-    <ConsoleCrane />
-  </div>
 </template>
 
 <script lang="ts">

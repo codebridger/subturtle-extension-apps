@@ -60,6 +60,14 @@
 			"js": [
 				"nibble.js"
 			]
+		},
+		{
+			"matches": [
+				"<all_urls>"
+			],
+			"js": [
+				"console-crane.js"
+			]
 		}
 	],
 	"web_accessible_resources": [

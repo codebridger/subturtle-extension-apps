@@ -75,6 +75,7 @@ module.exports = {
   entry: {
     main: "./src/main.ts",
     nibble: "./src/nibble.ts",
+    "console-crane": "./src/console-crane.ts",
     background: "./src/background.ts",
     popup: "./src/popup.ts",
   },

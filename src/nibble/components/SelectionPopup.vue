@@ -64,7 +64,7 @@
 <script lang="ts" setup>
 import { computed, nextTick, ref, watch } from "vue";
 import { TranslateService } from "../../common/services/translate.service";
-import { useConsoleCraneStore } from "../../console-crane/stores/console-crane";
+import { emitOpen } from "../../common/services/console-crane-bridge";
 
 const props = defineProps<{
   text: string;
@@ -88,8 +88,6 @@ const cardRef = ref<HTMLElement | null>(null);
 const iconCenter = ref<{ x: number; y: number } | null>(null);
 const cardLeft = ref<number | null>(null);
 const cardTop = ref<number | null>(null);
-
-const consoleCrane = useConsoleCraneStore();
 
 const logoUrl = computed(() =>
   typeof chrome !== "undefined" && chrome.runtime?.getURL
@@ -213,14 +211,14 @@ async function onIconClick(e: MouseEvent) {
 }
 
 function onSaveClick() {
-  consoleCrane.toggleConsoleCrane(
-    "word-detail",
-    {
+  emitOpen({
+    page: "word-detail",
+    params: {
       word: props.text,
       context: props.context,
     },
-    true
-  );
+    active: true,
+  });
   window.getSelection()?.removeAllRanges();
   emit("dismiss");
 }
