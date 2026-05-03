@@ -15,6 +15,9 @@ export default defineConfig({
     environment: "happy-dom",
     setupFiles: ["./tests/setup.ts"],
     include: ["tests/**/*.test.ts"],
+    // E2E specs run under Playwright, not Vitest. The .spec.ts suffix +
+    // tests/e2e/ directory keeps the two suites cleanly separated.
+    exclude: ["node_modules/**", "tests/e2e/**", "**/*.spec.ts"],
     globals: false,
   },
 });
