@@ -13,12 +13,11 @@
 </template>
 
 <script lang="ts" setup>
-import { useConsoleCraneStore } from "../../../console-crane/stores/console-crane";
+import { emitOpen } from "../../../common/services/console-crane-bridge";
 import { useMarkerStore } from "../../../stores/marker";
 import { ref, getCurrentInstance, onMounted, onUnmounted } from "vue";
 import { analytic } from "../../../plugins/mixpanel";
 
-const consoleCrane = useConsoleCraneStore();
 const markerStore = useMarkerStore();
 const props = defineProps<{
   id: string;
@@ -98,14 +97,20 @@ function onMouseLeave(e: MouseEvent) {
 
 function OpenWordDetail() {
   if (markerStore.words.length > 1) {
-    consoleCrane.toggleConsoleCrane("word-detail", {
-      word: markerStore.selectedPhrase,
-      context: markerStore.context,
+    emitOpen({
+      page: "word-detail",
+      params: {
+        word: markerStore.selectedPhrase,
+        context: markerStore.context,
+      },
     });
   } else {
-    consoleCrane.toggleConsoleCrane("word-detail", {
-      word: props.modelValue,
-      context: markerStore.context,
+    emitOpen({
+      page: "word-detail",
+      params: {
+        word: props.modelValue,
+        context: markerStore.context,
+      },
     });
   }
 }

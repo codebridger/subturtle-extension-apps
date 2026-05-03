@@ -6,7 +6,6 @@ import "./tailwind.css";
 import { App, createApp } from "vue";
 import subtitleComponents from "./subtitle/components/components";
 import generalComponents from "./common/components/components";
-import ConsoleCrane from "./console-crane/index.vue";
 
 import { netflix } from "./subtitle/web_netflix/initializer";
 import { youtube } from "./subtitle/web_youtube/initializer";
@@ -71,7 +70,6 @@ function start() {
       const components = {
         ...subtitleComponents,
         ...generalComponents,
-        ConsoleCrane,
       };
 
       Object.keys(components).forEach((name) => {
