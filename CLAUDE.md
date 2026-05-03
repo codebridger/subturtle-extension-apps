@@ -19,7 +19,7 @@ Load `dist/` as an unpacked extension at `chrome://extensions`. There is no sepa
 | `main.js` | [src/main.ts](src/main.ts) | YouTube `/watch`, Netflix | Subtitle phrase collector — wraps caption words in `<Word>` spans, hover/anchor selection. |
 | `nibble.js` | [src/nibble.ts](src/nibble.ts) | `<all_urls>` | Web text phrase collector — native `Selection` → floating Subturtle icon → translation card. **Does not mutate page DOM.** |
 | `console-crane.js` | [src/console-crane.ts](src/console-crane.ts) | `<all_urls>` | The modal app (word-detail, settings, save flow). Owns its own Vue app + Pinia store + router. Feature bundles drive it via the [bridge](src/common/services/console-crane-bridge.ts). |
-| `popup.js` | [src/popup.ts](src/popup.ts) | Toolbar popup | Settings, language, dashboard link, per-site Nibble toggle. |
+| `popup.js` | [src/popup.ts](src/popup.ts) | Toolbar popup | Ad-hoc text translation (input + detailed result), settings, language, dashboard link, per-site Nibble toggle. Reuses console-crane's `WordDetailModule` for the result panel — see [Shared APIs § WordDetailModule](#worddetailmodule-detailed-translation-panel) for the cross-bundle reuse rules. |
 | `background.js` | [src/background.ts](src/background.ts) | Service worker | OAuth, token storage, settings persistence to `chrome.storage.local`, broadcast `SYNC_SETTINGS` to tabs. |
 
 Manifest content_scripts split is in [static/manifest.json](static/manifest.json). On a YouTube `/watch` page all three content scripts run side-by-side in the same isolated world — `main.js`, `nibble.js`, and `console-crane.js` — so they coordinate through shared `chrome.storage` (settings) and `window` CustomEvents (the ConsoleCrane bridge).
@@ -77,7 +77,9 @@ The console-crane content script listens (`onOpen` in [src/console-crane.ts](src
 
 **Inside the console-crane bundle itself**, code can keep using `useConsoleCraneStore()` directly — it's the same Vue app. Bridge events are only the cross-bundle path.
 
-Params are encoded into the route via `encodeRouteParams` in [src/console-crane/stores/console-crane.ts](src/console-crane/stores/console-crane.ts) — Unicode-safe (uses TextEncoder). Decode with `decodeRouteParams`. **Never use `window.btoa(JSON.stringify(...))` directly** — it throws `InvalidCharacterError` on non-Latin1 input (Persian, CJK, emoji, accented Latin).
+Params are encoded into the route via `encodeRouteParams` from [src/console-crane/route-params.ts](src/console-crane/route-params.ts) — Unicode-safe (uses TextEncoder). Decode with `decodeRouteParams`. **Never use `window.btoa(JSON.stringify(...))` directly** — it throws `InvalidCharacterError` on non-Latin1 input (Persian, CJK, emoji, accented Latin).
+
+These helpers live in their own module (separate from the store) so consumers can import them without dragging in the console-crane router. Importing them from the store would close a circular ESM init when the importer isn't `console-crane.ts` itself (popup → WordDetailModule → store → router → WordDetailModule). Keep them in `route-params.ts`.
 
 ### Translation
 
@@ -87,6 +89,25 @@ const text = await TranslateService.instance.fetchSimpleTranslation(phrase, cont
 ```
 
 24-hour in-memory cache keyed on `(translationType, targetLanguage, phrase, context)`. `fetchDetailedTranslation` for the rich `LanguageLearningData` shape used by ConsoleCrane.
+
+### WordDetailModule (detailed translation panel)
+
+[src/console-crane/modules/word-detail/index.vue](src/console-crane/modules/word-detail/index.vue) is the rich result panel — definition, phonetic, examples, related expressions, plus the bundle save UI from [SaveWordSectionV2](src/console-crane/components/SaveWordSectionV2.vue). It runs its own `fetchDetailedTranslation` call internally, so the caller just supplies inputs.
+
+It supports two mounting modes:
+
+- **Route-driven** (console-crane): mounted by the console-crane router; reads `{ word, context }` from the base64-encoded `:data` route param. This is what `emitOpen({ page: "word-detail", params })` ultimately drives.
+- **Prop-driven** (popup, anywhere outside the console-crane router): pass `:word` and optional `:context` directly. When `word` is present it's preferred over the route param.
+
+Also emits `loading: boolean` mirroring its internal pending state — bind it on the parent (e.g. the popup's [TranslateCard](src/popup/components/TranslateCard.vue)) to reflect a button spinner.
+
+**Cross-bundle reuse caveat.** The "feature bundles never import the ConsoleCrane component or its store" rule is about the modal wrapper and `useConsoleCraneStore` — they're for opening the modal on a page that already has the ConsoleCrane content script. Reusing presentational sub-modules like `WordDetailModule` (and the things it transitively pulls in: `SaveWordSectionV2`, `SelectPhraseBundleV2`, `FreemiumLimitCounter`) **is fine** as long as:
+
+1. You're in a bundle that does NOT also load `console-crane.js` (today: only the popup qualifies — it's its own Chrome extension page, not a content script).
+2. You drive the module via props, not by trying to inject route params it doesn't have.
+3. The host app installs Pinia + the modular-rest auth plugin before mount (`addPlugins(app)` from [src/plugins/install.ts](src/plugins/install.ts)).
+
+If you ever need this from a content-script bundle that runs alongside ConsoleCrane, use the [bridge](#consolecrane-bridge) instead — don't double-mount the same component on the same page.
 
 ### Settings store
 
@@ -216,7 +237,8 @@ When changes touch the bundle layout, content scripts, or shared CSS:
 - On YouTube `/watch`: subtitle popup works; Nibble selection popup also works (all three content scripts run there). Exactly one `#subturtle-console-crane-root` in the DOM.
 - On Wikipedia: only `nibble.js` and `console-crane.js` run; selection → icon → translation card → save flow opens ConsoleCrane.
 - In the popup: per-site toggle reads/writes `nibbleDisabledDomains` and survives a popup re-open. Toggling Nibble OFF for a host **while ConsoleCrane is open** must NOT close the modal or lock page scroll — the modal lifecycle is decoupled from the Nibble per-host gate via the bridge.
-- In ConsoleCrane on a non-Latin page (e.g. Persian / Chinese article): no `InvalidCharacterError` from `btoa`.
+- In the popup translate input: input is auto-focused on open; submitting renders the detailed result inline; logged-out users see "Login to save this phrase"; logged-in users get the bundle picker. Re-translating a different word resets the result. The button shows a spinner while pending.
+- In ConsoleCrane on a non-Latin page (e.g. Persian / Chinese article): no `InvalidCharacterError` from `btoa`. Same check applies to the popup translate input — paste a Persian / CJK phrase and confirm no encoding error.
 - Visual scale is consistent on a default-html-font-size site (YouTube) and a large-html-font-size site (typical WordPress blog).
 
 ## Useful pointers
@@ -228,6 +250,9 @@ When changes touch the bundle layout, content scripts, or shared CSS:
 - Background message types: [src/common/types/messaging.ts](src/common/types/messaging.ts)
 - ConsoleCrane store: [src/console-crane/stores/console-crane.ts](src/console-crane/stores/console-crane.ts)
 - ConsoleCrane bridge: [src/common/services/console-crane-bridge.ts](src/common/services/console-crane-bridge.ts)
+- Route-param helpers (Unicode-safe base64): [src/console-crane/route-params.ts](src/console-crane/route-params.ts)
+- WordDetailModule (detailed result panel, prop- or route-driven): [src/console-crane/modules/word-detail/index.vue](src/console-crane/modules/word-detail/index.vue)
+- Popup translate card: [src/popup/components/TranslateCard.vue](src/popup/components/TranslateCard.vue)
 - Settings store: [src/common/store/settings.ts](src/common/store/settings.ts)
 - Marker store: [src/stores/marker.ts](src/stores/marker.ts)
 - Translate service: [src/common/services/translate.service.ts](src/common/services/translate.service.ts)
