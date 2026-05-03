@@ -140,7 +140,9 @@ Add the route to [src/console-crane/router.ts](src/console-crane/router.ts), add
 
 ## Release pipeline
 
-Releases are automated by [.github/workflows/release.yml](.github/workflows/release.yml) running [`semantic-release`](https://semantic-release.gitbook.io/) on every push to `main`. The pipeline is split into visible workflow steps rather than hidden inside a single `yarn release` call — read the workflow file end-to-end before changing it.
+Releases are automated by [.github/workflows/release.yml](.github/workflows/release.yml) running [`semantic-release`](https://semantic-release.gitbook.io/) on every push to `main` (stable channel) **or `dev` (prerelease channel)**. The pipeline is split into visible workflow steps rather than hidden inside a single `yarn release` call — read the workflow file end-to-end before changing it.
+
+A top-level `concurrency:` block keys on `github.ref`, so two pushes to the same branch queue but `main` and `dev` runs proceed in parallel without touching each other's state (different changelog files, different version commits).
 
 ### How a release runs
 
@@ -150,7 +152,7 @@ Releases are automated by [.github/workflows/release.yml](.github/workflows/rele
 4. **Bump versions for build** — `npm version --no-git-tag-version` writes `package.json`; [scripts/sync-manifest-version.mjs](scripts/sync-manifest-version.mjs) writes the same version to [static/manifest.json](static/manifest.json).
 5. **Build & zip** — `yarn build && yarn zip` produces `subturtle.zip` with the new version baked in.
 6. **Restore version files** — `git checkout -- package.json static/manifest.json` reverts the bump. This step exists deliberately: it lets `@semantic-release/git` see a real diff in step 7 and create the `chore(release): X.Y.Z [skip ci]` commit. Without restore, the diff is empty and no commit lands.
-7. **Run `yarn release`** — `@semantic-release/npm` re-bumps `package.json`, [.releaserc.json](.releaserc.json) `prepareCmd` re-syncs `manifest.json`, `@semantic-release/git` commits both files and tags `vX.Y.Z`, `@semantic-release/github` creates the release with `subturtle.zip` attached.
+7. **Run `yarn release`** — `@semantic-release/npm` re-bumps `package.json`, `@semantic-release/changelog` prepends release notes to the active changelog file (`CHANGELOG.md` on `main`, `CHANGELOG-DEV.md` on `dev`), [release.config.cjs](release.config.cjs) `prepareCmd` re-syncs `manifest.json`, `@semantic-release/git` commits all three files and tags `vX.Y.Z`, `@semantic-release/github` creates the release with `subturtle.zip` attached (auto-flagged as prerelease for dev runs).
 8. **Upload zip artifact** — also published as a workflow artifact for offline access.
 
 ### Conventional Commits drive versioning
@@ -164,25 +166,32 @@ If you squash-merge PRs, GitHub uses the **PR title** as the squash commit messa
 
 ### `prepareCmd` does not build
 
-[.releaserc.json](.releaserc.json) `prepareCmd` only runs `scripts/sync-manifest-version.mjs`. The build/zip happen earlier as explicit workflow steps so they're visible in CI logs and have access to the env file. Don't move build/zip back into `prepareCmd`.
+[release.config.cjs](release.config.cjs) `prepareCmd` only runs `scripts/sync-manifest-version.mjs`. The build/zip happen earlier as explicit workflow steps so they're visible in CI logs and have access to the env file. Don't move build/zip back into `prepareCmd`.
+
+### Dev channel (prereleases)
+
+Pushes to `dev` cut prereleases on the `dev` channel — versions look like `1.11.0-dev.1`, `1.11.0-dev.2`, etc. When `dev` lands on `main`, semantic-release promotes the next stable bump cleanly (e.g. `1.11.0-dev.3` → `1.11.0`).
+
+- **Two changelog files, never merged.** Stable runs prepend to [CHANGELOG.md](CHANGELOG.md); dev runs prepend to [CHANGELOG-DEV.md](CHANGELOG-DEV.md). The active file is selected at config-load time in [release.config.cjs](release.config.cjs) by reading `GITHUB_REF_NAME` (set by GitHub Actions) or, locally, `git rev-parse --abbrev-ref HEAD`. So `yarn release:dry` works correctly on a `dev` checkout without extra env.
+- **Chrome-compatible `manifest.version`, plus `version_name` for prereleases.** Chrome MV3 only accepts 1–4 dot-separated integers in `manifest.version`, so [scripts/sync-manifest-version.mjs](scripts/sync-manifest-version.mjs) maps a prerelease `MAJOR.MINOR.PATCH-channel.N` to `MAJOR.MINOR.PATCH.N` for `version` and copies the full semver into `version_name` (which is what shows in `chrome://extensions`). Stable releases write only `version` and clear any stale `version_name`.
+- **GitHub Release auto-flagging.** `@semantic-release/github` checks the branch's `prerelease` flag and marks the release accordingly — no extra config needed beyond the `branches` array in [release.config.cjs](release.config.cjs).
+- **Comparison-ordering caveat.** A dev build (`1.11.0.5`) is a higher Chrome version than the stable `1.11.0`. If a tester installs a dev zip and later wants the stable zip of the same base version, Chrome will not auto-downgrade. Once `1.11.0` ships stable, the next dev push is `1.12.0-dev.1` → `1.12.0.1`, which is correctly higher. Acceptable for an internal channel; flag this if you ever wire dev builds to a Chrome Web Store listing.
 
 ### Required GitHub Actions config
 
-When forking or moving the repo, recreate these on the new repo:
+The release workflow targets one of two GitHub Environments per run, picked from the branch via `environment: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}`. Push to `main` → `prod` environment; push to `dev` → `dev` environment. With the job bound to an environment, `${{ secrets.X }}` / `${{ vars.X }}` resolve environment-first then fall back to repo-level — so the `env:` block in the "Write .env.production" step is the same for both branches.
 
-**Secrets** (`Settings → Secrets and variables → Actions → Secrets`):
-- `MIXPANEL_PROJECT_TOKEN`
-- `GOOGLE_OAUTH_CLIENT_ID`
-- `GOOGLE_TRANSLATE_KEY`
+**Per-environment** (`Settings → Environments → prod` / `dev`) — same keys in both, different values:
+- Secret: `MIXPANEL_PROJECT_TOKEN`
+- Variables: `SUBTURTLE_API_URL`, `SUBTURTLE_DASHBOARD_URL`
 
-**Variables** (`Settings → Secrets and variables → Actions → Variables`):
-- `MIXPANEL_API_HOST`
-- `GOOGLE_TRANSLATE_PROXY_URL`
-- `UNINSTALL_FORM_URL`
-- `SUBTURTLE_API_URL`
-- `SUBTURTLE_DASHBOARD_URL`
+**Repository-level** (`Settings → Secrets and variables → Actions`) — shared by both:
+- Secrets: `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_TRANSLATE_KEY`
+- Variables: `MIXPANEL_API_HOST`, `GOOGLE_TRANSLATE_PROXY_URL`, `UNINSTALL_FORM_URL`
 
-The default `GITHUB_TOKEN` is enough for the bot to push the release commit and tag, as long as the `main` ruleset doesn't require PRs. Currently main only blocks force pushes and deletions; no PR rule.
+When forking, recreate the two environments and the repo-level entries above.
+
+The default `GITHUB_TOKEN` is enough for the bot to push the release commit and tag, as long as the `main` (or `dev`) ruleset doesn't require PRs. Currently main only blocks force pushes and deletions; no PR rule.
 
 ### Local rehearsal
 
@@ -223,5 +232,6 @@ When changes touch the bundle layout, content scripts, or shared CSS:
 - Marker store: [src/stores/marker.ts](src/stores/marker.ts)
 - Translate service: [src/common/services/translate.service.ts](src/common/services/translate.service.ts)
 - Release workflow: [.github/workflows/release.yml](.github/workflows/release.yml)
-- semantic-release config: [.releaserc.json](.releaserc.json)
+- semantic-release config: [release.config.cjs](release.config.cjs)
+- Changelogs: [CHANGELOG.md](CHANGELOG.md) (stable), [CHANGELOG-DEV.md](CHANGELOG-DEV.md) (prerelease)
 - Version-bump helpers: [scripts/next-version.mjs](scripts/next-version.mjs), [scripts/sync-manifest-version.mjs](scripts/sync-manifest-version.mjs)
