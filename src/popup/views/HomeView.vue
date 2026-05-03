@@ -8,6 +8,13 @@
         <!-- Translate any text -->
         <TranslateCard />
 
+        <!-- Section divider between the translation surface and the rest of
+             the popup so the result detail doesn't visually bleed into the
+             settings cards below. -->
+        <div
+          class="h-px bg-gradient-to-r from-transparent via-gray-300/70 to-transparent dark:via-white/[0.12]"
+        ></div>
+
         <!-- Control Panel -->
         <div
           class="bg-gray-50 dark:bg-white/[0.03] backdrop-blur-xl rounded-xl p-4 border border-gray-200 dark:border-white/[0.08] shadow-xl hover:border-gray-300 dark:hover:border-white/[0.12] transition-all duration-300"

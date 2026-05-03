@@ -199,6 +199,10 @@ const props = defineProps<{
   context?: string;
 }>();
 
+const emit = defineEmits<{
+  loading: [boolean];
+}>();
+
 const route = useRoute();
 
 onMounted(() => {
@@ -231,6 +235,9 @@ const wordData = ref<LanguageLearningData | null>(null); // Stores detailed ling
 const pending = ref(false); // Loading state
 const error = ref<string | null>(null); // Translation error message, null when ok
 const key = ref(new Date().getTime()); // Key for forcing component refresh
+
+// Mirror loading state to parent so popup callers can show a button spinner.
+watch(pending, (val) => emit("loading", val));
 
 // Gets the title of the target language (e.g., "Spanish", "French")
 const targetLanguageTitle = computed(
