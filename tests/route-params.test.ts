@@ -33,4 +33,19 @@ describe("route-params encode/decode round-trip", () => {
       encodeRouteParams({ word: "آزمون", context: "💯 测试" })
     ).not.toThrow();
   });
+
+  it("round-trips undefined params via the empty string", () => {
+    // toggleConsoleCrane(page) calls encodeRouteParams without params for
+    // pages like "empty" / "settings". JSON.stringify(undefined) returns
+    // undefined (not "undefined"), so encode is a no-op and decode returns
+    // undefined back rather than throwing on JSON.parse("").
+    const encoded = encodeRouteParams(undefined);
+    expect(encoded).toBe("");
+    expect(decodeRouteParams(encoded)).toBeUndefined();
+  });
+
+  it("decodes an empty string to undefined without throwing", () => {
+    expect(() => decodeRouteParams("")).not.toThrow();
+    expect(decodeRouteParams("")).toBeUndefined();
+  });
 });

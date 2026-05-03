@@ -42,12 +42,14 @@ function broadcastSettings(settings: SettingsObject) {
       // Tabs without our content script (chrome://, web store, freshly
       // installed pre-extension tabs, etc.) reject with "Receiving end does
       // not exist". That's expected for a fire-and-forget broadcast.
-      chrome.tabs
-        .sendMessage(tab.id, {
+      // Cast: @types/chrome@0.0.193 still types tabs.sendMessage as void;
+      // in MV3 the no-callback overload returns a Promise.
+      (
+        chrome.tabs.sendMessage(tab.id, {
           type: MESSAGE_TYPE.SYNC_SETTINGS,
           settings,
-        })
-        .catch(() => {});
+        }) as unknown as Promise<unknown>
+      ).catch(() => {});
     }
   });
 }

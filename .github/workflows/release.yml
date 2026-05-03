@@ -60,6 +60,9 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
 
+      - name: Type check
+        run: yarn typecheck
+
       - name: Unit tests (Vitest)
         run: yarn test
 

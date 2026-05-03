@@ -9,6 +9,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "typecheck": "node scripts/typecheck.mjs",
     "release": "semantic-release",
     "release:dry": "semantic-release --dry-run --no-ci"
   },
