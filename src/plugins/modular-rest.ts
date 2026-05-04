@@ -76,27 +76,52 @@ export async function loginWithLastSession() {
       return user;
     })
     .then((_user) => updateIsLogin())
-    .then(async (isSuccess) => {
-
-      // if the login failed, it means token is invalid or expired.
-      // so the token should be removed from the storage.
-      if (!isSuccess) {
+    .then(async (_isRegisteredUser) => {
+      // updateIsLogin's truthy result means "registered user with a real
+      // account". Anonymous users return false here even though they hold a
+      // perfectly valid session — so don't conflate "not a registered user"
+      // with "login failed". Only broadcast logout when the underlying token
+      // truly couldn't be validated (authentication.isLogin === false).
+      // Without this guard, every fresh popup open would `logout()` the anon
+      // session, clearing chrome.storage.sync and broadcasting null to every
+      // tab — and the next translate from any content script then 412s
+      // because its Authorization header is empty.
+      if (!authentication.isLogin) {
         await logout();
         return false;
       }
-
-      return isSuccess;
+      return true;
     })
 
     .finally(() => {
       if (!authentication.isLogin) {
         authentication
           .loginAsAnonymous()
-          .then((user) => {
+          .then(async () => {
             console.log(
               "Subturtle Anonymous login succeded",
               authentication.isLogin
             );
+            // Persist the anonymous token so subsequent mounts (other bundles
+            // on the same page, the popup, page reloads) reuse it instead of
+            // each calling /user/loginAnonymous and stranding the previous
+            // anonymous user — which the server then 412s on the next call.
+            // Writes to chrome.storage.sync (cross-context) and to this
+            // page's localStorage (modular-rest's own per-origin cache).
+            const token = authentication.getToken;
+            if (token) {
+              try {
+                await sendMessage(new StoreUserTokenMessage(token));
+              } catch (err) {
+                console.warn(
+                  "Subturtle: persisting anonymous token to background failed",
+                  err
+                );
+              }
+              if (typeof localStorage !== "undefined") {
+                localStorage.setItem("token", token);
+              }
+            }
             updateIsLogin();
           })
           .catch((err) => {
