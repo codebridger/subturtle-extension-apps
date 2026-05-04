@@ -5,9 +5,14 @@ Operating manual for working inside this repo. For product overview / supported 
 ## Quick start
 
 ```bash
-npm install
-npm run dev      # webpack --watch, writes dist/
-npm run build    # NODE_ENV=production webpack --mode=production
+yarn install
+yarn dev          # webpack --watch, writes dist/
+yarn build        # NODE_ENV=production webpack --mode=production
+
+yarn test         # Vitest one-shot (unit + component)
+yarn test:watch   # Vitest watch mode
+yarn test:e2e     # Playwright E2E against the loaded extension (requires dist/)
+yarn typecheck    # tsc --noEmit via the upstream-error filter
 ```
 
 Load `dist/` as an unpacked extension at `chrome://extensions`. There is no separate dev server — the bundler writes straight to `dist/`, and Chrome reloads when you click the reload button on the extension card.
@@ -169,7 +174,7 @@ A top-level `concurrency:` block keys on `github.ref`, so two pushes to the same
 
 1. **Compute the next version** — [scripts/next-version.mjs](scripts/next-version.mjs) calls semantic-release in dry-run mode and prints exactly `NONE` or `1.10.0`-style on stdout. It routes semantic-release's own logs to stderr so the workflow can capture stdout cleanly.
 2. **Skip if no release** — when version is `NONE`, every following step's `if:` short-circuits.
-3. **Write `.env.production`** — webpack's [dotenv-webpack](webpack.config.js) is configured with `safe: true`, so all 8 keys from [.env.example](.env.example) must be present at build time. CI populates the file from 3 GitHub Actions secrets and 5 vars (see workflow `env:` block).
+3. **Write `.env.production`** — webpack's [dotenv-webpack](webpack.config.js) is configured with `safe: true`, so all 8 keys from [.env.example](.env.example) must be present at build time. CI populates the file from 3 GitHub Actions secrets and 5 vars (see workflow `env:` block). The job's `environment:` line (resolved from the branch) routes `MIXPANEL_PROJECT_TOKEN`, `SUBTURTLE_API_URL`, and `SUBTURTLE_DASHBOARD_URL` to the matching `prod`/`dev` environment; the rest come from repo-level. See [§ Required GitHub Actions config](#required-github-actions-config).
 4. **Bump versions for build** — `npm version --no-git-tag-version` writes `package.json`; [scripts/sync-manifest-version.mjs](scripts/sync-manifest-version.mjs) writes the same version to [static/manifest.json](static/manifest.json).
 5. **Build & zip** — `yarn build && yarn zip` produces `subturtle.zip` with the new version baked in.
 6. **Restore version files** — `git checkout -- package.json static/manifest.json` reverts the bump. This step exists deliberately: it lets `@semantic-release/git` see a real diff in step 7 and create the `chore(release): X.Y.Z [skip ci]` commit. Without restore, the diff is empty and no commit lands.
@@ -229,17 +234,119 @@ GITHUB_TOKEN=$(gh auth token) yarn release:dry
 
 This prints the version + notes that would be generated without writing anything or creating a release.
 
+## Testing
+
+Three test layers, all wired into a single CI verify gate that blocks releases on a red.
+
+### Stack
+
+| Layer | Tool | Where |
+| --- | --- | --- |
+| Unit / component | Vitest + happy-dom + `@vue/test-utils` + `@pinia/testing` | [tests/](tests/) — `*.test.ts` |
+| E2E (real Chromium with the unpacked extension loaded) | `@playwright/test` + `chromium.launchPersistentContext({ args: ['--load-extension=dist'] })` | [tests/e2e/](tests/e2e/) — `*.spec.ts` |
+| Static type | `tsc --noEmit` via [scripts/typecheck.mjs](scripts/typecheck.mjs) | (whole repo) |
+
+The `.test.ts` / `.spec.ts` split keeps Vitest and Playwright from fighting over file ownership — Vitest's `exclude` config drops everything matching `**/*.spec.ts` and `tests/e2e/**`.
+
+### Vitest setup
+
+- [vitest.config.ts](vitest.config.ts) — happy-dom env. PostCSS is bypassed inline (the project's webpack-targeted [postcss.config.js](postcss.config.js) uses a custom `rem→px` plugin that Vite's loader rejects); unit tests don't import CSS so the bypass is invisible to component tests.
+- [tests/setup.ts](tests/setup.ts) — hand-rolled in-memory `chrome.*` shim covering the surface the production code actually touches: `runtime.sendMessage` / `onMessage`, `storage.local` get/set, `storage.onChanged.addListener`, `tabs.query` / `sendMessage`, `i18n.getUILanguage`, `runtime.getURL`. Plus a module-level `vi.mock('mixpanel-browser', ...)` so analytics never fire, and a silenced `console.log`. Don't pull in `jest-chrome` / `sinon-chrome` — both are abandoned and over-engineered for this surface.
+- Pinia stores get a fresh `createPinia()` per test in `beforeEach`. Cross-bundle bridge tests use real `window.dispatchEvent` (happy-dom provides a real DOM).
+
+### Playwright E2E setup
+
+- [playwright.config.ts](playwright.config.ts) — `webServer` auto-boots [tests/e2e/server.mjs](tests/e2e/server.mjs) (a ~30-line static-file server for fixture pages). Single worker (extensions don't parallelize cleanly under one persistent context). HTML report always emitted, uploaded as a CI artifact on every run.
+- [tests/e2e/extension-fixture.ts](tests/e2e/extension-fixture.ts) — Playwright fixture that loads `dist/` as an unpacked extension and exposes `context`, `serviceWorker`, `extensionId`. Specs that need the extension import `{ test, expect }` from this file instead of `@playwright/test`. The `dist-artifacts.spec.ts` is fs-only and uses plain `@playwright/test`.
+- Fixture pages live under [tests/e2e/fixtures/](tests/e2e/fixtures/): `index.html` (English, default 16px html font-size), `persian.html` (Persian RTL — regression target for the `btoa` / Latin1 bug class), `large-font.html` (24px html — regression target for the postcss `rem→px` rewrite).
+- Don't run E2E against real `youtube.com` / `netflix.com` — flaky, slow, and breaks on selector changes outside our control. Nibble + ConsoleCrane both match `<all_urls>` in the manifest, so the local fixtures are enough for those flows.
+
+### Critical Chromium flags
+
+The fixture passes a specific args list to `launchPersistentContext`. **Changing them breaks CI silently.**
+
+- `--headless=new` — forces the *full* Chromium binary in new-headless mode. Without it, Playwright defers to `chrome-headless-shell` on Linux runners, which **does not load extensions**. Every `toBeAttached` for `#subturtle-{nibble,console-crane}-root` will time out at 10s. macOS happens to do the right thing without this flag, which makes it easy to drop accidentally.
+- `--no-sandbox`, `--disable-setuid-sandbox`, `--disable-dev-shm-usage` — standard CI hygiene for Chromium under containerised runners. Harmless on macOS, sometimes required on Linux GitHub runners.
+- `--disable-extensions-except=${dist}` + `--load-extension=${dist}` — load only our extension, nothing else.
+
+### CI verify gate
+
+[.github/workflows/release.yml](.github/workflows/release.yml) — a single workflow with two jobs.
+
+The new `verify` job runs on `push` AND `pull_request` to `main` / `dev`. Step order matters:
+
+1. Checkout + sibling `dashboard-app` clone (CI-only path; see Gotchas).
+2. `yarn install --frozen-lockfile`.
+3. Cache + install Playwright Chromium (`~/.cache/ms-playwright` keyed on `yarn.lock` hash).
+4. **Type check** — `yarn typecheck`.
+5. **Unit tests** — `yarn test`.
+6. **Stub `.env.production`** — heredocs *non-empty* placeholder values for every key in `.env.example`. Do not regress this to `cp .env.example .env.production`: empty values cause `mixpanel.init("")` in [src/plugins/mixpanel.ts](src/plugins/mixpanel.ts) to throw synchronously during the content-script import chain, which silently halts every Vue mount before its top-level `log()` calls. Symptom: every browser-loading e2e test times out at `toBeAttached` for the content-script roots, with zero HTTP traffic in the trace after the page load.
+7. **Build** — `yarn build`.
+8. **E2E tests** — `yarn test:e2e`.
+9. **Upload Playwright report** — runs on success or failure (gated by `hashFiles('playwright-report/**') != ''` so it skips silently when typecheck / unit tests fail before Playwright produces output). Pull with `gh run download -n playwright-report <run-id>`.
+
+The existing `release` job is unchanged in body but now has `needs: verify` and `if: github.event_name == 'push'` so it skips on PRs and only fires after verify is green.
+
+### Typecheck wrapper ([scripts/typecheck.mjs](scripts/typecheck.mjs))
+
+Wraps `tsc --noEmit` and suppresses two classes of upstream errors:
+
+- `node_modules/pilotui/*` — pilotui's `package.json` `exports.types` points at raw TS source, so tsc follows into `pilotui/src/vue.ts` which has a mismatched plugin signature against `vue3-perfect-scrollbar`.
+- `../dashboard-app/*` — [src/stores/profile.ts](src/stores/profile.ts) walks the import chain into the sibling repo's frontend types, which re-export from server-side TS that depends on `mongoose` / `stripe` / `@modular-rest/server`. dashboard-app's own `node_modules` are usually present locally but are NOT installed in CI.
+
+Real errors in our own code still print full tsc output and fail. Clean runs print a single summary line so GitHub's log parser doesn't surface the suppressed errors as red `Error:` annotations in the UI.
+
+The Vue 3 SFC ambient declaration lives at [src/vue-shim.d.ts](src/vue-shim.d.ts); it must use `DefineComponent` (not Vue 2's default-export shape) or every `.vue` import in the routers gets typed as the bare `vue` module namespace.
+
+### Test file map
+
+```
+tests/
+  setup.ts                          # chrome.* shim, mixpanel mock
+  route-params.test.ts              # encode/decode Unicode round-trip + undefined edge case
+  console-crane-bridge.test.ts      # window CustomEvent emit/listen contracts
+  console-crane-store.test.ts       # toggleConsoleCrane / goBack / canGoBack / isOnMainPage
+  translate.service.test.ts         # cache hit/miss + 24h TTL eviction (vi.useFakeTimers)
+  settings-host.test.ts             # nibbleDisabledDomains normalize / toggle
+  language-detection.test.ts        # RTL detection, title lookup, supported codes
+  selection-popup.test.ts           # @mousedown.prevent.stop regression
+  nibble-surface.test.ts            # bridge-driven hide/show
+  translate-card.test.ts            # popup translate input flow
+  e2e/
+    extension-fixture.ts            # chromium.launchPersistentContext + extension load
+    server.mjs                      # static fixtures HTTP server
+    fixtures/                       # index.html, persian.html, large-font.html
+    dist-artifacts.spec.ts          # fs check of dist/ shape (no browser)
+    nibble-flow.spec.ts             # content script mounting + Persian emitOpen
+    console-crane-lifecycle.spec.ts # modal stays open while Nibble toggles off
+    translate-flow.spec.ts          # full Persian translate-and-save with page.route stubs
+    visual-scale.spec.ts            # rem→px rewrite regression net
+```
+
+### Test totals
+
+79 unit / component tests across 9 files; 11 E2E specs across 5 files. Full suite runs in ~15s once Playwright's Chromium is warm.
+
 ## Verification checklist
 
-When changes touch the bundle layout, content scripts, or shared CSS:
+Most of this is automated by `yarn test` + `yarn test:e2e` — the items below are what the test suite already pins, with cross-references to the spec files. Re-run them by hand only if you're touching code the suite can't reach (the YouTube / Netflix subtitle path) or if you want a manual sanity pass on a real site.
 
-- `dist/` contains exactly: `background.js`, `main.js`, `nibble.js`, `console-crane.js`, `popup.js`, `popup.html`, `manifest.json`, `assets/` (no orphan numeric chunks).
-- On YouTube `/watch`: subtitle popup works; Nibble selection popup also works (all three content scripts run there). Exactly one `#subturtle-console-crane-root` in the DOM.
-- On Wikipedia: only `nibble.js` and `console-crane.js` run; selection → icon → translation card → save flow opens ConsoleCrane.
-- In the popup: per-site toggle reads/writes `nibbleDisabledDomains` and survives a popup re-open. Toggling Nibble OFF for a host **while ConsoleCrane is open** must NOT close the modal or lock page scroll — the modal lifecycle is decoupled from the Nibble per-host gate via the bridge.
-- In the popup translate input: input is auto-focused on open; submitting renders the detailed result inline; logged-out users see "Login to save this phrase"; logged-in users get the bundle picker. Re-translating a different word resets the result. The button shows a spinner while pending.
-- In ConsoleCrane on a non-Latin page (e.g. Persian / Chinese article): no `InvalidCharacterError` from `btoa`. Same check applies to the popup translate input — paste a Persian / CJK phrase and confirm no encoding error.
-- Visual scale is consistent on a default-html-font-size site (YouTube) and a large-html-font-size site (typical WordPress blog).
+Automated:
+
+- `dist/` shape — entry files present, no orphan numeric chunks, manifest declares all four content scripts. → [tests/e2e/dist-artifacts.spec.ts](tests/e2e/dist-artifacts.spec.ts).
+- Both content scripts mount their roots on a generic page; exactly one `#subturtle-console-crane-root`. → [tests/e2e/nibble-flow.spec.ts](tests/e2e/nibble-flow.spec.ts).
+- Selection → Subturtle icon → translated card → Save → ConsoleCrane opens with WordDetail rendering Persian content. → [tests/e2e/translate-flow.spec.ts](tests/e2e/translate-flow.spec.ts).
+- Toggling Nibble OFF for a host **while ConsoleCrane is open** does NOT close the modal or release the body scroll lock. → [tests/e2e/console-crane-lifecycle.spec.ts](tests/e2e/console-crane-lifecycle.spec.ts).
+- Popup translate input: auto-focus on open, spinner while pending, re-submit different word resets, no double-fetch on enter mash. → [tests/translate-card.test.ts](tests/translate-card.test.ts).
+- Per-host Nibble toggle persists and normalizes (`www.` strip, case fold, dedup). → [tests/settings-host.test.ts](tests/settings-host.test.ts).
+- ConsoleCrane on Persian / CJK / emoji inputs throws no `InvalidCharacterError` from `btoa` — covered at the encode level, the bridge level, and the full select-and-save flow. → [tests/route-params.test.ts](tests/route-params.test.ts), [tests/e2e/nibble-flow.spec.ts](tests/e2e/nibble-flow.spec.ts), [tests/e2e/translate-flow.spec.ts](tests/e2e/translate-flow.spec.ts).
+- Visual scale is consistent on default-html-fontsize and 24px-html-fontsize hosts (postcss `rem→px` rewrite regression net). → [tests/e2e/visual-scale.spec.ts](tests/e2e/visual-scale.spec.ts).
+
+Still manual:
+
+- On YouTube `/watch`: subtitle popup wraps caption words, hover/anchor selection works, all three content scripts run side-by-side. The `main.js` URL match is locked to `youtube.com` and Netflix, so it can't be fixtured without a test-only manifest.
+- On Netflix: same — subtitle wrapping behaviour on real Netflix.
+- Popup full re-open lifecycle on the actual `chrome-extension://<id>/popup.html` page (the unit suite covers individual components but not the popup-page mount + nav transitions).
 
 ## Useful pointers
 
@@ -256,7 +363,14 @@ When changes touch the bundle layout, content scripts, or shared CSS:
 - Settings store: [src/common/store/settings.ts](src/common/store/settings.ts)
 - Marker store: [src/stores/marker.ts](src/stores/marker.ts)
 - Translate service: [src/common/services/translate.service.ts](src/common/services/translate.service.ts)
-- Release workflow: [.github/workflows/release.yml](.github/workflows/release.yml)
+- Release + verify workflow: [.github/workflows/release.yml](.github/workflows/release.yml)
 - semantic-release config: [release.config.cjs](release.config.cjs)
 - Changelogs: [CHANGELOG.md](CHANGELOG.md) (stable), [CHANGELOG-DEV.md](CHANGELOG-DEV.md) (prerelease)
 - Version-bump helpers: [scripts/next-version.mjs](scripts/next-version.mjs), [scripts/sync-manifest-version.mjs](scripts/sync-manifest-version.mjs)
+- Vitest config: [vitest.config.ts](vitest.config.ts)
+- Vitest setup (chrome shim, mixpanel mock): [tests/setup.ts](tests/setup.ts)
+- Playwright config: [playwright.config.ts](playwright.config.ts)
+- Playwright extension fixture: [tests/e2e/extension-fixture.ts](tests/e2e/extension-fixture.ts)
+- Playwright fixtures server: [tests/e2e/server.mjs](tests/e2e/server.mjs)
+- Typecheck wrapper (with upstream-error filter): [scripts/typecheck.mjs](scripts/typecheck.mjs)
+- Vue 3 SFC ambient declaration: [src/vue-shim.d.ts](src/vue-shim.d.ts)

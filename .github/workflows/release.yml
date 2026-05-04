@@ -5,6 +5,10 @@ on:
     branches:
       - main
       - dev
+  pull_request:
+    branches:
+      - main
+      - dev
 
 permissions:
   contents: write
@@ -16,8 +20,96 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  verify:
+    name: Verify (lint, unit, build, e2e)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # Required because src/stores/profile.ts imports types from
+      # ../../../dashboard-app/frontend/types/database.type — see CLAUDE.md.
+      - name: Checkout sibling dashboard-app
+        run: git clone --depth 1 https://github.com/codebridger/subturtle-dashboard-app.git ../dashboard-app
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
+      - name: Install Playwright Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install chromium --with-deps
+
+      - name: Install Playwright system deps (cache hit path)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Type check
+        run: yarn typecheck
+
+      - name: Unit tests (Vitest)
+        run: yarn test
+
+      # dotenv-webpack is configured with `safe: true`, so the build needs
+      # every key in .env.example to exist at build time. We write
+      # non-empty placeholders rather than copying the empty .env.example
+      # — `mixpanel.init("")` throws synchronously during the content-script
+      # import chain, which silently halts every Vue mount and was the root
+      # cause of e2e tests failing on `#subturtle-{nibble,console-crane}-root`
+      # never appearing. SUBTURTLE_API_URL points at the local fixtures
+      # server so any auth/translate calls 404 instead of escaping to the
+      # real backend.
+      - name: Stub .env.production for verify build
+        run: |
+          cat > .env.production <<'EOF'
+          MIXPANEL_PROJECT_TOKEN=ci_e2e_stub_token
+          MIXPANEL_API_HOST=http://localhost:4173/_mixpanel_stub
+          GOOGLE_TRANSLATE_KEY=ci_e2e_stub_key
+          GOOGLE_TRANSLATE_PROXY_URL=http://localhost:4173/_translate_proxy_stub
+          UNINSTALL_FORM_URL=http://localhost:4173/_uninstall_stub
+          SUBTURTLE_API_URL=http://localhost:4173
+          SUBTURTLE_DASHBOARD_URL=http://localhost:4173/_dashboard_stub
+          GOOGLE_OAUTH_CLIENT_ID=ci_e2e_stub_oauth_client
+          EOF
+
+      - name: Build extension
+        run: yarn build
+
+      - name: E2E tests (Playwright)
+        run: yarn test:e2e
+
+      - name: Upload Playwright report
+        # Run on both success and failure (anything except job cancel) so
+        # the HTML report is downloadable for green runs too. The
+        # hashFiles guard skips silently when typecheck or unit tests
+        # failed before Playwright produced any output.
+        if: ${{ !cancelled() && hashFiles('playwright-report/**') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
   release:
     name: Release
+    needs: verify
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
     steps:
