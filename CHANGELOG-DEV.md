@@ -1,3 +1,10 @@
+# [1.11.0-dev.3](https://github.com/codebridger/subturtle-extension-apps/compare/v1.11.0-dev.2...v1.11.0-dev.3) (2026-05-04)
+
+
+### Bug Fixes
+
+* persist anonymous tokens and stop logout-cascade on anon sessions ([825db93](https://github.com/codebridger/subturtle-extension-apps/commit/825db93ddf441d9c1791ae45016d85e98360e856))
+
 # [1.11.0-dev.2](https://github.com/codebridger/subturtle-extension-apps/compare/v1.11.0-dev.1...v1.11.0-dev.2) (2026-05-03)
 
 
