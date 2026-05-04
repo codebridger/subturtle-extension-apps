@@ -94,11 +94,12 @@ jobs:
       - name: E2E tests (Playwright)
         run: yarn test:e2e
 
-      - name: Upload Playwright report on failure
-        # Only run when an earlier step failed AND the report directory
-        # was actually produced. A typecheck or unit-test failure exits
-        # before Playwright runs, so there's nothing to upload.
-        if: failure() && hashFiles('playwright-report/**') != ''
+      - name: Upload Playwright report
+        # Run on both success and failure (anything except job cancel) so
+        # the HTML report is downloadable for green runs too. The
+        # hashFiles guard skips silently when typecheck or unit tests
+        # failed before Playwright produced any output.
+        if: ${{ !cancelled() && hashFiles('playwright-report/**') != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report

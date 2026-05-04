@@ -13,7 +13,9 @@
 //    installing its deps; locally maintainers usually have them. Either
 //    way, those errors aren't actionable from here.
 //
-// Real errors in our own code still fail the check.
+// On clean runs we print only a short summary so GitHub's log parser
+// doesn't surface the suppressed errors as red `Error:` annotations.
+// Real errors in our own code still print the full tsc output and fail.
 import { spawnSync } from "node:child_process";
 
 const SUPPRESSED_PATH_FRAGMENTS = [
@@ -21,9 +23,6 @@ const SUPPRESSED_PATH_FRAGMENTS = [
   "dashboard-app/",
 ];
 
-// Extracts the file path that prefixes a tsc error line. The line is
-// always `<path>(<line>,<col>): error TS<num>:` (non-pretty mode), but
-// CI loggers may prepend tokens like "Error: " — we match anywhere.
 const FILE_AT_ERROR = /([^\s:]+\.(?:ts|tsx|d\.ts|vue))\(\d+,\d+\):\s*error\s+TS\d+/;
 
 function isSuppressed(line) {
@@ -35,17 +34,27 @@ function isSuppressed(line) {
 const r = spawnSync("npx", ["tsc", "--noEmit"], { encoding: "utf8" });
 const output = (r.stdout || "") + (r.stderr || "");
 
-const errorLines = output
-  .split("\n")
-  .filter((l) => /error TS\d+/.test(l))
-  .filter((l) => !isSuppressed(l));
+const allErrorLines = output.split("\n").filter((l) => /error TS\d+/.test(l));
+const realErrorLines = allErrorLines.filter((l) => !isSuppressed(l));
+const suppressedCount = allErrorLines.length - realErrorLines.length;
 
-if (errorLines.length > 0) {
+if (realErrorLines.length > 0) {
+  // Print full tsc output so the user sees error context, then a summary.
   console.error(output);
+  console.error(
+    `\n${realErrorLines.length} type error(s) in our code. Fix above.`
+  );
+  if (suppressedCount > 0) {
+    console.error(
+      `(${suppressedCount} additional error(s) suppressed from pilotui / dashboard-app — see scripts/typecheck.mjs.)`
+    );
+  }
   process.exit(1);
 }
 
-// Soft suppressed errors still get printed (so a future maintainer notices)
-// but don't fail the check.
-if (output.trim()) console.log(output.trim());
+const suffix =
+  suppressedCount > 0
+    ? ` (${suppressedCount} upstream error(s) from pilotui / dashboard-app suppressed — see scripts/typecheck.mjs)`
+    : "";
+console.log(`typecheck clean.${suffix}`);
 process.exit(0);
