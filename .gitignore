@@ -6,3 +6,6 @@ dist
 static/key-file.json
 *.zip
 .npmrc
+/.claude
+/playwright-report
+/test-results

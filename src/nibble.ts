@@ -6,7 +6,6 @@ import "./tailwind.css";
 import { createApp } from "vue";
 
 import generalComponents from "./common/components/components";
-import ConsoleCrane from "./console-crane/index.vue";
 
 import IndexVue from "./nibble/Index.vue";
 import { initNibbleApp } from "./nibble/initializer";
@@ -34,7 +33,6 @@ log("Nibble using version", VERSION);
 
   const components = {
     ...generalComponents,
-    ConsoleCrane,
   };
 
   Object.keys(components).forEach((name) => {

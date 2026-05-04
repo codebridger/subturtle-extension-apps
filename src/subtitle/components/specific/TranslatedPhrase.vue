@@ -17,12 +17,10 @@
 import { cleanText } from "../../../common/helper/text";
 import { computed, defineProps, onMounted, ref, watch } from "vue";
 import { useMarkerStore } from "../../../stores/marker";
-import { useConsoleCraneStore } from "../../../console-crane/stores/console-crane";
 
 import { IconButton } from "pilotui/elements";
 
 const markerStore = useMarkerStore();
-const consoleCraneStore = useConsoleCraneStore();
 
 const props = defineProps<{
   textStyle: any;

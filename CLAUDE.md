@@ -5,25 +5,31 @@ Operating manual for working inside this repo. For product overview / supported 
 ## Quick start
 
 ```bash
-npm install
-npm run dev      # webpack --watch, writes dist/
-npm run build    # NODE_ENV=production webpack --mode=production
+yarn install
+yarn dev          # webpack --watch, writes dist/
+yarn build        # NODE_ENV=production webpack --mode=production
+
+yarn test         # Vitest one-shot (unit + component)
+yarn test:watch   # Vitest watch mode
+yarn test:e2e     # Playwright E2E against the loaded extension (requires dist/)
+yarn typecheck    # tsc --noEmit via the upstream-error filter
 ```
 
 Load `dist/` as an unpacked extension at `chrome://extensions`. There is no separate dev server — the bundler writes straight to `dist/`, and Chrome reloads when you click the reload button on the extension card.
 
-## Three content surfaces (+ popup, background)
+## Bundles (+ popup, background)
 
 | Bundle | Entry | Runs on | Purpose |
 | --- | --- | --- | --- |
 | `main.js` | [src/main.ts](src/main.ts) | YouTube `/watch`, Netflix | Subtitle phrase collector — wraps caption words in `<Word>` spans, hover/anchor selection. |
 | `nibble.js` | [src/nibble.ts](src/nibble.ts) | `<all_urls>` | Web text phrase collector — native `Selection` → floating Subturtle icon → translation card. **Does not mutate page DOM.** |
-| `popup.js` | [src/popup.ts](src/popup.ts) | Toolbar popup | Settings, language, dashboard link, per-site Nibble toggle. |
+| `console-crane.js` | [src/console-crane.ts](src/console-crane.ts) | `<all_urls>` | The modal app (word-detail, settings, save flow). Owns its own Vue app + Pinia store + router. Feature bundles drive it via the [bridge](src/common/services/console-crane-bridge.ts). |
+| `popup.js` | [src/popup.ts](src/popup.ts) | Toolbar popup | Ad-hoc text translation (input + detailed result), settings, language, dashboard link, per-site Nibble toggle. Reuses console-crane's `WordDetailModule` for the result panel — see [Shared APIs § WordDetailModule](#worddetailmodule-detailed-translation-panel) for the cross-bundle reuse rules. |
 | `background.js` | [src/background.ts](src/background.ts) | Service worker | OAuth, token storage, settings persistence to `chrome.storage.local`, broadcast `SYNC_SETTINGS` to tabs. |
 
-Manifest content_scripts split is in [static/manifest.json](static/manifest.json). Each surface gets its own bundle — they share Vue components and Pinia stores via the source tree, but no two surfaces ever load the same compiled JS on the same page.
+Manifest content_scripts split is in [static/manifest.json](static/manifest.json). On a YouTube `/watch` page all three content scripts run side-by-side in the same isolated world — `main.js`, `nibble.js`, and `console-crane.js` — so they coordinate through shared `chrome.storage` (settings) and `window` CustomEvents (the ConsoleCrane bridge).
 
-ConsoleCrane (the modal app at [src/console-crane/](src/console-crane/)) is mounted by every surface — subtitle, nibble, and the popup share it through component registration in their respective entry files.
+**ConsoleCrane is its own content script, not a component embedded in feature bundles.** There is exactly one ConsoleCrane instance per page regardless of which feature bundles are loaded. Feature bundles never `import` the ConsoleCrane component or its store directly; they call `emitOpen()` from [src/common/services/console-crane-bridge.ts](src/common/services/console-crane-bridge.ts) and listen to `onState()` for "is the modal open right now". See [Shared APIs § ConsoleCrane bridge](#consolecrane-bridge) below.
 
 ## Style isolation: the two non-negotiable rules
 
@@ -35,6 +41,7 @@ Bootstraps that already get this right:
 - [src/subtitle/web_youtube/initializer.ts](src/subtitle/web_youtube/initializer.ts) — appends `<div id="subturtle-app" class="subturtle-scope">`
 - [src/subtitle/web_netflix/initializer.ts](src/subtitle/web_netflix/initializer.ts) — same pattern
 - [src/nibble/initializer.ts](src/nibble/initializer.ts) — `<div id="subturtle-nibble-root" class="subturtle-scope">`
+- [src/console-crane/initializer.ts](src/console-crane/initializer.ts) — `<div id="subturtle-console-crane-root" class="subturtle-scope">`
 
 When adding a new mount point, copy this pattern. The class also drives dark mode — see `applyThemeToDOM` in [src/common/store/settings.ts](src/common/store/settings.ts).
 
@@ -55,18 +62,29 @@ Implications:
 
 ## Shared APIs
 
-### ConsoleCrane modal
+### ConsoleCrane bridge
+
+From any feature bundle (subtitle, nibble), open the modal by emitting a CustomEvent on `window`:
 
 ```ts
-import { useConsoleCraneStore } from "@/console-crane/stores/console-crane";
-useConsoleCraneStore().toggleConsoleCrane(
-  "word-detail",                            // page: "empty" | "word-detail" | "settings"
-  { word: phrase, context: paragraphText }, // params (any object)
-  true                                      // active: pass true to force-open (omit to toggle)
-);
+import { emitOpen } from "@/common/services/console-crane-bridge";
+emitOpen({
+  page: "word-detail",                      // "empty" | "word-detail" | "settings"
+  params: { word: phrase, context: paragraphText },
+  active: true,                              // pass true to force-open (omit to toggle)
+});
 ```
 
-Params are encoded into the route via `encodeRouteParams` in [src/console-crane/stores/console-crane.ts](src/console-crane/stores/console-crane.ts) — Unicode-safe (uses TextEncoder). Decode with `decodeRouteParams`. **Never use `window.btoa(JSON.stringify(...))` directly** — it throws `InvalidCharacterError` on non-Latin1 input (Persian, CJK, emoji, accented Latin).
+The console-crane content script listens (`onOpen` in [src/console-crane.ts](src/console-crane.ts)) and calls `store.toggleConsoleCrane(...)` against its own Pinia store. Two complementary channels exist for state flowing the other way:
+
+- `onState((s) => ...)` — fires whenever `isActive` changes. Used by Nibble's [SelectionPopup](src/nibble/components/NibbleSurface.vue) to hide itself while the modal is open.
+- `requestState()` — feature bundle asks console-crane to re-emit its current state. A freshly mounted listener calls this to sync up rather than waiting for the next change.
+
+**Inside the console-crane bundle itself**, code can keep using `useConsoleCraneStore()` directly — it's the same Vue app. Bridge events are only the cross-bundle path.
+
+Params are encoded into the route via `encodeRouteParams` from [src/console-crane/route-params.ts](src/console-crane/route-params.ts) — Unicode-safe (uses TextEncoder). Decode with `decodeRouteParams`. **Never use `window.btoa(JSON.stringify(...))` directly** — it throws `InvalidCharacterError` on non-Latin1 input (Persian, CJK, emoji, accented Latin).
+
+These helpers live in their own module (separate from the store) so consumers can import them without dragging in the console-crane router. Importing them from the store would close a circular ESM init when the importer isn't `console-crane.ts` itself (popup → WordDetailModule → store → router → WordDetailModule). Keep them in `route-params.ts`.
 
 ### Translation
 
@@ -76,6 +94,25 @@ const text = await TranslateService.instance.fetchSimpleTranslation(phrase, cont
 ```
 
 24-hour in-memory cache keyed on `(translationType, targetLanguage, phrase, context)`. `fetchDetailedTranslation` for the rich `LanguageLearningData` shape used by ConsoleCrane.
+
+### WordDetailModule (detailed translation panel)
+
+[src/console-crane/modules/word-detail/index.vue](src/console-crane/modules/word-detail/index.vue) is the rich result panel — definition, phonetic, examples, related expressions, plus the bundle save UI from [SaveWordSectionV2](src/console-crane/components/SaveWordSectionV2.vue). It runs its own `fetchDetailedTranslation` call internally, so the caller just supplies inputs.
+
+It supports two mounting modes:
+
+- **Route-driven** (console-crane): mounted by the console-crane router; reads `{ word, context }` from the base64-encoded `:data` route param. This is what `emitOpen({ page: "word-detail", params })` ultimately drives.
+- **Prop-driven** (popup, anywhere outside the console-crane router): pass `:word` and optional `:context` directly. When `word` is present it's preferred over the route param.
+
+Also emits `loading: boolean` mirroring its internal pending state — bind it on the parent (e.g. the popup's [TranslateCard](src/popup/components/TranslateCard.vue)) to reflect a button spinner.
+
+**Cross-bundle reuse caveat.** The "feature bundles never import the ConsoleCrane component or its store" rule is about the modal wrapper and `useConsoleCraneStore` — they're for opening the modal on a page that already has the ConsoleCrane content script. Reusing presentational sub-modules like `WordDetailModule` (and the things it transitively pulls in: `SaveWordSectionV2`, `SelectPhraseBundleV2`, `FreemiumLimitCounter`) **is fine** as long as:
+
+1. You're in a bundle that does NOT also load `console-crane.js` (today: only the popup qualifies — it's its own Chrome extension page, not a content script).
+2. You drive the module via props, not by trying to inject route params it doesn't have.
+3. The host app installs Pinia + the modular-rest auth plugin before mount (`addPlugins(app)` from [src/plugins/install.ts](src/plugins/install.ts)).
+
+If you ever need this from a content-script bundle that runs alongside ConsoleCrane, use the [bridge](#consolecrane-bridge) instead — don't double-mount the same component on the same page.
 
 ### Settings store
 
@@ -94,12 +131,12 @@ And the `SettingsObject` type in [src/common/types/messaging.ts](src/common/type
 
 ### Marker store (subtitle surfaces only)
 
-[src/stores/marker.ts](src/stores/marker.ts) — central authority for word marking, hover, anchors, auto-clear timers. Used by `<Word>` / `<WordSelectionRectangle>` / `<SelectionAnchor>` / `<TranslatedPhrase>` in [src/subtitle/components/specific/](src/subtitle/components/specific/). **Nibble does not use the marker store** — it gets `text` + `context` directly from `window.getSelection()` and passes them straight to ConsoleCrane.
+[src/stores/marker.ts](src/stores/marker.ts) — central authority for word marking, hover, anchors, auto-clear timers. Used by `<Word>` / `<WordSelectionRectangle>` / `<SelectionAnchor>` / `<TranslatedPhrase>` in [src/subtitle/components/specific/](src/subtitle/components/specific/). **Nibble does not use the marker store** — it reads `text` + `context` from `window.getSelection()` and forwards them through the ConsoleCrane bridge.
 
 ## Gotchas
 
 - **Pinia install order in entry scripts.** `useSettingsStore()` requires Pinia. Always run `addPlugins(app)` (see [src/plugins/install.ts](src/plugins/install.ts)) before any `useXxxStore()` call. The Nibble entry initializes Pinia, then settings, then gates the per-domain check, then mounts.
-- **Nibble root must NOT have `pointer-events: none`.** It's a 0×0 fixed element so it can't intercept clicks anyway, but `pointer-events: none` cascades into ConsoleCrane and swallows all modal clicks. Leave the root unspecified for pointer events.
+- **Nibble and ConsoleCrane roots must NOT have `pointer-events: none`.** Both are 0×0 fixed elements so they can't intercept clicks anyway, but `pointer-events: none` cascades into the modal and swallows all clicks. Leave the root unspecified for pointer events.
 - **Selection popup must `@mousedown.prevent.stop`.** Otherwise clicking the popup deselects the page text, the composable detects the empty selection, and the popup unmounts mid-click.
 - **The mount root in Nibble must not block the page.** Set `width: 0; height: 0; position: fixed; top: 0; left: 0`. Children use their own `position: fixed` to position themselves relative to the viewport.
 - **Theme dark class lives on `.subturtle-scope`, not `<html>`.** Tailwind's `dark:` rules are rewritten by `postcss-prefix-selector` to `.subturtle-scope.dark ...` — so the same element must carry both classes. The settings store handles this and a `MutationObserver` keeps Vue Teleport subtrees in sync.
@@ -117,7 +154,7 @@ Most additions go in [src/nibble/](src/nibble/) — composables, components, pop
 
 ### A new ConsoleCrane page
 
-Add the route to [src/console-crane/router.ts](src/console-crane/router.ts), add the page name to the `ConsolePage` type in [src/console-crane/types.ts](src/console-crane/types.ts), and call `toggleConsoleCrane(<page>, params, true)` from wherever you trigger it. Params are Unicode-safely encoded for free.
+Add the route to [src/console-crane/router.ts](src/console-crane/router.ts), add the page name to the `ConsolePage` type in [src/console-crane/types.ts](src/console-crane/types.ts), and trigger it via `emitOpen({ page: "<name>", params, active: true })` from any feature bundle (or `useConsoleCraneStore().toggleConsoleCrane(...)` if you're calling from inside the console-crane bundle itself). Params are Unicode-safely encoded for free.
 
 ### A new content script entry
 
@@ -125,20 +162,23 @@ Add the route to [src/console-crane/router.ts](src/console-crane/router.ts), add
 2. Add a `content_scripts` block in [static/manifest.json](static/manifest.json) with the right URL match.
 3. The entry script must mount its Vue root inside a `.subturtle-scope`-classed element (see Style isolation rule 1).
 4. Run `addPlugins(app)` before any store usage.
+5. To open the modal from the new bundle, use the [ConsoleCrane bridge](#consolecrane-bridge) — never import the ConsoleCrane component or store directly from another bundle.
 
 ## Release pipeline
 
-Releases are automated by [.github/workflows/release.yml](.github/workflows/release.yml) running [`semantic-release`](https://semantic-release.gitbook.io/) on every push to `main`. The pipeline is split into visible workflow steps rather than hidden inside a single `yarn release` call — read the workflow file end-to-end before changing it.
+Releases are automated by [.github/workflows/release.yml](.github/workflows/release.yml) running [`semantic-release`](https://semantic-release.gitbook.io/) on every push to `main` (stable channel) **or `dev` (prerelease channel)**. The pipeline is split into visible workflow steps rather than hidden inside a single `yarn release` call — read the workflow file end-to-end before changing it.
+
+A top-level `concurrency:` block keys on `github.ref`, so two pushes to the same branch queue but `main` and `dev` runs proceed in parallel without touching each other's state (different changelog files, different version commits).
 
 ### How a release runs
 
 1. **Compute the next version** — [scripts/next-version.mjs](scripts/next-version.mjs) calls semantic-release in dry-run mode and prints exactly `NONE` or `1.10.0`-style on stdout. It routes semantic-release's own logs to stderr so the workflow can capture stdout cleanly.
 2. **Skip if no release** — when version is `NONE`, every following step's `if:` short-circuits.
-3. **Write `.env.production`** — webpack's [dotenv-webpack](webpack.config.js) is configured with `safe: true`, so all 8 keys from [.env.example](.env.example) must be present at build time. CI populates the file from 3 GitHub Actions secrets and 5 vars (see workflow `env:` block).
+3. **Write `.env.production`** — webpack's [dotenv-webpack](webpack.config.js) is configured with `safe: true`, so all 8 keys from [.env.example](.env.example) must be present at build time. CI populates the file from 3 GitHub Actions secrets and 5 vars (see workflow `env:` block). The job's `environment:` line (resolved from the branch) routes `MIXPANEL_PROJECT_TOKEN`, `SUBTURTLE_API_URL`, and `SUBTURTLE_DASHBOARD_URL` to the matching `prod`/`dev` environment; the rest come from repo-level. See [§ Required GitHub Actions config](#required-github-actions-config).
 4. **Bump versions for build** — `npm version --no-git-tag-version` writes `package.json`; [scripts/sync-manifest-version.mjs](scripts/sync-manifest-version.mjs) writes the same version to [static/manifest.json](static/manifest.json).
 5. **Build & zip** — `yarn build && yarn zip` produces `subturtle.zip` with the new version baked in.
 6. **Restore version files** — `git checkout -- package.json static/manifest.json` reverts the bump. This step exists deliberately: it lets `@semantic-release/git` see a real diff in step 7 and create the `chore(release): X.Y.Z [skip ci]` commit. Without restore, the diff is empty and no commit lands.
-7. **Run `yarn release`** — `@semantic-release/npm` re-bumps `package.json`, [.releaserc.json](.releaserc.json) `prepareCmd` re-syncs `manifest.json`, `@semantic-release/git` commits both files and tags `vX.Y.Z`, `@semantic-release/github` creates the release with `subturtle.zip` attached.
+7. **Run `yarn release`** — `@semantic-release/npm` re-bumps `package.json`, `@semantic-release/changelog` prepends release notes to the active changelog file (`CHANGELOG.md` on `main`, `CHANGELOG-DEV.md` on `dev`), [release.config.cjs](release.config.cjs) `prepareCmd` re-syncs `manifest.json`, `@semantic-release/git` commits all three files and tags `vX.Y.Z`, `@semantic-release/github` creates the release with `subturtle.zip` attached (auto-flagged as prerelease for dev runs).
 8. **Upload zip artifact** — also published as a workflow artifact for offline access.
 
 ### Conventional Commits drive versioning
@@ -152,25 +192,32 @@ If you squash-merge PRs, GitHub uses the **PR title** as the squash commit messa
 
 ### `prepareCmd` does not build
 
-[.releaserc.json](.releaserc.json) `prepareCmd` only runs `scripts/sync-manifest-version.mjs`. The build/zip happen earlier as explicit workflow steps so they're visible in CI logs and have access to the env file. Don't move build/zip back into `prepareCmd`.
+[release.config.cjs](release.config.cjs) `prepareCmd` only runs `scripts/sync-manifest-version.mjs`. The build/zip happen earlier as explicit workflow steps so they're visible in CI logs and have access to the env file. Don't move build/zip back into `prepareCmd`.
+
+### Dev channel (prereleases)
+
+Pushes to `dev` cut prereleases on the `dev` channel — versions look like `1.11.0-dev.1`, `1.11.0-dev.2`, etc. When `dev` lands on `main`, semantic-release promotes the next stable bump cleanly (e.g. `1.11.0-dev.3` → `1.11.0`).
+
+- **Two changelog files, never merged.** Stable runs prepend to [CHANGELOG.md](CHANGELOG.md); dev runs prepend to [CHANGELOG-DEV.md](CHANGELOG-DEV.md). The active file is selected at config-load time in [release.config.cjs](release.config.cjs) by reading `GITHUB_REF_NAME` (set by GitHub Actions) or, locally, `git rev-parse --abbrev-ref HEAD`. So `yarn release:dry` works correctly on a `dev` checkout without extra env.
+- **Chrome-compatible `manifest.version`, plus `version_name` for prereleases.** Chrome MV3 only accepts 1–4 dot-separated integers in `manifest.version`, so [scripts/sync-manifest-version.mjs](scripts/sync-manifest-version.mjs) maps a prerelease `MAJOR.MINOR.PATCH-channel.N` to `MAJOR.MINOR.PATCH.N` for `version` and copies the full semver into `version_name` (which is what shows in `chrome://extensions`). Stable releases write only `version` and clear any stale `version_name`.
+- **GitHub Release auto-flagging.** `@semantic-release/github` checks the branch's `prerelease` flag and marks the release accordingly — no extra config needed beyond the `branches` array in [release.config.cjs](release.config.cjs).
+- **Comparison-ordering caveat.** A dev build (`1.11.0.5`) is a higher Chrome version than the stable `1.11.0`. If a tester installs a dev zip and later wants the stable zip of the same base version, Chrome will not auto-downgrade. Once `1.11.0` ships stable, the next dev push is `1.12.0-dev.1` → `1.12.0.1`, which is correctly higher. Acceptable for an internal channel; flag this if you ever wire dev builds to a Chrome Web Store listing.
 
 ### Required GitHub Actions config
 
-When forking or moving the repo, recreate these on the new repo:
+The release workflow targets one of two GitHub Environments per run, picked from the branch via `environment: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}`. Push to `main` → `prod` environment; push to `dev` → `dev` environment. With the job bound to an environment, `${{ secrets.X }}` / `${{ vars.X }}` resolve environment-first then fall back to repo-level — so the `env:` block in the "Write .env.production" step is the same for both branches.
 
-**Secrets** (`Settings → Secrets and variables → Actions → Secrets`):
-- `MIXPANEL_PROJECT_TOKEN`
-- `GOOGLE_OAUTH_CLIENT_ID`
-- `GOOGLE_TRANSLATE_KEY`
+**Per-environment** (`Settings → Environments → prod` / `dev`) — same keys in both, different values:
+- Secret: `MIXPANEL_PROJECT_TOKEN`
+- Variables: `SUBTURTLE_API_URL`, `SUBTURTLE_DASHBOARD_URL`
 
-**Variables** (`Settings → Secrets and variables → Actions → Variables`):
-- `MIXPANEL_API_HOST`
-- `GOOGLE_TRANSLATE_PROXY_URL`
-- `UNINSTALL_FORM_URL`
-- `SUBTURTLE_API_URL`
-- `SUBTURTLE_DASHBOARD_URL`
+**Repository-level** (`Settings → Secrets and variables → Actions`) — shared by both:
+- Secrets: `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_TRANSLATE_KEY`
+- Variables: `MIXPANEL_API_HOST`, `GOOGLE_TRANSLATE_PROXY_URL`, `UNINSTALL_FORM_URL`
 
-The default `GITHUB_TOKEN` is enough for the bot to push the release commit and tag, as long as the `main` ruleset doesn't require PRs. Currently main only blocks force pushes and deletions; no PR rule.
+When forking, recreate the two environments and the repo-level entries above.
+
+The default `GITHUB_TOKEN` is enough for the bot to push the release commit and tag, as long as the `main` (or `dev`) ruleset doesn't require PRs. Currently main only blocks force pushes and deletions; no PR rule.
 
 ### Local rehearsal
 
@@ -187,16 +234,119 @@ GITHUB_TOKEN=$(gh auth token) yarn release:dry
 
 This prints the version + notes that would be generated without writing anything or creating a release.
 
+## Testing
+
+Three test layers, all wired into a single CI verify gate that blocks releases on a red.
+
+### Stack
+
+| Layer | Tool | Where |
+| --- | --- | --- |
+| Unit / component | Vitest + happy-dom + `@vue/test-utils` + `@pinia/testing` | [tests/](tests/) — `*.test.ts` |
+| E2E (real Chromium with the unpacked extension loaded) | `@playwright/test` + `chromium.launchPersistentContext({ args: ['--load-extension=dist'] })` | [tests/e2e/](tests/e2e/) — `*.spec.ts` |
+| Static type | `tsc --noEmit` via [scripts/typecheck.mjs](scripts/typecheck.mjs) | (whole repo) |
+
+The `.test.ts` / `.spec.ts` split keeps Vitest and Playwright from fighting over file ownership — Vitest's `exclude` config drops everything matching `**/*.spec.ts` and `tests/e2e/**`.
+
+### Vitest setup
+
+- [vitest.config.ts](vitest.config.ts) — happy-dom env. PostCSS is bypassed inline (the project's webpack-targeted [postcss.config.js](postcss.config.js) uses a custom `rem→px` plugin that Vite's loader rejects); unit tests don't import CSS so the bypass is invisible to component tests.
+- [tests/setup.ts](tests/setup.ts) — hand-rolled in-memory `chrome.*` shim covering the surface the production code actually touches: `runtime.sendMessage` / `onMessage`, `storage.local` get/set, `storage.onChanged.addListener`, `tabs.query` / `sendMessage`, `i18n.getUILanguage`, `runtime.getURL`. Plus a module-level `vi.mock('mixpanel-browser', ...)` so analytics never fire, and a silenced `console.log`. Don't pull in `jest-chrome` / `sinon-chrome` — both are abandoned and over-engineered for this surface.
+- Pinia stores get a fresh `createPinia()` per test in `beforeEach`. Cross-bundle bridge tests use real `window.dispatchEvent` (happy-dom provides a real DOM).
+
+### Playwright E2E setup
+
+- [playwright.config.ts](playwright.config.ts) — `webServer` auto-boots [tests/e2e/server.mjs](tests/e2e/server.mjs) (a ~30-line static-file server for fixture pages). Single worker (extensions don't parallelize cleanly under one persistent context). HTML report always emitted, uploaded as a CI artifact on every run.
+- [tests/e2e/extension-fixture.ts](tests/e2e/extension-fixture.ts) — Playwright fixture that loads `dist/` as an unpacked extension and exposes `context`, `serviceWorker`, `extensionId`. Specs that need the extension import `{ test, expect }` from this file instead of `@playwright/test`. The `dist-artifacts.spec.ts` is fs-only and uses plain `@playwright/test`.
+- Fixture pages live under [tests/e2e/fixtures/](tests/e2e/fixtures/): `index.html` (English, default 16px html font-size), `persian.html` (Persian RTL — regression target for the `btoa` / Latin1 bug class), `large-font.html` (24px html — regression target for the postcss `rem→px` rewrite).
+- Don't run E2E against real `youtube.com` / `netflix.com` — flaky, slow, and breaks on selector changes outside our control. Nibble + ConsoleCrane both match `<all_urls>` in the manifest, so the local fixtures are enough for those flows.
+
+### Critical Chromium flags
+
+The fixture passes a specific args list to `launchPersistentContext`. **Changing them breaks CI silently.**
+
+- `--headless=new` — forces the *full* Chromium binary in new-headless mode. Without it, Playwright defers to `chrome-headless-shell` on Linux runners, which **does not load extensions**. Every `toBeAttached` for `#subturtle-{nibble,console-crane}-root` will time out at 10s. macOS happens to do the right thing without this flag, which makes it easy to drop accidentally.
+- `--no-sandbox`, `--disable-setuid-sandbox`, `--disable-dev-shm-usage` — standard CI hygiene for Chromium under containerised runners. Harmless on macOS, sometimes required on Linux GitHub runners.
+- `--disable-extensions-except=${dist}` + `--load-extension=${dist}` — load only our extension, nothing else.
+
+### CI verify gate
+
+[.github/workflows/release.yml](.github/workflows/release.yml) — a single workflow with two jobs.
+
+The new `verify` job runs on `push` AND `pull_request` to `main` / `dev`. Step order matters:
+
+1. Checkout + sibling `dashboard-app` clone (CI-only path; see Gotchas).
+2. `yarn install --frozen-lockfile`.
+3. Cache + install Playwright Chromium (`~/.cache/ms-playwright` keyed on `yarn.lock` hash).
+4. **Type check** — `yarn typecheck`.
+5. **Unit tests** — `yarn test`.
+6. **Stub `.env.production`** — heredocs *non-empty* placeholder values for every key in `.env.example`. Do not regress this to `cp .env.example .env.production`: empty values cause `mixpanel.init("")` in [src/plugins/mixpanel.ts](src/plugins/mixpanel.ts) to throw synchronously during the content-script import chain, which silently halts every Vue mount before its top-level `log()` calls. Symptom: every browser-loading e2e test times out at `toBeAttached` for the content-script roots, with zero HTTP traffic in the trace after the page load.
+7. **Build** — `yarn build`.
+8. **E2E tests** — `yarn test:e2e`.
+9. **Upload Playwright report** — runs on success or failure (gated by `hashFiles('playwright-report/**') != ''` so it skips silently when typecheck / unit tests fail before Playwright produces output). Pull with `gh run download -n playwright-report <run-id>`.
+
+The existing `release` job is unchanged in body but now has `needs: verify` and `if: github.event_name == 'push'` so it skips on PRs and only fires after verify is green.
+
+### Typecheck wrapper ([scripts/typecheck.mjs](scripts/typecheck.mjs))
+
+Wraps `tsc --noEmit` and suppresses two classes of upstream errors:
+
+- `node_modules/pilotui/*` — pilotui's `package.json` `exports.types` points at raw TS source, so tsc follows into `pilotui/src/vue.ts` which has a mismatched plugin signature against `vue3-perfect-scrollbar`.
+- `../dashboard-app/*` — [src/stores/profile.ts](src/stores/profile.ts) walks the import chain into the sibling repo's frontend types, which re-export from server-side TS that depends on `mongoose` / `stripe` / `@modular-rest/server`. dashboard-app's own `node_modules` are usually present locally but are NOT installed in CI.
+
+Real errors in our own code still print full tsc output and fail. Clean runs print a single summary line so GitHub's log parser doesn't surface the suppressed errors as red `Error:` annotations in the UI.
+
+The Vue 3 SFC ambient declaration lives at [src/vue-shim.d.ts](src/vue-shim.d.ts); it must use `DefineComponent` (not Vue 2's default-export shape) or every `.vue` import in the routers gets typed as the bare `vue` module namespace.
+
+### Test file map
+
+```
+tests/
+  setup.ts                          # chrome.* shim, mixpanel mock
+  route-params.test.ts              # encode/decode Unicode round-trip + undefined edge case
+  console-crane-bridge.test.ts      # window CustomEvent emit/listen contracts
+  console-crane-store.test.ts       # toggleConsoleCrane / goBack / canGoBack / isOnMainPage
+  translate.service.test.ts         # cache hit/miss + 24h TTL eviction (vi.useFakeTimers)
+  settings-host.test.ts             # nibbleDisabledDomains normalize / toggle
+  language-detection.test.ts        # RTL detection, title lookup, supported codes
+  selection-popup.test.ts           # @mousedown.prevent.stop regression
+  nibble-surface.test.ts            # bridge-driven hide/show
+  translate-card.test.ts            # popup translate input flow
+  e2e/
+    extension-fixture.ts            # chromium.launchPersistentContext + extension load
+    server.mjs                      # static fixtures HTTP server
+    fixtures/                       # index.html, persian.html, large-font.html
+    dist-artifacts.spec.ts          # fs check of dist/ shape (no browser)
+    nibble-flow.spec.ts             # content script mounting + Persian emitOpen
+    console-crane-lifecycle.spec.ts # modal stays open while Nibble toggles off
+    translate-flow.spec.ts          # full Persian translate-and-save with page.route stubs
+    visual-scale.spec.ts            # rem→px rewrite regression net
+```
+
+### Test totals
+
+79 unit / component tests across 9 files; 11 E2E specs across 5 files. Full suite runs in ~15s once Playwright's Chromium is warm.
+
 ## Verification checklist
 
-When changes touch the bundle layout, content scripts, or shared CSS:
+Most of this is automated by `yarn test` + `yarn test:e2e` — the items below are what the test suite already pins, with cross-references to the spec files. Re-run them by hand only if you're touching code the suite can't reach (the YouTube / Netflix subtitle path) or if you want a manual sanity pass on a real site.
 
-- `dist/` contains exactly: `background.js`, `main.js`, `nibble.js`, `popup.js`, `popup.html`, `manifest.json`, `assets/` (no orphan numeric chunks).
-- On YouTube `/watch`: subtitle popup works; Nibble selection popup also works (both bundles run there since the manifest has overlapping matches).
-- On Wikipedia: only `nibble.js` runs; selection → icon → translation card → save flow opens ConsoleCrane.
-- In the popup: per-site toggle reads/writes `nibbleDisabledDomains` and survives a popup re-open.
-- In ConsoleCrane on a non-Latin page (e.g. Persian / Chinese article): no `InvalidCharacterError` from `btoa`.
-- Visual scale is consistent on a default-html-font-size site (YouTube) and a large-html-font-size site (typical WordPress blog).
+Automated:
+
+- `dist/` shape — entry files present, no orphan numeric chunks, manifest declares all four content scripts. → [tests/e2e/dist-artifacts.spec.ts](tests/e2e/dist-artifacts.spec.ts).
+- Both content scripts mount their roots on a generic page; exactly one `#subturtle-console-crane-root`. → [tests/e2e/nibble-flow.spec.ts](tests/e2e/nibble-flow.spec.ts).
+- Selection → Subturtle icon → translated card → Save → ConsoleCrane opens with WordDetail rendering Persian content. → [tests/e2e/translate-flow.spec.ts](tests/e2e/translate-flow.spec.ts).
+- Toggling Nibble OFF for a host **while ConsoleCrane is open** does NOT close the modal or release the body scroll lock. → [tests/e2e/console-crane-lifecycle.spec.ts](tests/e2e/console-crane-lifecycle.spec.ts).
+- Popup translate input: auto-focus on open, spinner while pending, re-submit different word resets, no double-fetch on enter mash. → [tests/translate-card.test.ts](tests/translate-card.test.ts).
+- Per-host Nibble toggle persists and normalizes (`www.` strip, case fold, dedup). → [tests/settings-host.test.ts](tests/settings-host.test.ts).
+- ConsoleCrane on Persian / CJK / emoji inputs throws no `InvalidCharacterError` from `btoa` — covered at the encode level, the bridge level, and the full select-and-save flow. → [tests/route-params.test.ts](tests/route-params.test.ts), [tests/e2e/nibble-flow.spec.ts](tests/e2e/nibble-flow.spec.ts), [tests/e2e/translate-flow.spec.ts](tests/e2e/translate-flow.spec.ts).
+- Visual scale is consistent on default-html-fontsize and 24px-html-fontsize hosts (postcss `rem→px` rewrite regression net). → [tests/e2e/visual-scale.spec.ts](tests/e2e/visual-scale.spec.ts).
+
+Still manual:
+
+- On YouTube `/watch`: subtitle popup wraps caption words, hover/anchor selection works, all three content scripts run side-by-side. The `main.js` URL match is locked to `youtube.com` and Netflix, so it can't be fixtured without a test-only manifest.
+- On Netflix: same — subtitle wrapping behaviour on real Netflix.
+- Popup full re-open lifecycle on the actual `chrome-extension://<id>/popup.html` page (the unit suite covers individual components but not the popup-page mount + nav transitions).
 
 ## Useful pointers
 
@@ -206,9 +356,21 @@ When changes touch the bundle layout, content scripts, or shared CSS:
 - Vue plugin setup: [src/plugins/install.ts](src/plugins/install.ts)
 - Background message types: [src/common/types/messaging.ts](src/common/types/messaging.ts)
 - ConsoleCrane store: [src/console-crane/stores/console-crane.ts](src/console-crane/stores/console-crane.ts)
+- ConsoleCrane bridge: [src/common/services/console-crane-bridge.ts](src/common/services/console-crane-bridge.ts)
+- Route-param helpers (Unicode-safe base64): [src/console-crane/route-params.ts](src/console-crane/route-params.ts)
+- WordDetailModule (detailed result panel, prop- or route-driven): [src/console-crane/modules/word-detail/index.vue](src/console-crane/modules/word-detail/index.vue)
+- Popup translate card: [src/popup/components/TranslateCard.vue](src/popup/components/TranslateCard.vue)
 - Settings store: [src/common/store/settings.ts](src/common/store/settings.ts)
 - Marker store: [src/stores/marker.ts](src/stores/marker.ts)
 - Translate service: [src/common/services/translate.service.ts](src/common/services/translate.service.ts)
-- Release workflow: [.github/workflows/release.yml](.github/workflows/release.yml)
-- semantic-release config: [.releaserc.json](.releaserc.json)
+- Release + verify workflow: [.github/workflows/release.yml](.github/workflows/release.yml)
+- semantic-release config: [release.config.cjs](release.config.cjs)
+- Changelogs: [CHANGELOG.md](CHANGELOG.md) (stable), [CHANGELOG-DEV.md](CHANGELOG-DEV.md) (prerelease)
 - Version-bump helpers: [scripts/next-version.mjs](scripts/next-version.mjs), [scripts/sync-manifest-version.mjs](scripts/sync-manifest-version.mjs)
+- Vitest config: [vitest.config.ts](vitest.config.ts)
+- Vitest setup (chrome shim, mixpanel mock): [tests/setup.ts](tests/setup.ts)
+- Playwright config: [playwright.config.ts](playwright.config.ts)
+- Playwright extension fixture: [tests/e2e/extension-fixture.ts](tests/e2e/extension-fixture.ts)
+- Playwright fixtures server: [tests/e2e/server.mjs](tests/e2e/server.mjs)
+- Typecheck wrapper (with upstream-error filter): [scripts/typecheck.mjs](scripts/typecheck.mjs)
+- Vue 3 SFC ambient declaration: [src/vue-shim.d.ts](src/vue-shim.d.ts)

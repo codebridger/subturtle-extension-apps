@@ -1,7 +1,5 @@
 <template>
   <SubtitleComponent :positionRect="position" :textList="text" :textStyle="style" />
-
-  <ConsoleCrane />
 </template>
 
 <script lang="ts">

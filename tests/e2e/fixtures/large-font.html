@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Subturtle E2E fixture — large root font-size</title>
+    <style>
+      /* Some WordPress / news templates set html font-size to 20-24px,
+         which is what motivated the rem→px rewrite in postcss.config.js.
+         This fixture pins the host root to 24px so a regression in that
+         rewrite shows up as a visibly oversized Subturtle UI. */
+      html { font-size: 24px; }
+      body { font-family: -apple-system, system-ui, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; color: #111; }
+      p { line-height: 1.6; font-size: 1.125rem; }
+    </style>
+  </head>
+  <body>
+    <h1>Large root font-size fixture</h1>
+    <p>
+      Selecting a <span id="test-word">vocabulary</span> word here should give
+      the same Subturtle UI scale as on the default-font-size fixture.
+    </p>
+  </body>
+</html>
