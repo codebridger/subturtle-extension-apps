@@ -152,9 +152,15 @@ export function useTextSelection() {
   }
 
   function onDocClick(e: MouseEvent) {
-    const target = e.target as Element | null;
-    if (!target) return;
-    if (target.closest(`#${NIBBLE_ROOT_ID}`)) return;
+    const target = e.target;
+    const el =
+      target instanceof Element
+        ? target
+        : target instanceof Node
+        ? target.parentElement
+        : null;
+    if (!el) return;
+    if (el.closest(`#${NIBBLE_ROOT_ID}`)) return;
     if (window.getSelection()?.isCollapsed !== false) return;
   }
 
