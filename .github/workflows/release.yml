@@ -67,11 +67,26 @@ jobs:
         run: yarn test
 
       # dotenv-webpack is configured with `safe: true`, so the build needs
-      # every key in .env.example to exist at build time. The values can be
-      # empty for a verify build — none of the network calls fire under
-      # tests, and the resulting dist/ is only loaded into Playwright.
+      # every key in .env.example to exist at build time. We write
+      # non-empty placeholders rather than copying the empty .env.example
+      # — `mixpanel.init("")` throws synchronously during the content-script
+      # import chain, which silently halts every Vue mount and was the root
+      # cause of e2e tests failing on `#subturtle-{nibble,console-crane}-root`
+      # never appearing. SUBTURTLE_API_URL points at the local fixtures
+      # server so any auth/translate calls 404 instead of escaping to the
+      # real backend.
       - name: Stub .env.production for verify build
-        run: cp .env.example .env.production
+        run: |
+          cat > .env.production <<'EOF'
+          MIXPANEL_PROJECT_TOKEN=ci_e2e_stub_token
+          MIXPANEL_API_HOST=http://localhost:4173/_mixpanel_stub
+          GOOGLE_TRANSLATE_KEY=ci_e2e_stub_key
+          GOOGLE_TRANSLATE_PROXY_URL=http://localhost:4173/_translate_proxy_stub
+          UNINSTALL_FORM_URL=http://localhost:4173/_uninstall_stub
+          SUBTURTLE_API_URL=http://localhost:4173
+          SUBTURTLE_DASHBOARD_URL=http://localhost:4173/_dashboard_stub
+          GOOGLE_OAUTH_CLIENT_ID=ci_e2e_stub_oauth_client
+          EOF
 
       - name: Build extension
         run: yarn build

@@ -16,17 +16,20 @@
 // Real errors in our own code still fail the check.
 import { spawnSync } from "node:child_process";
 
-const SUPPRESSED_PATHS = [
+const SUPPRESSED_PATH_FRAGMENTS = [
   "node_modules/pilotui/",
-  "../dashboard-app/",
-  // tsc may print sibling-repo paths in absolute or relative form depending
-  // on cwd; cover the bare directory name too so a fresh `git clone ../dashboard-app`
-  // in CI is captured regardless.
   "dashboard-app/",
 ];
 
+// Extracts the file path that prefixes a tsc error line. The line is
+// always `<path>(<line>,<col>): error TS<num>:` (non-pretty mode), but
+// CI loggers may prepend tokens like "Error: " — we match anywhere.
+const FILE_AT_ERROR = /([^\s:]+\.(?:ts|tsx|d\.ts|vue))\(\d+,\d+\):\s*error\s+TS\d+/;
+
 function isSuppressed(line) {
-  return SUPPRESSED_PATHS.some((p) => line.startsWith(p));
+  const m = line.match(FILE_AT_ERROR);
+  if (!m) return false;
+  return SUPPRESSED_PATH_FRAGMENTS.some((frag) => m[1].includes(frag));
 }
 
 const r = spawnSync("npx", ["tsc", "--noEmit"], { encoding: "utf8" });
