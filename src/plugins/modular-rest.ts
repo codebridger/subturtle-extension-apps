@@ -49,6 +49,7 @@ import {
 import { ref } from "vue";
 import { useProfileStore } from "../stores/profile";
 import { analytic } from "./mixpanel";
+import { debug, error, log } from "../common/helper/log";
 
 GlobalOptions.set({
   host: process.env.SUBTURTLE_API_URL || "",
@@ -61,6 +62,7 @@ export {
 } from "@modular-rest/client";
 
 export const isLogin = ref(false);
+
 function updateIsLogin() {
   const loginInfo =
     authentication.isLogin && authentication.user?.type.toLowerCase() == "user";
@@ -79,8 +81,8 @@ function updateIsLogin() {
 
         return true;
       })
-      .catch((error) => {
-        console.error("Error bootstrapping profile store:", error);
+      .catch((errorDetail) => {
+        error("Error bootstrapping profile store:", errorDetail);
         return false;
       });
   }
@@ -111,11 +113,20 @@ export async function loginWithLastSession() {
 
       const user = await authentication.loginWithToken(
         res.token as string,
-        true
+        // token will be stored on background service, so we don't need to store it here
+        false
       );
-      return user;
+
+      debug("retrieved user from last login: ", user);
+
+      if (user.type == "anonymous") {
+        authentication.logout();
+        return false;
+      } else {
+        return updateIsLogin();
+      }
+
     })
-    .then((_user) => updateIsLogin())
     .then(async (_isRegisteredUser) => {
       // updateIsLogin's truthy result means "registered user with a real
       // account". Anonymous users return false here even though they hold a
@@ -126,19 +137,20 @@ export async function loginWithLastSession() {
       // session, clearing chrome.storage.sync and broadcasting null to every
       // tab — and the next translate from any content script then 412s
       // because its Authorization header is empty.
-      if (!authentication.isLogin) {
+      if (!_isRegisteredUser && !authentication.isLogin) {
         await logout();
         return false;
       }
       return true;
     })
-
     .finally(() => {
       if (!authentication.isLogin) {
+        debug("Login with last session failed, trying anonymous login");
+
         authentication
           .loginAsAnonymous()
           .then(async () => {
-            console.log(
+            debug(
               "Subturtle Anonymous login succeded",
               authentication.isLogin
             );
@@ -153,14 +165,14 @@ export async function loginWithLastSession() {
               try {
                 await sendMessage(new StoreUserTokenMessage(token));
               } catch (err) {
-                console.warn(
+                error(
                   "Subturtle: persisting anonymous token to background failed",
                   err
                 );
               }
-              if (typeof localStorage !== "undefined") {
-                localStorage.setItem("token", token);
-              }
+              // if (typeof localStorage !== "undefined") {
+              //   localStorage.setItem("token", token);
+              // }
             }
             updateIsLogin();
           })

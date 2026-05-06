@@ -1,4 +1,5 @@
 import { BaseMessage, LoginStatusResponse } from "../types/messaging";
+import { debug, log } from "./log";
 
 /**
  * Send message to background
@@ -10,6 +11,7 @@ export async function sendMessage<T extends BaseMessage | LoginStatusResponse>(
 ) {
   return new Promise<T>((resolve, reject) => {
     try {
+      debug("Sending message to background:", message);
       chrome.runtime.sendMessage(message, (response) => {
         if (chrome.runtime.lastError) {
           // Chrome runtime errors should be properly formatted with message
@@ -22,6 +24,7 @@ export async function sendMessage<T extends BaseMessage | LoginStatusResponse>(
           // Handle case where response is undefined/null
           reject(new Error("No response received"));
         } else {
+          debug("Received response:", response);
           resolve(response);
         }
       });
