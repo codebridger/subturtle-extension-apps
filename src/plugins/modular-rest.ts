@@ -1,3 +1,43 @@
+// IMPORTANT: must precede any import that may touch localStorage at module load.
+// Content scripts run in an "isolated world" that shares localStorage with the
+// host page. The dashboard at *.subturtle.app and localhost:3000 (dev) uses
+// `token` as its own localStorage key for the user's session — when the
+// extension's modular-rest client (or our explicit cache write below) writes
+// the extension's anonymous token there, it clobbers the dashboard user's
+// session and bounces them to /auth/login on the next reload or new tab.
+//
+// Block 'token' writes/removes from the content-script side on those origins.
+// The extension already persists tokens to chrome.storage.sync via the
+// background script, so losing the per-page localStorage cache only costs
+// one extra /user/loginAnonymous call per content-script mount on dashboard
+// origins — it does NOT break extension auth.
+function isDashboardOrigin(): boolean {
+  if (typeof window === "undefined") return false;
+  const host = window.location.hostname;
+  const port = window.location.port;
+  return (
+    (host === "localhost" && port === "3000") ||
+    host === "subturtle.app" ||
+    host === "www.subturtle.app" ||
+    host === "dashboard.subturtle.app" ||
+    host === "www.dashboard.subturtle.app"
+  );
+}
+
+if (typeof Storage !== "undefined" && isDashboardOrigin()) {
+  const origSet = Storage.prototype.setItem;
+  const origRm = Storage.prototype.removeItem;
+  Storage.prototype.setItem = function (k: string, v: string) {
+    // Only suppress writes to localStorage on the dashboard, never sessionStorage.
+    if (this === window.localStorage && k === "token") return;
+    return origSet.call(this, k, v);
+  };
+  Storage.prototype.removeItem = function (k: string) {
+    if (this === window.localStorage && k === "token") return;
+    return origRm.call(this, k);
+  };
+}
+
 import { GlobalOptions, authentication } from "@modular-rest/client";
 
 import { sendMessage, sendMessageToTabs } from "../common/helper/massage";

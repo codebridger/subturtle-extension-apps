@@ -1,3 +1,17 @@
+# [1.11.0-dev.4](https://github.com/codebridger/subturtle-extension-apps/compare/v1.11.0-dev.3...v1.11.0-dev.4) (2026-05-06)
+
+
+### Bug Fixes
+
+* [#86](https://github.com/codebridger/subturtle-extension-apps/issues/86)exgqfpu skip token writes to host LS on dashboard origins ([838451e](https://github.com/codebridger/subturtle-extension-apps/commit/838451e9ad10d3a3755691b4ca586a0d3815a008)), closes [#86exgqfpu](https://github.com/codebridger/subturtle-extension-apps/issues/86exgqfpu)
+
+# [1.11.0-dev.3](https://github.com/codebridger/subturtle-extension-apps/compare/v1.11.0-dev.2...v1.11.0-dev.3) (2026-05-04)
+
+
+### Bug Fixes
+
+* persist anonymous tokens and stop logout-cascade on anon sessions ([825db93](https://github.com/codebridger/subturtle-extension-apps/commit/825db93ddf441d9c1791ae45016d85e98360e856))
+
 # [1.11.0-dev.2](https://github.com/codebridger/subturtle-extension-apps/compare/v1.11.0-dev.1...v1.11.0-dev.2) (2026-05-03)
 
 
