@@ -17,10 +17,12 @@
  * when the extension needs to run on a host that blocks Vue's policy.
  */
 
+import { debug } from "./common/helper/log";
+
 const trustedTypes = (window as any).trustedTypes;
 
 if (trustedTypes && trustedTypes.createPolicy) {
-  console.log("[Subturtle] Setting up Trusted Types workaround");
+  debug("[Subturtle] Setting up Trusted Types workaround");
 
   const originalCreatePolicy = trustedTypes.createPolicy.bind(trustedTypes);
 
@@ -32,7 +34,7 @@ if (trustedTypes && trustedTypes.createPolicy) {
 
   trustedTypes.createPolicy = function (name: string, rules: any) {
     if (name === "vue" || name.startsWith("vue-")) {
-      console.log(
+      debug(
         `[Subturtle] Intercepted policy creation for "${name}", returning passthrough`
       );
       return createPassthroughPolicy();
@@ -46,7 +48,7 @@ if (trustedTypes && trustedTypes.createPolicy) {
     }
   };
 
-  console.log("[Subturtle] Trusted Types workaround installed");
+  debug("[Subturtle] Trusted Types workaround installed");
 }
 
-export {};
+export { };

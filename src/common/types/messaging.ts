@@ -20,8 +20,8 @@ export type SettingsObject = {
 export class BaseMessage {
   type!: string;
 
-  static is(message: any) {}
-  static checkResponse(response: any) {}
+  static is(message: any) { }
+  static checkResponse(response: any) { }
 }
 
 export class GetLoginStatusMessage implements BaseMessage {
@@ -35,6 +35,9 @@ export class GetLoginStatusMessage implements BaseMessage {
     return message.type === MESSAGE_TYPE.GET_LOGIN_STATUS;
   }
 
+  /**
+   * To check if the message has an expected token in response.
+   */
   static checkResponse(response: any): response is LoginStatusResponse {
     return response && response.status && response.token;
   }

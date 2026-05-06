@@ -17,8 +17,9 @@ import type { Route, Page } from "@playwright/test";
 //      saw "Translation failed."
 //
 // This test pins both halves of the fix:
-//   * After an anonymous login, chrome.storage.sync is populated and the
-//     in-page localStorage cache holds the same token.
+//   * After an anonymous login, chrome.storage.sync is populated with the
+//     anon token (the in-page localStorage write at modular-rest.ts:173-175
+//     was later commented out, so we don't assert on it here).
 //   * Mutating chrome.storage.local.settings to simulate a popup language
 //     change does NOT clear chrome.storage.sync.token, and a fresh
 //     /function/run still goes out with a non-empty Authorization header.
@@ -115,11 +116,6 @@ test.describe("auth survives language switch (anonymous user)", () => {
         { timeout: 5_000 }
       )
       .toBe(ANON_TOKEN);
-
-    // Same token in the page's localStorage (modular-rest's per-origin cache).
-    expect(
-      await page.evaluate(() => localStorage.getItem("token"))
-    ).toBe(ANON_TOKEN);
 
     // First translate — works, Authorization header carries the anon token.
     await page.locator("#test-word").click({ clickCount: 2 });
