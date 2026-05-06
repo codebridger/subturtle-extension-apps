@@ -1,3 +1,10 @@
+## [1.11.1](https://github.com/codebridger/subturtle-extension-apps/compare/v1.11.0...v1.11.1) (2026-05-06)
+
+
+### Bug Fixes
+
+* [#86](https://github.com/codebridger/subturtle-extension-apps/issues/86)exgqfpu skip token writes to host LS on dashboard origins ([838451e](https://github.com/codebridger/subturtle-extension-apps/commit/838451e9ad10d3a3755691b4ca586a0d3815a008)), closes [#86exgqfpu](https://github.com/codebridger/subturtle-extension-apps/issues/86exgqfpu)
+
 # [1.11.0](https://github.com/codebridger/subturtle-extension-apps/compare/v1.10.1...v1.11.0) (2026-05-04)
 
 
