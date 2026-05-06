@@ -22,6 +22,8 @@ concurrency:
 jobs:
   verify:
     name: Verify (lint, unit, build, e2e)
+    # Prevent duplicate runs on internal PRs from branches that already trigger a push event
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository || !contains(fromJSON('["main", "dev"]'), github.event.pull_request.head.ref)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
