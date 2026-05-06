@@ -105,6 +105,7 @@ chrome.runtime.onMessage.addListener((request, _sender) => {
 });
 
 export async function loginWithLastSession() {
+
   // Check if the user is logged in
   // If the user is logged in, try to login with the token as last session.
   await sendMessage(new GetLoginStatusMessage())
