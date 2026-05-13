@@ -38,6 +38,38 @@ if (typeof Storage !== "undefined" && isDashboardOrigin()) {
   };
 }
 
+// Announce extension presence to the dashboard so it can hide the "install
+// the extension" nudge. window.postMessage crosses the content-script /
+// page-world boundary; the message is scoped to the page's own origin.
+if (typeof window !== "undefined" && isDashboardOrigin()) {
+  const announcePresence = () => {
+    try {
+      window.postMessage(
+        {
+          source: "subturtle-extension",
+          type: "presence",
+          version: chrome.runtime.getManifest().version,
+        },
+        window.location.origin
+      );
+    } catch (_e) {
+      // postMessage can fail in odd sandboxed iframes — non-fatal.
+    }
+  };
+
+  // Announce immediately in case the dashboard listener is already attached.
+  announcePresence();
+
+  // Respond to dashboard pings in case the dashboard mounts after us.
+  window.addEventListener("message", (event) => {
+    if (event.source !== window) return;
+    const data = event.data;
+    if (data?.source === "subturtle-dashboard" && data?.type === "ping") {
+      announcePresence();
+    }
+  });
+}
+
 import { GlobalOptions, authentication } from "@modular-rest/client";
 
 import { sendMessage, sendMessageToTabs } from "../common/helper/massage";
