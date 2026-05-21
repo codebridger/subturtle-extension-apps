@@ -1,6 +1,7 @@
 <template>
-  <Select v-model="selected" :options="options" multiple custom labelKey="title" valueKey="_id"
-    placeholder="Select Phrase Bundles to save...">
+  <div class="relative w-full">
+    <Select v-model="selected" :options="options" multiple custom labelKey="title" valueKey="_id"
+      :placeholder="showSuggestion ? '' : 'Select Phrase Bundles to save...'">
     <template #selected="{
       selectedOption,
       selectedOptions,
@@ -11,13 +12,16 @@
       <div v-if="multiple && selectedOptions.length > 0" class="flex items-center gap-2 flex-wrap">
         <span class="text-xs text-gray-500 dark:text-gray-400">Selected:</span>
         <div class="flex items-center gap-1 flex-wrap">
-          <span v-for="(option, index) in selectedOptions.slice(0, 2)" :key="index"
-            class="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-500/20 text-blue-800 dark:text-blue-300 rounded">
-            {{ getOptionLabel(option) }}
-          </span>
-          <span v-if="selectedCount > 2"
-            class="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded">
-            +{{ selectedCount - 2 }} more
+          <span v-for="(option, index) in selectedOptions" :key="index"
+            class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-500/20 text-blue-800 dark:text-blue-300 rounded">
+            {{ resolveTitle(option, getOptionLabel) }}
+            <span role="button" tabindex="0" title="Remove"
+              class="inline-flex items-center justify-center rounded-full p-0.5 hover:bg-blue-200 dark:hover:bg-blue-500/30 transition-colors cursor-pointer"
+              @click.stop.prevent="removeSelected(option)"
+              @mousedown.stop.prevent
+              @keyup.enter.stop="removeSelected(option)">
+              <i class="i-mdi-close text-[11px]" />
+            </span>
           </span>
         </div>
       </div>
@@ -25,7 +29,7 @@
         <span class="inline-flex items-center justify-center w-5 h-5 text-xs text-blue-600">
           ✓
         </span>
-        <span class="font-medium">{{ getOptionLabel(selectedOption) }}</span>
+        <span class="font-medium">{{ resolveTitle(selectedOption, getOptionLabel) }}</span>
       </span>
     </template>
     <template #header>
@@ -45,14 +49,38 @@
         {{ (option as unknown as PhraseBundleType).title }}
       </div>
     </template>
-  </Select>
+    </Select>
+
+    <!--
+      Suggested bundle, shown inside the field when nothing is selected yet.
+      Clearly marked as a suggestion and editable in place. The chip sits on the
+      left; the rest of the field (and the caret) stays clickable to pick an
+      existing bundle, which clears the suggestion.
+    -->
+    <div v-if="showSuggestion" class="absolute inset-y-0 left-0 right-12 flex items-center pl-3 pointer-events-none">
+      <div class="pointer-events-auto inline-flex items-center gap-1.5 min-w-0 max-w-full rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-200 ring-1 ring-purple-300 dark:ring-purple-700 px-2.5 py-1"
+        @click.stop>
+        <i class="i-mdi-auto-fix text-sm opacity-80 shrink-0" />
+        <span class="text-[10px] uppercase tracking-wide font-semibold opacity-70 shrink-0">Suggested</span>
+        <template v-if="!isEditingSuggested">
+          <span class="text-sm font-medium whitespace-nowrap">{{ suggestedName }}</span>
+          <button type="button" class="shrink-0 opacity-70 hover:opacity-100" title="Edit name" @click.stop="startEditSuggested">
+            <i class="i-mdi-pencil text-xs" />
+          </button>
+        </template>
+        <input v-else ref="suggestedInput" v-model="editBuffer" type="text" dir="auto"
+          class="flex-1 min-w-0 w-56 max-w-full text-sm bg-white dark:bg-gray-900 rounded px-2 py-0.5 border border-purple-300 dark:border-purple-700 focus:outline-none focus:ring-1 focus:ring-purple-400"
+          @click.stop @keydown.stop @keyup.enter="commitEditSuggested" @blur="commitEditSuggested" />
+      </div>
+    </div>
+  </div>
 </template>
 
 <script lang="ts" setup>
 import { dataProvider, authentication } from "@modular-rest/client";
 import { Button } from "pilotui/elements";
 import { Select, Input, InputGroup } from "pilotui";
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
 import { COLLECTIONS, DATABASE } from "../../common/static/global";
 import { PhraseBundleType } from "../../common/types/phrase.type";
@@ -62,10 +90,13 @@ import { log } from "../../common/helper/log";
 const props = defineProps<{
   selectedBundles: string[];
   excludedBundleIds?: string[];
+  /** AI-suggested bundle name shown in-field when no bundle is selected yet. */
+  suggestedName?: string;
 }>();
 
 const emit = defineEmits({
   "update:selectedBundles": (value: string[]) => true,
+  "update:suggestedName": (value: string) => true,
 });
 
 const isFetching = ref(false);
@@ -74,12 +105,68 @@ const isCreating = ref(false);
 const searchedBundleName = ref("");
 const options = ref<PhraseBundleType[]>([]);
 
+// In-field suggested bundle (shown only when nothing is selected yet).
+const isEditingSuggested = ref(false);
+const editBuffer = ref("");
+const suggestedInput = ref<HTMLInputElement | null>(null);
+const showSuggestion = computed(
+  () => !!props.suggestedName && (props.selectedBundles?.length || 0) === 0
+);
+
+/**
+ * Resolve a selected entry to its bundle title. pilotui hands back the option
+ * object when picked from the dropdown, but the raw value (id) when the value
+ * was preselected externally — so look the id up in the loaded options and fall
+ * back to the slot's label helper.
+ */
+function resolveTitle(
+  option: any,
+  getOptionLabel: (o: any) => string
+): string {
+  if (option && typeof option === "object") {
+    return option.title ?? getOptionLabel(option);
+  }
+  const found = options.value.find((o) => o._id === option);
+  return found ? found.title : getOptionLabel(option);
+}
+
+/**
+ * Normalise a selection entry to a bundle id. pilotui stores the whole option
+ * object when picked from the dropdown but the raw id when set externally.
+ */
+function toId(entry: any): string {
+  return entry && typeof entry === "object" ? entry._id : entry;
+}
+
+/** Deselect a bundle chip (removes it from the selection / makes it dirty). */
+function removeSelected(option: any) {
+  const targetId = toId(option);
+  emit(
+    "update:selectedBundles",
+    (props.selectedBundles || []).filter((x) => toId(x) !== targetId)
+  );
+}
+
+function startEditSuggested() {
+  editBuffer.value = props.suggestedName || "";
+  isEditingSuggested.value = true;
+  nextTick(() => suggestedInput.value?.focus());
+}
+
+function commitEditSuggested() {
+  const value = editBuffer.value.trim();
+  if (value) emit("update:suggestedName", value);
+  isEditingSuggested.value = false;
+}
+
 const selected = computed<string[] | undefined>({
   get() {
     return props.selectedBundles;
   },
   set(v) {
-    emit("update:selectedBundles", Array.isArray(v) ? v : []);
+    // pilotui pushes option objects on dropdown pick; always emit plain ids so
+    // the parent (and createPhrase) only ever sees bundle id strings.
+    emit("update:selectedBundles", Array.isArray(v) ? v.map(toId) : []);
   },
 });
 
