@@ -4,6 +4,8 @@ export type Chunk = {
   text: string;
   /** Kind of pattern (collocation, phrasal_verb, idiom, discourse_marker, other) */
   type: string;
+  /** Short explanation of the chunk's meaning/usage in the target language */
+  definition?: string;
   /** Pronunciation of the chunk written in the target language alphabet */
   transliteration?: string;
   /** Model confidence that this is a useful learnable chunk (0-1) */

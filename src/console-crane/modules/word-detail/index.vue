@@ -166,32 +166,29 @@
         </button>
       </div>
 
-      <!-- Save word functionality - only shown to logged in users -->
-      <SaveWordSectionV2 v-if="isLogin && wordData?.translation?.phrase" :phrase="cleanText(getProps().word!)"
-        :translation="cleanText(wordData?.translation?.phrase || '')" :context="wordData?.context"
-        :direction="wordData?.direction" :language_info="wordData?.language_info"
-        :linguistic_data="wordData?.linguistic_data" :chunks="wordData?.chunks || []"
-        :suggested-bundle-name="wordData?.suggested_bundle_name" />
-
-      <!-- Login prompt: only when there's a translation worth saving -->
-      <button
-        v-else-if="!isLogin && wordData?.translation?.phrase"
-        type="button"
-        class="self-center inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-white text-sm font-semibold shadow-sm hover:from-pink-600 hover:to-purple-700 transition"
-        @click="handleLoginRequest"
-      >
-        <i class="text-lg i-solar-login-3-bold" />
-        <span>Login to save this phrase</span>
-      </button>
-
       <!-- LINGUISTIC DATA SECTION - Shows detailed linguistic information -->
       <template v-if="wordData && wordData.linguistic_data">
         <section class="w-full flex flex-col gap-3">
-          <!-- Main definition card -->
+          <!-- Definition card: per-chunk meaning + pronunciation, or the whole-phrase definition. -->
           <Fieldset class="dark:bg-gray-900" legend="Definition">
-            <p class="text-base mb-3 text-gray-900 dark:text-gray-100" :dir="wordData?.direction?.target">
-              {{ wordData.linguistic_data.definition }}
-            </p>
+            <div
+              v-for="(entry, index) in definitionEntries"
+              :key="index"
+              class="mb-4 last:mb-3"
+            >
+              <div v-if="entry.label || entry.transliteration" class="flex items-baseline justify-between gap-4 mb-1">
+                <span v-if="entry.label" class="text-sm font-semibold text-gray-700 dark:text-gray-200" dir="ltr">
+                  {{ entry.label }}
+                </span>
+                <span v-else />
+                <span v-if="entry.transliteration" class="text-sm italic text-gray-500 dark:text-gray-400" :dir="wordData?.direction?.target">
+                  {{ entry.transliteration }}
+                </span>
+              </div>
+              <p v-if="entry.definition" class="text-base text-gray-900 dark:text-gray-100" :dir="wordData?.direction?.target">
+                {{ entry.definition }}
+              </p>
+            </div>
 
             <!-- Type and formality level -->
             <div class="flex gap-2">
@@ -199,23 +196,6 @@
                 :label="wordData.linguistic_data.type.toUpperCase()" />
               <IconButton v-if="wordData.linguistic_data.formality_level" badge size="sm"
                 :label="wordData.linguistic_data.formality_level.toUpperCase()" />
-            </div>
-          </Fieldset>
-
-          <Fieldset v-if="pronunciationRows.length" class="dark:bg-gray-900" legend="Pronunciation">
-            <!-- Per-chunk pronunciation when chunks exist, otherwise the whole-phrase transliteration. -->
-            <div
-              v-for="(row, index) in pronunciationRows"
-              :key="index"
-              class="flex items-center justify-between gap-4 py-1"
-            >
-              <span v-if="row.label" class="text-sm font-medium text-gray-700 dark:text-gray-200" dir="ltr">
-                {{ row.label }}
-              </span>
-              <span v-else />
-              <span class="text-base italic text-gray-900 dark:text-gray-100" :dir="wordData?.direction?.target">
-                {{ row.value }}
-              </span>
             </div>
           </Fieldset>
         </section>
@@ -239,6 +219,24 @@
           No linguistic data available for "{{ cleanText(getProps().word!) }}".
         </div>
       </template>
+
+      <!-- Save word functionality - shown after the definition -->
+      <SaveWordSectionV2 v-if="isLogin && wordData?.translation?.phrase" :phrase="cleanText(getProps().word!)"
+        :translation="cleanText(wordData?.translation?.phrase || '')" :context="wordData?.context"
+        :direction="wordData?.direction" :language_info="wordData?.language_info"
+        :linguistic_data="wordData?.linguistic_data" :chunks="wordData?.chunks || []"
+        :suggested-bundle-name="wordData?.suggested_bundle_name" />
+
+      <!-- Login prompt: only when there's a translation worth saving -->
+      <button
+        v-else-if="!isLogin && wordData?.translation?.phrase"
+        type="button"
+        class="self-center inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-white text-sm font-semibold shadow-sm hover:from-pink-600 hover:to-purple-700 transition"
+        @click="handleLoginRequest"
+      >
+        <i class="text-lg i-solar-login-3-bold" />
+        <span>Login to save this phrase</span>
+      </button>
     </div>
   </div>
 </template>
@@ -321,20 +319,31 @@ const context = computed(() => {
 });
 
 /**
- * Rows for the Pronunciation fieldset. When chunks exist, each chunk is paired
- * with its own transliteration (label = chunk text). Otherwise fall back to the
- * whole-phrase transliteration (no label) for short selections.
+ * Entries for the Definition fieldset. Each entry pairs a label (chunk text)
+ * with its pronunciation and meaning. When chunks exist, one entry per chunk;
+ * otherwise a single entry with the whole-phrase definition + transliteration.
  */
-const pronunciationRows = computed<{ label: string; value: string }[]>(() => {
+const definitionEntries = computed<
+  { label: string; transliteration: string; definition: string }[]
+>(() => {
   const chunks = wordData.value?.chunks || [];
-  const chunkRows = chunks
-    .filter((c) => c.transliteration && c.transliteration.trim())
-    .map((c) => ({ label: c.text, value: c.transliteration as string }));
-  if (chunkRows.length) return chunkRows;
+  const chunkEntries = chunks
+    .filter((c) => (c.definition && c.definition.trim()) || (c.transliteration && c.transliteration.trim()))
+    .map((c) => ({
+      label: c.text,
+      transliteration: c.transliteration || "",
+      definition: c.definition || "",
+    }));
+  if (chunkEntries.length) return chunkEntries;
 
-  const whole = wordData.value?.linguistic_data?.phonetic?.transliteration;
-  if (whole && whole.trim()) return [{ label: "", value: whole }];
-  return [];
+  return [
+    {
+      label: "",
+      transliteration:
+        wordData.value?.linguistic_data?.phonetic?.transliteration || "",
+      definition: wordData.value?.linguistic_data?.definition || "",
+    },
+  ];
 });
 
 /**
