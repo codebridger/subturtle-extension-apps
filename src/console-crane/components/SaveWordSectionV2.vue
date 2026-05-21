@@ -99,7 +99,6 @@ import { useDefaultBundleStore } from "../../stores/default-bundle";
 import { useProfileStore } from "../../stores/profile";
 import FreemiumLimitCounter from "./FreemiumLimitCounter.vue";
 import { analytic } from "../../plugins/mixpanel";
-import { useConsoleCraneStore } from "../stores/console-crane";
 import { BundleSuggestionService } from "../../common/services/bundle-suggestion.service";
 import type { Chunk } from "../modules/word-detail/types";
 
@@ -138,7 +137,6 @@ const showPreview = ref(false);
 
 const defaultBundleStore = useDefaultBundleStore();
 const profileStore = useProfileStore();
-const consoleCraneStore = useConsoleCraneStore();
 
 // When the user picks a real bundle, drop the suggestion.
 watch(selectedBundles, (val) => {
@@ -418,9 +416,12 @@ function handleUpgrade() {
  * Open the Practice now config page inside the console-crane modal.
  * The full config card ships in subtask 86exnxnw7; this navigates to its route.
  */
-function startPracticeNow() {
+async function startPracticeNow() {
   analytic.track("practice-now_opened");
-  consoleCraneStore.toggleConsoleCrane(
+  // Lazy import to avoid a circular dependency:
+  // SaveWordSectionV2 -> console-crane store -> router -> word-detail -> SaveWordSectionV2.
+  const { useConsoleCraneStore } = await import("../stores/console-crane");
+  useConsoleCraneStore().toggleConsoleCrane(
     "practice-config",
     {
       phrase: props.phrase,
