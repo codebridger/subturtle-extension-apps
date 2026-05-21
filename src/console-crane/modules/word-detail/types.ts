@@ -53,8 +53,12 @@ export type LanguageLearningData = {
   linguistic_data: LinguisticData;
   /** Reusable patterns found inside the selection (cap 2; empty for short/cross-language). */
   chunks: Chunk[];
-  /** Short suggested bundle name derived from the page title, when available. */
-  suggested_bundle_name?: string;
+};
+
+/** Result of the per-page bundle suggestion call. */
+export type BundleSuggestion = {
+  matchedBundle: { _id: string; title: string } | null;
+  suggestedName: string | null;
 };
 
 /** Response shape of the translationAdvice RPC. */

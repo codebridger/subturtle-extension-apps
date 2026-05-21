@@ -99,8 +99,8 @@ import { useDefaultBundleStore } from "../../stores/default-bundle";
 import { useProfileStore } from "../../stores/profile";
 import FreemiumLimitCounter from "./FreemiumLimitCounter.vue";
 import { analytic } from "../../plugins/mixpanel";
-import { normaliseSourceUrl } from "../../common/helper/url-normalise";
 import { useConsoleCraneStore } from "../stores/console-crane";
+import { BundleSuggestionService } from "../../common/services/bundle-suggestion.service";
 import type { Chunk } from "../modules/word-detail/types";
 
 const props = defineProps<{
@@ -117,7 +117,6 @@ const props = defineProps<{
   };
   linguistic_data?: any;
   chunks?: Chunk[];
-  suggestedBundleName?: string;
 }>();
 
 const selectBundleRef = ref();
@@ -198,7 +197,7 @@ watch(
   async () => {
     selectedBundles.value = [];
     useSuggested.value = false;
-    suggestedName.value = props.suggestedBundleName?.trim() || "";
+    suggestedName.value = "";
     showPreview.value = false;
 
     await loadExistingBundles();
@@ -206,15 +205,19 @@ watch(
     // Already-saved phrase: nothing to default.
     if (existingBundles.value.length > 0) return;
 
-    // 1. An existing bundle from this same page (matched by normalised URL).
-    const urlBundleId = await matchBundleByUrl();
-    if (urlBundleId) {
-      selectedBundles.value = [urlBundleId];
+    // Per-page suggestion (matched bundle from this page, or an AI name).
+    // Cached per URL by the service, so this is at most one server call per page.
+    const suggestion = await BundleSuggestionService.instance.getForCurrentPage();
+
+    // 1. An existing bundle from this same page.
+    if (suggestion.matchedBundle) {
+      selectedBundles.value = [suggestion.matchedBundle._id];
       return;
     }
 
     // 2. A suggested name from the page title (first save from this page).
-    if (suggestedName.value) {
+    if (suggestion.suggestedName) {
+      suggestedName.value = suggestion.suggestedName;
       useSuggested.value = true;
       return;
     }
@@ -240,37 +243,6 @@ async function loadAllBundles() {
     });
   } catch (error) {
     console.error("Error loading bundles:", error);
-  }
-}
-
-/**
- * Find the most recent bundle that already holds a phrase saved from this same
- * page (by normalised source URL). Returns its id, or null.
- */
-async function matchBundleByUrl(): Promise<string | null> {
-  if (typeof location === "undefined") return null;
-  const sourceUrl = normaliseSourceUrl(location.href);
-  if (!sourceUrl) return null;
-
-  try {
-    const phrases = await dataProvider.find<PhraseType & { _id: string }>({
-      database: DATABASE.USER_CONTENT,
-      collection: COLLECTIONS.PHRASE,
-      query: { refId: authentication.user?.id, sourceUrl },
-    });
-    const phraseIds = phrases.map((p) => p._id);
-    if (!phraseIds.length) return null;
-
-    const bundles = await dataProvider.find<PhraseBundleType>({
-      database: DATABASE.USER_CONTENT,
-      collection: COLLECTIONS.PHRASE_BUNDLE,
-      query: { refId: authentication.user?.id, phrases: { $in: phraseIds } },
-      options: { sort: "-_id" },
-    });
-    return bundles[0]?._id || null;
-  } catch (error) {
-    console.error("Error matching bundle by URL:", error);
-    return null;
   }
 }
 
@@ -413,6 +385,12 @@ async function savePhrase() {
 
     // Store the bundles used as new defaults for future saves
     defaultBundleStore.setDefaultBundles(bundleIds);
+
+    // This page now has a saved phrase + bundle; drop the cached suggestion so
+    // the next open matches the bundle instead of re-suggesting a name.
+    if (typeof location !== "undefined") {
+      BundleSuggestionService.instance.clear(location.href);
+    }
 
     // Clear selection and reload existing bundles
     selectedBundles.value = [];

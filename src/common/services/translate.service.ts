@@ -159,12 +159,6 @@ export class TranslateService {
       return cachedResult;
     }
 
-    // Page context drives the bundle-name suggestion on first save from a page.
-    const pageTitle =
-      typeof document !== "undefined" ? document.title : undefined;
-    const pageUrl =
-      typeof location !== "undefined" ? location.href : undefined;
-
     // If not cached, fetch from API
     try {
       const data = await functionProvider.run<LanguageLearningData>({
@@ -175,8 +169,6 @@ export class TranslateService {
           targetLanguage: this.languageTitle,
           phrase: text,
           context: context || "",
-          pageTitle,
-          pageUrl,
         },
       });
 

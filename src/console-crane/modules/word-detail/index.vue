@@ -224,8 +224,7 @@
       <SaveWordSectionV2 v-if="isLogin && wordData?.translation?.phrase" :phrase="cleanText(getProps().word!)"
         :translation="cleanText(wordData?.translation?.phrase || '')" :context="wordData?.context"
         :direction="wordData?.direction" :language_info="wordData?.language_info"
-        :linguistic_data="wordData?.linguistic_data" :chunks="wordData?.chunks || []"
-        :suggested-bundle-name="wordData?.suggested_bundle_name" />
+        :linguistic_data="wordData?.linguistic_data" :chunks="wordData?.chunks || []" />
 
       <!-- Login prompt: only when there's a translation worth saving -->
       <button
