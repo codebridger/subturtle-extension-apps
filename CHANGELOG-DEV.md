@@ -1,3 +1,10 @@
+# [1.12.0-dev.1](https://github.com/codebridger/subturtle-extension-apps/compare/v1.11.2-dev.1...v1.12.0-dev.1) (2026-05-21)
+
+
+### Features
+
+* announce extension presence on dashboard origins for install nudge [#86](https://github.com/codebridger/subturtle-extension-apps/issues/86)exkh0z3 ([69dcf1b](https://github.com/codebridger/subturtle-extension-apps/commit/69dcf1bc0c13f293c01592545ec2ccb1111d5f3e)), closes [#86exkh0z3](https://github.com/codebridger/subturtle-extension-apps/issues/86exkh0z3)
+
 ## [1.11.2-dev.1](https://github.com/codebridger/subturtle-extension-apps/compare/v1.11.1...v1.11.2-dev.1) (2026-05-06)
 
 
