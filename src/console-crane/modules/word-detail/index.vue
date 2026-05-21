@@ -244,6 +244,7 @@
 import { ref, computed, watch, inject, onMounted } from "vue";
 import { cleanText, firstUpper } from "../../../common/helper/text";
 import { TranslateService } from "../../../common/services/translate.service";
+import { findSavedPhrase } from "../../../common/services/phrase.service";
 import { Chunk, LanguageLearningData } from "./types";
 
 import { isLogin } from "../../../plugins/modular-rest";
@@ -314,7 +315,8 @@ const title = computed(() => {
 });
 
 const context = computed(() => {
-  return getProps().context || "";
+  // Prefer the stored source sentence (saved phrases) over the live selection.
+  return wordData.value?.context || getProps().context || "";
 });
 
 /**
@@ -491,13 +493,14 @@ function submitEditMessage() {
   runAdvice(message, history);
 }
 
-// Hide the context line when it's just a duplicate / superset of the selection itself.
+// Show the surrounding source sentence. Hide it only when it's empty or
+// identical to the selection itself (a sentence that contains the selection is
+// exactly what we want to show).
 const showContext = computed(() => {
-  const c = context.value.trim().toLowerCase();
-  const t = cleanText(getProps().word || "").trim().toLowerCase();
+  const c = context.value.trim();
+  const t = cleanText(getProps().word || "").trim();
   if (!c) return false;
-  if (!t) return true;
-  return c !== t && !c.includes(t.slice(0, Math.max(8, t.length - 4)));
+  return c.toLowerCase() !== t.toLowerCase();
 });
 
 // Scale title down for long phrases so a sentence-length selection doesn't dominate the modal.
@@ -531,7 +534,7 @@ watch(
  * Fetches detailed linguistic data for the word
  * Uses context if available
  */
-function fetchWordDetail() {
+async function fetchWordDetail() {
   pending.value = true;
   error.value = null;
   wordData.value = null;
@@ -540,21 +543,38 @@ function fetchWordDetail() {
   const cleaned = cleanText(props.word as string);
   const context = props.context || "";
 
-  TranslateService.instance
-    .fetchDetailedTranslation(cleaned, context)
-    .then((data) => {
-      wordData.value = data;
-    })
-    .catch((err) => {
-      console.error("Failed to fetch translation:", err);
-      const message =
-        err?.message ||
-        err?.body?.message ||
-        "We couldn't fetch the translation. Please try again.";
-      error.value = message;
-      analytic.track("word-detail-page_translation-error", { message });
-    })
-    .finally(() => (pending.value = false));
+  try {
+    // If the phrase is already saved, build the view from the stored document
+    // (translation + linguistic data + chunks) instead of spending an AI call.
+    const saved = (await findSavedPhrase(cleaned)) as any;
+    if (saved && saved.linguistic_data) {
+      wordData.value = {
+        phrase: saved.phrase,
+        context: saved.context || context,
+        direction: saved.direction,
+        translation: { phrase: saved.translation, context: "" },
+        language_info: saved.language_info,
+        linguistic_data: saved.linguistic_data,
+        chunks: saved.chunks || [],
+      } as LanguageLearningData;
+      return;
+    }
+
+    wordData.value = await TranslateService.instance.fetchDetailedTranslation(
+      cleaned,
+      context
+    );
+  } catch (err: any) {
+    console.error("Failed to fetch translation:", err);
+    const message =
+      err?.message ||
+      err?.body?.message ||
+      "We couldn't fetch the translation. Please try again.";
+    error.value = message;
+    analytic.track("word-detail-page_translation-error", { message });
+  } finally {
+    pending.value = false;
+  }
 }
 
 function retryFetch() {

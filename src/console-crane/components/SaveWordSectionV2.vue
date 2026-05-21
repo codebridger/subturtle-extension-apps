@@ -68,6 +68,7 @@ import { useProfileStore } from "../../stores/profile";
 import FreemiumLimitCounter from "./FreemiumLimitCounter.vue";
 import { analytic } from "../../plugins/mixpanel";
 import { BundleSuggestionService } from "../../common/services/bundle-suggestion.service";
+import { findSavedPhrase } from "../../common/services/phrase.service";
 import type { Chunk } from "../modules/word-detail/types";
 
 const props = defineProps<{
@@ -248,18 +249,8 @@ async function loadExistingBundles(): Promise<boolean> {
   if (!props.phrase || !props.translation) return false;
 
   try {
-    // Match by phrase (+ owner) only. The translation can vary between AI calls,
-    // so including it here would make an already-saved phrase look unsaved.
-    existedPhrase.value = await dataProvider
-      .findOne({
-        database: DATABASE.USER_CONTENT,
-        collection: COLLECTIONS.PHRASE,
-        query: {
-          refId: authentication.user?.id,
-          phrase: props.phrase.trim(),
-        },
-      })
-      .then((doc) => doc as PhraseType | null);
+    // Shared lookup (matches by phrase + owner; translation excluded on purpose).
+    existedPhrase.value = await findSavedPhrase(props.phrase);
 
     if (!existedPhrase.value) {
       existingBundles.value = [];

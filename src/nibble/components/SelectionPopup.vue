@@ -26,14 +26,21 @@
       </div>
 
       <div class="nibble-card__footer">
-        <button type="button" class="nibble-save-btn" @click="onSaveClick" aria-label="View details and save"
-          title="Open details · Save phrase">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        <button type="button" class="nibble-save-btn" @click="onSaveClick"
+          :aria-label="isAlreadySaved ? 'Open and learn this phrase' : 'View details and save'"
+          :title="isAlreadySaved ? 'Already saved · open to learn' : 'Open details · Save phrase'">
+          <svg v-if="!isAlreadySaved" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="nibble-save-btn__icon"
             aria-hidden="true">
             <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
           </svg>
-          <span>Save and Learn</span>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="nibble-save-btn__icon"
+            aria-hidden="true">
+            <path d="M12 7v14" />
+            <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />
+          </svg>
+          <span>{{ isAlreadySaved ? "Learn" : "Save and Learn" }}</span>
         </button>
       </div>
     </div>
@@ -65,6 +72,7 @@
 import { computed, nextTick, ref, watch } from "vue";
 import { TranslateService } from "../../common/services/translate.service";
 import { emitOpen } from "../../common/services/console-crane-bridge";
+import { findSavedPhrase } from "../../common/services/phrase.service";
 
 const props = defineProps<{
   text: string;
@@ -81,6 +89,8 @@ type Mode = "icon" | "loading" | "translated" | "error";
 const mode = ref<Mode>("icon");
 const translation = ref<string>("");
 const cardRef = ref<HTMLElement | null>(null);
+// Whether this exact phrase is already saved by the user (drives Save vs Learn).
+const isAlreadySaved = ref(false);
 
 // Anchor where the user clicked the icon. Loading reuses this for the
 // 36px spinner; the card centers on iconCenter and `cardLeft`/`cardTop`
@@ -165,6 +175,7 @@ watch(
     if (newText !== oldText) {
       mode.value = "icon";
       translation.value = "";
+      isAlreadySaved.value = false;
       iconCenter.value = null;
       cardLeft.value = null;
       cardTop.value = null;
@@ -198,6 +209,18 @@ async function onIconClick(e: MouseEvent) {
   }
 
   mode.value = "loading";
+
+  // If the phrase is already saved, reuse the stored translation instead of
+  // spending an AI call — and surface it as "Learn" rather than "Save".
+  const saved = await findSavedPhrase(props.text);
+  isAlreadySaved.value = !!saved;
+  const savedTranslation = saved?.translation?.trim();
+  if (savedTranslation) {
+    translation.value = savedTranslation;
+    mode.value = "translated";
+    return;
+  }
+
   try {
     const result = await TranslateService.instance.fetchSimpleTranslation(
       props.text,
