@@ -126,7 +126,7 @@
                 class="text-xs text-gray-600 dark:text-gray-400 mt-auto pt-2 border-t border-purple-400/10"
               >
                 Click the icon, then hit
-                <span class="text-purple-400 font-medium">Save & view</span>
+                <span class="text-purple-400 font-medium">Save and Learn</span>
                 to open the full word details.
               </div>
             </div>
