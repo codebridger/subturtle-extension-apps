@@ -10,11 +10,32 @@
         @click.stop>
         <!-- Source phrase -->
         <div class="px-6 pt-6 pb-4" :dir="wordData?.direction?.source">
-          <p class="text-[10px] uppercase tracking-wider font-semibold text-gray-400 dark:text-gray-400 mb-2">
-            Selected
-          </p>
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <p class="text-[10px] uppercase tracking-wider font-semibold text-gray-400 dark:text-gray-400">
+              Selected
+            </p>
+            <!-- Opens an AI chat to ask questions or fix the highlights -->
+            <button
+              v-if="wordData?.translation?.phrase"
+              type="button"
+              title="Chat with AI to understand this phrase or change the highlighted patterns"
+              class="inline-flex items-center gap-1 text-[11px] font-medium text-purple-600 dark:text-purple-300 hover:underline shrink-0"
+              @click.stop="showAdviceChat = !showAdviceChat"
+            >
+              <i class="i-mdi-message-text-outline text-xs" />
+              <span>Ask AI · explain or fix</span>
+            </button>
+          </div>
+          <!-- Selection with reusable chunks highlighted inline -->
           <h1 :class="['font-semibold leading-tight dark:text-gray-100', titleSizeClass]">
-            {{ title }}
+            <template v-for="(seg, i) in selectionSegments" :key="i">
+              <mark
+                v-if="seg.isChunk"
+                class="bg-yellow-200/70 dark:bg-yellow-400/25 rounded px-0.5 text-inherit"
+                >{{ seg.text }}</mark
+              >
+              <template v-else>{{ seg.text }}</template>
+            </template>
           </h1>
           <p
             v-if="showContext"
@@ -22,6 +43,82 @@
           >
             {{ context }}
           </p>
+
+          <!-- In-modal advice chat for correcting chunks -->
+          <div
+            v-if="showAdviceChat"
+            class="mt-4 rounded-lg border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.02] p-3"
+            dir="ltr"
+            @click.stop
+          >
+            <div v-if="adviceThread.length" class="flex flex-col gap-2 mb-2 max-h-40 overflow-y-auto">
+              <template v-for="(msg, i) in adviceThread" :key="i">
+                <!-- Editing a previous user message -->
+                <form
+                  v-if="editingIndex === i"
+                  class="self-end w-full flex items-center gap-1"
+                  @submit.prevent="submitEditMessage"
+                >
+                  <input
+                    v-model="editingText"
+                    dir="auto"
+                    autofocus
+                    class="flex-1 min-w-0 text-sm rounded-md border border-purple-300 dark:border-purple-700 bg-white dark:bg-gray-900 px-2.5 py-1.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-purple-400"
+                    @keyup.esc="cancelEditMessage"
+                  />
+                  <button type="submit" class="shrink-0 p-1.5 rounded-md text-purple-600 hover:bg-purple-100 dark:hover:bg-purple-900/40" title="Save">
+                    <i class="i-mdi-check text-base" />
+                  </button>
+                  <button type="button" class="shrink-0 p-1.5 rounded-md text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800" title="Cancel" @click="cancelEditMessage">
+                    <i class="i-mdi-close text-base" />
+                  </button>
+                </form>
+                <!-- Normal bubble -->
+                <div
+                  v-else
+                  dir="auto"
+                  :class="[
+                    'group text-sm rounded-md px-2.5 py-1.5 max-w-[90%] flex items-start gap-1.5',
+                    msg.role === 'user'
+                      ? 'self-end bg-purple-100 dark:bg-purple-900/40 text-gray-900 dark:text-gray-100'
+                      : 'self-start bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200',
+                  ]"
+                >
+                  <span class="min-w-0">{{ msg.text }}</span>
+                  <button
+                    v-if="msg.role === 'user' && !adviceLoading"
+                    type="button"
+                    title="Edit this message"
+                    class="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-purple-500 hover:text-purple-700"
+                    @click="startEditMessage(i)"
+                  >
+                    <i class="i-mdi-pencil text-xs" />
+                  </button>
+                </div>
+              </template>
+            </div>
+            <p v-else class="text-xs text-gray-500 dark:text-gray-400 mb-2">
+              Ask anything about this phrase — meaning, grammar, usage. You can also say e.g. "highlight 'had to'".
+            </p>
+            <form class="flex items-center gap-2" @submit.prevent="sendAdviceMessage">
+              <input
+                v-model="adviceInput"
+                type="text"
+                dir="auto"
+                :disabled="adviceLoading"
+                placeholder="Type a message…"
+                class="flex-1 min-w-0 text-sm rounded-md border border-gray-300 dark:border-white/[0.12] bg-white dark:bg-gray-900 px-2.5 py-1.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-purple-400"
+              />
+              <button
+                type="submit"
+                :disabled="adviceLoading || !adviceInput.trim()"
+                class="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-purple-600 text-white text-sm font-medium disabled:opacity-50 hover:bg-purple-700 transition-colors"
+              >
+                <i v-if="adviceLoading" class="i-mdi-loading animate-spin" />
+                <span>Send</span>
+              </button>
+            </form>
+          </div>
         </div>
 
         <!-- Divider line -->
@@ -73,7 +170,8 @@
       <SaveWordSectionV2 v-if="isLogin && wordData?.translation?.phrase" :phrase="cleanText(getProps().word!)"
         :translation="cleanText(wordData?.translation?.phrase || '')" :context="wordData?.context"
         :direction="wordData?.direction" :language_info="wordData?.language_info"
-        :linguistic_data="wordData?.linguistic_data" />
+        :linguistic_data="wordData?.linguistic_data" :chunks="wordData?.chunks || []"
+        :suggested-bundle-name="wordData?.suggested_bundle_name" />
 
       <!-- Login prompt: only when there's a translation worth saving -->
       <button
@@ -104,50 +202,20 @@
             </div>
           </Fieldset>
 
-          <Fieldset class="dark:bg-gray-900" legend="Phonetic">
-            <div class="flex justify-between gap-4">
-              <p class="text-base italic text-gray-500 dark:text-gray-300">
-                {{ wordData?.linguistic_data?.phonetic.ipa || "" }}
-              </p>
-              <p class="text-base italic text-gray-900 dark:text-gray-100" :dir="wordData?.direction?.target">
-                {{ wordData.linguistic_data.phonetic.transliteration }}
-              </p>
-            </div>
-          </Fieldset>
-
-          <!-- Example sentences -->
-          <Fieldset class="dark:bg-gray-900" v-if="
-            wordData.linguistic_data.examples &&
-            wordData.linguistic_data.examples.length
-          " legend="Examples">
-            <div v-for="(example, index) in wordData.linguistic_data.examples" :key="index" class="mb-3 last:mb-0">
-              <p class="text-base mb-1 text-gray-900 dark:text-gray-100" :dir="wordData?.direction?.target">
-                {{ example.target }}
-              </p>
-              <p class="text-sm italic text-gray-500 dark:text-gray-300" :dir="wordData?.direction?.source">
-                {{ example.source }}
-              </p>
-              <Divider v-if="index < wordData.linguistic_data.examples.length - 1" />
-            </div>
-          </Fieldset>
-
-          <!-- Related expressions -->
-          <Fieldset class="dark:bg-gray-900" v-if="
-            wordData.linguistic_data.related_expressions &&
-            wordData.linguistic_data.related_expressions.length
-          " legend="Related Expressions">
-            <div v-for="(expression, index) in wordData.linguistic_data
-              .related_expressions" :key="index" class="mb-3 last:mb-0">
-              <p class="text-base mb-1 text-gray-900 dark:text-gray-100" :dir="wordData?.direction?.target">
-                {{ expression.target }}
-              </p>
-              <p class="text-sm italic text-gray-500 dark:text-gray-300" :dir="wordData?.direction?.source">
-                {{ expression.source }}
-              </p>
-              <Divider v-if="
-                index <
-                wordData.linguistic_data.related_expressions.length - 1
-              " />
+          <Fieldset v-if="pronunciationRows.length" class="dark:bg-gray-900" legend="Pronunciation">
+            <!-- Per-chunk pronunciation when chunks exist, otherwise the whole-phrase transliteration. -->
+            <div
+              v-for="(row, index) in pronunciationRows"
+              :key="index"
+              class="flex items-center justify-between gap-4 py-1"
+            >
+              <span v-if="row.label" class="text-sm font-medium text-gray-700 dark:text-gray-200" dir="ltr">
+                {{ row.label }}
+              </span>
+              <span v-else />
+              <span class="text-base italic text-gray-900 dark:text-gray-100" :dir="wordData?.direction?.target">
+                {{ row.value }}
+              </span>
             </div>
           </Fieldset>
         </section>
@@ -179,13 +247,12 @@
 import { ref, computed, watch, inject, onMounted } from "vue";
 import { cleanText, firstUpper } from "../../../common/helper/text";
 import { TranslateService } from "../../../common/services/translate.service";
-import { LanguageLearningData } from "./types";
+import { Chunk, LanguageLearningData } from "./types";
 
 import { isLogin } from "../../../plugins/modular-rest";
 import SaveWordSectionV2 from "../../components/SaveWordSectionV2.vue";
 
 import Fieldset from "../../../common/components/Fieldset.vue";
-import Divider from "../../../common/components/Divider.vue";
 import { IconButton } from "pilotui/elements";
 
 import { useRoute } from "vue-router";
@@ -252,6 +319,169 @@ const title = computed(() => {
 const context = computed(() => {
   return getProps().context || "";
 });
+
+/**
+ * Rows for the Pronunciation fieldset. When chunks exist, each chunk is paired
+ * with its own transliteration (label = chunk text). Otherwise fall back to the
+ * whole-phrase transliteration (no label) for short selections.
+ */
+const pronunciationRows = computed<{ label: string; value: string }[]>(() => {
+  const chunks = wordData.value?.chunks || [];
+  const chunkRows = chunks
+    .filter((c) => c.transliteration && c.transliteration.trim())
+    .map((c) => ({ label: c.text, value: c.transliteration as string }));
+  if (chunkRows.length) return chunkRows;
+
+  const whole = wordData.value?.linguistic_data?.phonetic?.transliteration;
+  if (whole && whole.trim()) return [{ label: "", value: whole }];
+  return [];
+});
+
+/**
+ * Split the displayed selection into segments, marking the spans that match a
+ * confirmed chunk so they can be highlighted inline. Matching is
+ * case-insensitive and uses the first occurrence of each chunk's text.
+ */
+const selectionSegments = computed<{ text: string; isChunk: boolean }[]>(() => {
+  const text = title.value || "";
+  const chunks = wordData.value?.chunks || [];
+  if (!text || !chunks.length) return [{ text, isChunk: false }];
+
+  // Collect non-overlapping [start, end) ranges for each chunk.
+  const ranges: { start: number; end: number }[] = [];
+  const lower = text.toLowerCase();
+  for (const chunk of chunks) {
+    const needle = (chunk.text || "").trim().toLowerCase();
+    if (!needle) continue;
+    let from = 0;
+    while (from <= lower.length) {
+      const idx = lower.indexOf(needle, from);
+      if (idx === -1) break;
+      const end = idx + needle.length;
+      const overlaps = ranges.some((r) => idx < r.end && end > r.start);
+      if (!overlaps) {
+        ranges.push({ start: idx, end });
+        break;
+      }
+      from = idx + 1;
+    }
+  }
+
+  if (!ranges.length) return [{ text, isChunk: false }];
+  ranges.sort((a, b) => a.start - b.start);
+
+  const segments: { text: string; isChunk: boolean }[] = [];
+  let cursor = 0;
+  for (const r of ranges) {
+    if (r.start > cursor) {
+      segments.push({ text: text.slice(cursor, r.start), isChunk: false });
+    }
+    segments.push({ text: text.slice(r.start, r.end), isChunk: true });
+    cursor = r.end;
+  }
+  if (cursor < text.length) {
+    segments.push({ text: text.slice(cursor), isChunk: false });
+  }
+  return segments;
+});
+
+// --- AI advice chat ---
+type AdviceMessage = { role: "user" | "assistant"; text: string };
+
+const showAdviceChat = ref(false);
+const adviceInput = ref("");
+const adviceLoading = ref(false);
+const adviceThread = ref<AdviceMessage[]>([]);
+
+// Inline editing of a previous user message.
+const editingIndex = ref<number | null>(null);
+const editingText = ref("");
+
+/**
+ * Send one user message given a conversation `history` (the turns that precede
+ * it). Pushes the user turn and the assistant response onto the thread.
+ */
+async function runAdvice(message: string, history: AdviceMessage[]) {
+  if (!message || adviceLoading.value) return;
+
+  adviceThread.value.push({ role: "user", text: message });
+  adviceLoading.value = true;
+
+  try {
+    const advice = await TranslateService.instance.fetchTranslationAdvice({
+      phrase: cleanText(getProps().word || ""),
+      context: context.value,
+      message,
+      currentChunks: wordData.value?.chunks || [],
+      history,
+    });
+
+    // Reply text (the primary output) is shown when present.
+    if (advice.reply) {
+      adviceThread.value.push({ role: "assistant", text: advice.reply });
+    }
+    // Chunk edits are applied silently; add a note only if there was no reply.
+    if (advice.chunks && wordData.value) {
+      wordData.value.chunks = advice.chunks;
+      if (!advice.reply) {
+        adviceThread.value.push({
+          role: "assistant",
+          text: advice.chunks.length
+            ? "Updated the highlighted patterns."
+            : "Cleared the highlighted patterns.",
+        });
+      }
+    }
+    analytic.track("translation-advice_used");
+  } catch (err) {
+    adviceThread.value.push({
+      role: "assistant",
+      text: "Sorry, something went wrong. Please try again.",
+    });
+    console.error("Translation advice error:", err);
+  } finally {
+    adviceLoading.value = false;
+  }
+}
+
+function sendAdviceMessage() {
+  const message = adviceInput.value.trim();
+  if (!message || adviceLoading.value) return;
+  // Full conversation so far is the history for this new turn.
+  const history = adviceThread.value.map((m) => ({ ...m }));
+  adviceInput.value = "";
+  runAdvice(message, history);
+}
+
+function startEditMessage(index: number) {
+  if (adviceLoading.value) return;
+  editingIndex.value = index;
+  editingText.value = adviceThread.value[index]?.text || "";
+}
+
+function cancelEditMessage() {
+  editingIndex.value = null;
+  editingText.value = "";
+}
+
+/**
+ * Commit an edited user message: drop that message and everything after it,
+ * then re-run the AI from the edited point with the preceding history.
+ */
+function submitEditMessage() {
+  const index = editingIndex.value;
+  if (index === null || adviceLoading.value) return;
+
+  const message = editingText.value.trim();
+  if (!message) return;
+
+  const history = adviceThread.value.slice(0, index).map((m) => ({ ...m }));
+  adviceThread.value = adviceThread.value.slice(0, index);
+  editingIndex.value = null;
+  editingText.value = "";
+
+  runAdvice(message, history);
+}
 
 // Hide the context line when it's just a duplicate / superset of the selection itself.
 const showContext = computed(() => {

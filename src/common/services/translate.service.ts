@@ -7,7 +7,11 @@ import { Dictionary } from "../types/general.type";
 
 import proxy from "./proxy.service";
 import { functionProvider } from "@modular-rest/client";
-import { LanguageLearningData } from "../../console-crane/modules/word-detail/types";
+import {
+  Chunk,
+  LanguageLearningData,
+  TranslationAdvice,
+} from "../../console-crane/modules/word-detail/types";
 import { LanguageDetector } from "../helper/language-detection";
 import { useSettingsStore } from "../store/settings";
 
@@ -155,6 +159,12 @@ export class TranslateService {
       return cachedResult;
     }
 
+    // Page context drives the bundle-name suggestion on first save from a page.
+    const pageTitle =
+      typeof document !== "undefined" ? document.title : undefined;
+    const pageUrl =
+      typeof location !== "undefined" ? location.href : undefined;
+
     // If not cached, fetch from API
     try {
       const data = await functionProvider.run<LanguageLearningData>({
@@ -165,12 +175,15 @@ export class TranslateService {
           targetLanguage: this.languageTitle,
           phrase: text,
           context: context || "",
+          pageTitle,
+          pageUrl,
         },
       });
 
       // Add context and phrase to the result
       data.context = context;
       data.phrase = text;
+      if (!Array.isArray(data.chunks)) data.chunks = [];
 
       // Cache the result
       this.cacheResult(cacheKey, data);
@@ -181,6 +194,31 @@ export class TranslateService {
       console.error("Detailed translation error:", error);
       throw error;
     }
+  }
+
+  /**
+   * Conversational advisor for the save modal's "fix this?" chat.
+   * Returns either a plain-text reply or an updated chunks list.
+   */
+  async fetchTranslationAdvice(params: {
+    phrase: string;
+    context: string;
+    message: string;
+    currentChunks?: Chunk[];
+    history?: { role: "user" | "assistant"; text: string }[];
+  }): Promise<TranslationAdvice> {
+    return functionProvider.run<TranslationAdvice>({
+      name: "translationAdvice",
+      args: {
+        phrase: params.phrase,
+        context: params.context || "",
+        message: params.message,
+        currentChunks: params.currentChunks || [],
+        history: params.history || [],
+        sourceLanguage: "auto",
+        targetLanguage: this.languageTitle,
+      },
+    });
   }
 
   async translateByDictionaryapi(word: string) {

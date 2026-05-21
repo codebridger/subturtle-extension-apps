@@ -1,18 +1,35 @@
 <template>
   <div class="my-2 bg-white dark:bg-gray-900 rounded-xl">
+    <!-- Suggested bundle chip (first save from this page) -->
+    <div v-if="useSuggested" class="mb-3 flex items-center gap-2 flex-wrap">
+      <span class="text-[11px] uppercase tracking-wider font-semibold text-gray-400">Suggested:</span>
+      <input
+        v-if="isEditingSuggested"
+        v-model="suggestedName"
+        type="text"
+        class="text-sm rounded-md border border-purple-300 dark:border-purple-700 bg-white dark:bg-gray-900 px-2 py-1 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-purple-400"
+        @keyup.enter="isEditingSuggested = false"
+        @blur="isEditingSuggested = false"
+      />
+      <button
+        v-else
+        type="button"
+        class="inline-flex items-center gap-1.5 text-sm rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-200 px-3 py-1 hover:bg-purple-200 dark:hover:bg-purple-900/60"
+        @click="isEditingSuggested = true"
+      >
+        <span>{{ suggestedName }}</span>
+        <i class="i-mdi-pencil text-xs opacity-70" />
+      </button>
+    </div>
+
     <FreemiumLimitCounter v-if="showFreemiumCounter" :used="usedCount" :total="totalCount" :isAtLimit="!!isAtLimit"
       :isDisabled="!!(isSaving || isAtLimit)" @action="savePhrase" @upgrade="handleUpgrade" class="mb-4">
       <InputGroup>
         <SelectPhraseBundleV2 class="flex-1" ref="selectBundleRef" v-model:selected-bundles="selectedBundles"
           :excluded-bundle-ids="existingBundles.map((b) => b._id)" />
-        <Button :label="isAtLimit
-            ? 'Upgrade'
-            : !selectedBundles.length
-              ? 'Add to Bundles'
-              : `Add to ${selectedBundles.length} Bundle${selectedBundles.length > 1 ? 's' : ''
-              }`
-          " :icon-name="isAtLimit ? 'pi pi-crown' : ''" size="lg" @click="isAtLimit ? handleUpgrade() : savePhrase()"
-          :disabled="!selectedBundles.length || isSaving" :is-loading="isSaving"
+        <Button :label="isAtLimit ? 'Upgrade' : saveLabel"
+          :icon-name="isAtLimit ? 'pi pi-crown' : ''" size="lg" @click="isAtLimit ? handleUpgrade() : savePhrase()"
+          :disabled="!canSave || isSaving" :is-loading="isSaving"
           class="border-none bg-gradient-to-r from-pink-500 to-purple-600 shadow-md hover:from-pink-600 hover:to-purple-700 text-white font-semibold dark:from-pink-700 dark:to-purple-900">
           <template #icon>
             <i :class="isAtLimit ? 'pi pi-crown' : 'mr-4 i-ep-collection'" />
@@ -24,11 +41,7 @@
       <div class="flex w-full">
         <SelectPhraseBundleV2 ref="selectBundleRef" v-model:selected-bundles="selectedBundles"
           :excluded-bundle-ids="existingBundles.map((b) => b._id)" />
-        <Button :label="!selectedBundles.length
-            ? 'Add to Bundles'
-            : `Add to ${selectedBundles.length} Bundle${selectedBundles.length > 1 ? 's' : ''
-            }`
-          " size="lg" @click="savePhrase" :disabled="!selectedBundles.length || isSaving" :is-loading="isSaving"
+        <Button :label="saveLabel" size="lg" @click="savePhrase" :disabled="!canSave || isSaving" :is-loading="isSaving"
           class="border-none bg-gradient-to-r from-pink-500 to-purple-600 shadow-md hover:from-pink-600 hover:to-purple-700 text-white font-semibold dark:from-pink-700 dark:to-purple-900">
           <template #icon>
             <i class="mr-4 i-ep-collection" />
@@ -36,6 +49,24 @@
         </Button>
       </div>
     </template>
+
+    <!-- Practice now + Preview flashcard -->
+    <div class="mt-2 flex items-center gap-2 flex-wrap">
+      <Button label="Practice now" size="sm" text @click="startPracticeNow">
+        <template #icon>
+          <i class="mr-2 i-solar-microphone-3-bold" />
+        </template>
+      </Button>
+      <Button v-if="previewSentence" :label="showPreview ? 'Hide preview' : 'Preview flashcard'" size="sm" text
+        @click="showPreview = !showPreview" />
+    </div>
+
+    <div v-if="showPreview && previewSentence"
+      class="mt-2 rounded-lg border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.02] p-3">
+      <p class="text-[10px] uppercase tracking-wider font-semibold text-gray-400 mb-1.5">Preview · fill in the blank</p>
+      <p class="text-sm text-gray-900 dark:text-gray-100" :dir="direction?.source">{{ previewSentence }}</p>
+    </div>
+
     <!-- Existing Bundles as Fieldset -->
     <Fieldset v-if="existingBundles.length > 0" class="saved-bundles-fieldset bg-white dark:bg-gray-900"
       legend="Saved in">
@@ -68,6 +99,9 @@ import { useDefaultBundleStore } from "../../stores/default-bundle";
 import { useProfileStore } from "../../stores/profile";
 import FreemiumLimitCounter from "./FreemiumLimitCounter.vue";
 import { analytic } from "../../plugins/mixpanel";
+import { normaliseSourceUrl } from "../../common/helper/url-normalise";
+import { useConsoleCraneStore } from "../stores/console-crane";
+import type { Chunk } from "../modules/word-detail/types";
 
 const props = defineProps<{
   phrase: string;
@@ -82,18 +116,69 @@ const props = defineProps<{
     target: string;
   };
   linguistic_data?: any;
+  chunks?: Chunk[];
+  suggestedBundleName?: string;
 }>();
 
 const selectBundleRef = ref();
 const selectedBundles = ref<string[]>([]);
 const existingBundles = ref<PhraseBundleType[]>([]);
 const existedPhrase = ref<PhraseType | null>(null);
+const allBundles = ref<PhraseBundleType[]>([]);
 
 const isSaving = ref(false);
 const isRemoving = ref(false);
 
+// Bundle suggestion (first save from a page).
+const suggestedName = ref("");
+const useSuggested = ref(false);
+const isEditingSuggested = ref(false);
+
+// Preview flashcard.
+const showPreview = ref(false);
+
 const defaultBundleStore = useDefaultBundleStore();
 const profileStore = useProfileStore();
+const consoleCraneStore = useConsoleCraneStore();
+
+// When the user picks a real bundle, drop the suggestion.
+watch(selectedBundles, (val) => {
+  if (val.length) useSuggested.value = false;
+});
+
+const canSave = computed(
+  () =>
+    selectedBundles.value.length > 0 ||
+    (useSuggested.value && !!suggestedName.value.trim())
+);
+
+const saveLabel = computed(() => {
+  if (useSuggested.value && suggestedName.value.trim()) {
+    return `Save to ${suggestedName.value.trim()}`;
+  }
+  if (selectedBundles.value.length === 1) {
+    const title = allBundles.value.find(
+      (b) => b._id === selectedBundles.value[0]
+    )?.title;
+    if (title) return `Save to ${title}`;
+  }
+  if (!selectedBundles.value.length) return "Add to Bundles";
+  return `Add to ${selectedBundles.value.length} Bundle${
+    selectedBundles.value.length > 1 ? "s" : ""
+  }`;
+});
+
+// Build the L3+ style cloze preview by blanking the first chunk inside the context.
+const previewSentence = computed(() => {
+  const chunk = props.chunks?.[0]?.text?.trim();
+  const sentence = (props.context || "").trim();
+  if (!chunk || !sentence) return "";
+  const idx = sentence.toLowerCase().indexOf(chunk.toLowerCase());
+  if (idx === -1) return "";
+  return (
+    sentence.slice(0, idx) + "_____" + sentence.slice(idx + chunk.length)
+  );
+});
 
 const showFreemiumCounter = computed(
   () => !!(profileStore.isFreemium && profileStore.freemiumAllocation)
@@ -112,20 +197,82 @@ watch(
   () => [props.phrase, props.translation],
   async () => {
     selectedBundles.value = [];
+    useSuggested.value = false;
+    suggestedName.value = props.suggestedBundleName?.trim() || "";
+    showPreview.value = false;
+
     await loadExistingBundles();
 
-    // Auto-select previous bundles for new phrases (not already saved)
-    if (existingBundles.value.length === 0) {
-      const defaultBundles = defaultBundleStore.getDefaultBundles();
-      selectedBundles.value = defaultBundles;
+    // Already-saved phrase: nothing to default.
+    if (existingBundles.value.length > 0) return;
+
+    // 1. An existing bundle from this same page (matched by normalised URL).
+    const urlBundleId = await matchBundleByUrl();
+    if (urlBundleId) {
+      selectedBundles.value = [urlBundleId];
+      return;
     }
+
+    // 2. A suggested name from the page title (first save from this page).
+    if (suggestedName.value) {
+      useSuggested.value = true;
+      return;
+    }
+
+    // 3. Last-used bundles (existing behaviour).
+    selectedBundles.value = defaultBundleStore.getDefaultBundles();
   },
   { immediate: true, deep: true }
 );
 
 onMounted(() => {
   loadExistingBundles();
+  loadAllBundles();
 });
+
+async function loadAllBundles() {
+  try {
+    allBundles.value = await dataProvider.find<PhraseBundleType>({
+      database: DATABASE.USER_CONTENT,
+      collection: COLLECTIONS.PHRASE_BUNDLE,
+      query: { refId: authentication.user?.id },
+      options: { sort: "-_id" },
+    });
+  } catch (error) {
+    console.error("Error loading bundles:", error);
+  }
+}
+
+/**
+ * Find the most recent bundle that already holds a phrase saved from this same
+ * page (by normalised source URL). Returns its id, or null.
+ */
+async function matchBundleByUrl(): Promise<string | null> {
+  if (typeof location === "undefined") return null;
+  const sourceUrl = normaliseSourceUrl(location.href);
+  if (!sourceUrl) return null;
+
+  try {
+    const phrases = await dataProvider.find<PhraseType & { _id: string }>({
+      database: DATABASE.USER_CONTENT,
+      collection: COLLECTIONS.PHRASE,
+      query: { refId: authentication.user?.id, sourceUrl },
+    });
+    const phraseIds = phrases.map((p) => p._id);
+    if (!phraseIds.length) return null;
+
+    const bundles = await dataProvider.find<PhraseBundleType>({
+      database: DATABASE.USER_CONTENT,
+      collection: COLLECTIONS.PHRASE_BUNDLE,
+      query: { refId: authentication.user?.id, phrases: { $in: phraseIds } },
+      options: { sort: "-_id" },
+    });
+    return bundles[0]?._id || null;
+  } catch (error) {
+    console.error("Error matching bundle by URL:", error);
+    return null;
+  }
+}
 
 async function loadExistingBundles() {
   if (!props.phrase || !props.translation) return;
@@ -202,12 +349,37 @@ async function removePhraseFromBundle(bundleId: string) {
   }
 }
 
-async function savePhrase() {
-  if (!selectedBundles.value.length) return;
+/**
+ * Resolve the bundle ids to save into. When the user kept the suggested bundle,
+ * create it now and return its id. Returns an empty array if nothing to save.
+ */
+async function resolveBundleIds(): Promise<string[]> {
+  if (selectedBundles.value.length) return selectedBundles.value;
 
+  if (useSuggested.value && suggestedName.value.trim()) {
+    const created = await dataProvider.insertOne({
+      database: DATABASE.USER_CONTENT,
+      collection: COLLECTIONS.PHRASE_BUNDLE,
+      doc: { title: suggestedName.value.trim(), refId: authentication.user?.id },
+    });
+    analytic.track("phrase-bundle_created");
+    const id = (created as any)?._id;
+    return id ? [id] : [];
+  }
+
+  return [];
+}
+
+async function savePhrase() {
   isSaving.value = true;
 
   try {
+    const bundleIds = await resolveBundleIds();
+    if (!bundleIds.length) {
+      isSaving.value = false;
+      return;
+    }
+
     // Use the enhanced server function with linguistic type
     const result = await functionProvider
       .run<PhraseType>({
@@ -216,7 +388,7 @@ async function savePhrase() {
           phrase: props.phrase.trim(),
           translation: props.translation.trim(),
           translation_language: TranslateService.instance.targetLanguage.trim(),
-          bundleIds: selectedBundles.value,
+          bundleIds,
           refId: authentication.user?.id,
           type: "linguistic", // Specify linguistic type
           // Add linguistic-specific data from the word detail context
@@ -224,6 +396,8 @@ async function savePhrase() {
           direction: props.direction,
           language_info: props.language_info,
           linguistic_data: props.linguistic_data,
+          chunks: props.chunks || [],
+          sourceUrl: typeof location !== "undefined" ? location.href : undefined,
         },
       })
       .then((result) => {
@@ -237,12 +411,13 @@ async function savePhrase() {
     // Update the existedPhrase reference if it's a new phrase
     existedPhrase.value = result;
 
-    // Store selected bundles as new defaults for future saves
-    defaultBundleStore.setDefaultBundles(selectedBundles.value);
+    // Store the bundles used as new defaults for future saves
+    defaultBundleStore.setDefaultBundles(bundleIds);
 
     // Clear selection and reload existing bundles
     selectedBundles.value = [];
-    await loadExistingBundles();
+    useSuggested.value = false;
+    await Promise.all([loadExistingBundles(), loadAllBundles()]);
     // Refresh freemium counter
     await profileStore.fetchSubscription();
 
@@ -259,6 +434,24 @@ async function savePhrase() {
 
 function handleUpgrade() {
   window.open(getSubturtleDashboardUrlWithToken(), "_blank");
+}
+
+/**
+ * Open the Practice now config page inside the console-crane modal.
+ * The full config card ships in subtask 86exnxnw7; this navigates to its route.
+ */
+function startPracticeNow() {
+  analytic.track("practice-now_opened");
+  consoleCraneStore.toggleConsoleCrane(
+    "practice-config",
+    {
+      phrase: props.phrase,
+      context: props.context || "",
+      chunks: props.chunks || [],
+      bundleId: selectedBundles.value[0] || null,
+    },
+    true
+  );
 }
 </script>
 
