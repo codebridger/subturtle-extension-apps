@@ -113,6 +113,19 @@ const showSuggestion = computed(
   () => !!props.suggestedName && (props.selectedBundles?.length || 0) === 0
 );
 
+// If a selected id isn't in the loaded options (e.g. a bundle just created on
+// save, or a server-matched bundle), refetch so its title resolves instead of
+// showing the raw id.
+watch(
+  () => props.selectedBundles,
+  (ids) => {
+    if (!ids?.length || isFetching.value) return;
+    const known = new Set(options.value.map((o) => o._id));
+    if (ids.some((id) => !known.has(id))) fetchOptions();
+  },
+  { deep: true }
+);
+
 /**
  * Resolve a selected entry to its bundle title. pilotui hands back the option
  * object when picked from the dropdown, but the raw value (id) when the value
