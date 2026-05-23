@@ -13,7 +13,7 @@ import { RouterView, useRouter } from "vue-router";
 import Modal from "./components/Modal.vue";
 import { getSubturtleDashboardUrlWithToken } from "../common/static/global";
 import { Button, IconButton, App } from "pilotui";
-import { watch, onMounted, onUnmounted, ref, computed } from "vue";
+import { watch, onMounted, onUnmounted, ref } from "vue";
 import { analytic } from "../plugins/mixpanel";
 
 const store = useConsoleCraneStore();
@@ -41,13 +41,6 @@ function openSettings() {
 const rootRef = ref<HTMLElement | null>(null);
 let cleanupThemeListener: (() => void) | undefined;
 
-const isOnSettingsPage = computed(() => {
-  return (
-    store.history.length > 0 &&
-    store.history[store.history.length - 1].name === "settings"
-  );
-});
-
 onMounted(() => {
   if (rootRef.value) {
     // cleanupThemeListener = useSystemTheme(rootRef.value);
@@ -66,7 +59,7 @@ onUnmounted(() => {
         <div class="flex flex-col" :style="{ width: width + 'px', height: height + 'px' }">
           <!-- Header: always visible -->
           <section class="flex items-center gap-2 px-6 py-3 border-b border-gray-100 dark:border-white/[0.08] shrink-0">
-            <template v-if="isOnSettingsPage">
+            <template v-if="!store.isOnMainPage">
               <IconButton size="sm" rounded="full" icon="i-mdi-arrow-left" @click="store.goBack" />
             </template>
             <template v-else>

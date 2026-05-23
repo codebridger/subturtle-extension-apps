@@ -27,23 +27,6 @@
         </Button>
       </div>
     </template>
-
-    <!-- Practice now + Preview flashcard -->
-    <div class="mt-2 flex items-center gap-2 flex-wrap">
-      <Button label="Practice now" size="sm" text @click="startPracticeNow">
-        <template #icon>
-          <i class="mr-2 i-solar-microphone-3-bold" />
-        </template>
-      </Button>
-      <Button v-if="previewSentence" :label="showPreview ? 'Hide preview' : 'Preview flashcard'" size="sm" text
-        @click="showPreview = !showPreview" />
-    </div>
-
-    <div v-if="showPreview && previewSentence"
-      class="mt-2 rounded-lg border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.02] p-3">
-      <p class="text-[10px] uppercase tracking-wider font-semibold text-gray-400 mb-1.5">Preview · fill in the blank</p>
-      <p class="text-sm text-gray-900 dark:text-gray-100" :dir="direction?.source">{{ previewSentence }}</p>
-    </div>
   </div>
 </template>
 
@@ -99,9 +82,6 @@ const isSaving = ref(false);
 // Bundle suggestion (first save from a page).
 const suggestedName = ref("");
 const useSuggested = ref(false);
-
-// Preview flashcard.
-const showPreview = ref(false);
 
 const defaultBundleStore = useDefaultBundleStore();
 const profileStore = useProfileStore();
@@ -179,18 +159,6 @@ const freemiumSaveActive = computed(
 // button stays compact.
 const saveLabel = computed(() => "Save");
 
-// Build the L3+ style cloze preview by blanking the first chunk inside the context.
-const previewSentence = computed(() => {
-  const chunk = props.chunks?.[0]?.text?.trim();
-  const sentence = (props.context || "").trim();
-  if (!chunk || !sentence) return "";
-  const idx = sentence.toLowerCase().indexOf(chunk.toLowerCase());
-  if (idx === -1) return "";
-  return (
-    sentence.slice(0, idx) + "_____" + sentence.slice(idx + chunk.length)
-  );
-});
-
 const showFreemiumCounter = computed(
   () => !!(profileStore.isFreemium && profileStore.freemiumAllocation)
 );
@@ -210,7 +178,6 @@ watch(
     selectedBundles.value = [];
     useSuggested.value = false;
     suggestedName.value = "";
-    showPreview.value = false;
 
     await loadExistingBundles();
 
@@ -397,27 +364,6 @@ async function savePhrase() {
 
 function handleUpgrade() {
   window.open(getSubturtleDashboardUrlWithToken(), "_blank");
-}
-
-/**
- * Open the Practice now config page inside the console-crane modal.
- * The full config card ships in subtask 86exnxnw7; this navigates to its route.
- */
-async function startPracticeNow() {
-  analytic.track("practice-now_opened");
-  // Lazy import to avoid a circular dependency:
-  // SaveWordSectionV2 -> console-crane store -> router -> word-detail -> SaveWordSectionV2.
-  const { useConsoleCraneStore } = await import("../stores/console-crane");
-  useConsoleCraneStore().toggleConsoleCrane(
-    "practice-config",
-    {
-      phrase: props.phrase,
-      context: props.context || "",
-      chunks: props.chunks || [],
-      bundleId: selectedBundles.value[0] || null,
-    },
-    true
-  );
 }
 </script>
 

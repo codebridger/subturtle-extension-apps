@@ -142,6 +142,16 @@
         </div>
       </section>
 
+      <!-- Phrase actions, kept right under the translation so they're easy to spot -->
+      <div v-if="isLogin && wordData?.translation?.phrase" class="flex items-center gap-2 flex-wrap">
+        <Button label="Practice with AI" size="sm" text @click="startPracticeWithAI">
+          <template #icon>
+            <i class="mr-2 i-solar-microphone-3-bold" />
+          </template>
+        </Button>
+        <Button label="Preview flashcard" size="sm" text @click="openFlashcardPreview" />
+      </div>
+
       <!-- Error state with retry -->
       <div
         v-if="error && !pending"
@@ -168,36 +178,37 @@
 
       <!-- LINGUISTIC DATA SECTION - Shows detailed linguistic information -->
       <template v-if="wordData && wordData.linguistic_data">
-        <section class="w-full flex flex-col gap-3">
-          <!-- Definition card: per-chunk meaning + pronunciation, or the whole-phrase definition. -->
-          <Fieldset class="dark:bg-gray-900" legend="Definition">
-            <div
-              v-for="(entry, index) in definitionEntries"
-              :key="index"
-              class="mb-4 last:mb-3"
-            >
-              <div v-if="entry.label || entry.transliteration" class="flex items-baseline justify-between gap-4 mb-1">
-                <span v-if="entry.label" class="text-sm font-semibold text-gray-700 dark:text-gray-200" dir="ltr">
-                  {{ entry.label }}
-                </span>
-                <span v-else />
-                <span v-if="entry.transliteration" class="text-sm italic text-gray-500 dark:text-gray-400" :dir="wordData?.direction?.target">
-                  {{ entry.transliteration }}
-                </span>
-              </div>
-              <p v-if="entry.definition" class="text-base text-gray-900 dark:text-gray-100" :dir="wordData?.direction?.target">
-                {{ entry.definition }}
-              </p>
-            </div>
+        <section class="rounded-xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-gray-900 px-6 py-5">
+          <p class="text-[10px] uppercase tracking-wider font-semibold text-gray-400 dark:text-gray-400 mb-3">
+            Definition
+          </p>
 
-            <!-- Type and formality level -->
-            <div class="flex gap-2">
-              <IconButton v-if="wordData.linguistic_data.type" badge size="sm"
-                :label="wordData.linguistic_data.type.toUpperCase()" />
-              <IconButton v-if="wordData.linguistic_data.formality_level" badge size="sm"
-                :label="wordData.linguistic_data.formality_level.toUpperCase()" />
+          <div
+            v-for="(entry, index) in definitionEntries"
+            :key="index"
+            class="mb-4 last:mb-0"
+          >
+            <div v-if="entry.label || entry.transliteration" class="flex items-baseline justify-between gap-4 mb-1">
+              <span v-if="entry.label" class="text-sm font-semibold text-gray-700 dark:text-gray-200" dir="ltr">
+                {{ entry.label }}
+              </span>
+              <span v-else />
+              <span v-if="entry.transliteration" class="text-sm italic text-gray-500 dark:text-gray-400" :dir="wordData?.direction?.target">
+                {{ entry.transliteration }}
+              </span>
             </div>
-          </Fieldset>
+            <p v-if="entry.definition" class="text-base text-gray-900 dark:text-gray-100" :dir="wordData?.direction?.target">
+              {{ entry.definition }}
+            </p>
+          </div>
+
+          <!-- Type and formality level -->
+          <div class="flex gap-2 mt-4">
+            <IconButton v-if="wordData.linguistic_data.type" badge size="sm"
+              :label="wordData.linguistic_data.type.toUpperCase()" />
+            <IconButton v-if="wordData.linguistic_data.formality_level" badge size="sm"
+              :label="wordData.linguistic_data.formality_level.toUpperCase()" />
+          </div>
         </section>
       </template>
 
@@ -249,9 +260,10 @@ import { Chunk, LanguageLearningData } from "./types";
 
 import { isLogin } from "../../../plugins/modular-rest";
 import SaveWordSectionV2 from "../../components/SaveWordSectionV2.vue";
+import { useConsoleCraneStore } from "../../stores/console-crane";
 
-import Fieldset from "../../../common/components/Fieldset.vue";
 import { IconButton } from "pilotui/elements";
+import { Button } from "pilotui";
 
 import { useRoute } from "vue-router";
 import { sendMessage } from "../../../common/helper/massage";
@@ -318,6 +330,36 @@ const context = computed(() => {
   // Prefer the stored source sentence (saved phrases) over the live selection.
   return wordData.value?.context || getProps().context || "";
 });
+
+/** Open the AI practice config page for this phrase. */
+function startPracticeWithAI() {
+  analytic.track("practice-now_opened");
+  useConsoleCraneStore().toggleConsoleCrane(
+    "practice-config",
+    {
+      phrase: cleanText(getProps().word || ""),
+      context: context.value,
+      chunks: wordData.value?.chunks || [],
+    },
+    true
+  );
+}
+
+/** Open the flashcard cloze preview page for this phrase. */
+function openFlashcardPreview() {
+  analytic.track("flashcard-preview_opened");
+  useConsoleCraneStore().toggleConsoleCrane(
+    "flashcard-preview",
+    {
+      phrase: cleanText(getProps().word || ""),
+      translation: cleanText(wordData.value?.translation?.phrase || ""),
+      context: context.value,
+      chunks: wordData.value?.chunks || [],
+      direction: wordData.value?.direction,
+    },
+    true
+  );
+}
 
 /**
  * Entries for the Definition fieldset. Each entry pairs a label (chunk text)
