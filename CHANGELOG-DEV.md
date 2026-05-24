@@ -1,3 +1,20 @@
+# [1.12.0-dev.2](https://github.com/codebridger/subturtle-extension-apps/compare/v1.12.0-dev.1...v1.12.0-dev.2) (2026-05-24)
+
+
+### Bug Fixes
+
+* **save-modal:** break circular import to console-crane store ([ab00130](https://github.com/codebridger/subturtle-extension-apps/commit/ab00130647d72703147f8a96df6faa8e3b1fbbe5))
+* **save-modal:** refetch bundle options so post-save chip shows title ([25499da](https://github.com/codebridger/subturtle-extension-apps/commit/25499da35925bebeb854f20973c3ae39b4dbd6f2))
+
+
+### Features
+
+* **console-crane:** practice + flashcard-preview pages, near-translation actions ([224b9da](https://github.com/codebridger/subturtle-extension-apps/commit/224b9da79e8b9d2f094ae3f63b1f8524fcb78299))
+* **save-modal:** chunk highlights, AI advice chat, bundle suggestion ([9954c22](https://github.com/codebridger/subturtle-extension-apps/commit/9954c22f8822f5a06912247d0098d937c20ec6b5))
+* **save-modal:** in-field bundle chips with dirty-aware save + inline removal ([374cbb4](https://github.com/codebridger/subturtle-extension-apps/commit/374cbb4b0c957c5def27d6b9f0211b3ed4fe17f5))
+* **save-modal:** per-chunk definitions, merged pronunciation, reorder save ([f766040](https://github.com/codebridger/subturtle-extension-apps/commit/f76604023886a6d88b18831c9e492ef8253e11b7))
+* **saved-phrase:** DB-first lookup, reuse stored translation, no AI re-call ([1315cc8](https://github.com/codebridger/subturtle-extension-apps/commit/1315cc86c3421ab64560e68e70d0b282c662d3ba))
+
 # [1.12.0-dev.1](https://github.com/codebridger/subturtle-extension-apps/compare/v1.11.2-dev.1...v1.12.0-dev.1) (2026-05-21)
 
 
