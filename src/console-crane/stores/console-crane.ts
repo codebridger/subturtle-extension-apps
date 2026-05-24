@@ -2,7 +2,7 @@ import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { ConsolePage } from "../types";
 
-import { router } from "../router";
+import { getConsoleCraneRouter } from "../navigation";
 import { encodeRouteParams } from "../route-params";
 
 interface PageEntry {
@@ -37,7 +37,7 @@ export const useConsoleCraneStore = defineStore("console-crane", () => {
     ) {
       history.value.push({ name: page, params });
     }
-    router.push({
+    getConsoleCraneRouter()?.push({
       name: page,
       params: { data: encodeRouteParams(params) },
     });
@@ -47,7 +47,7 @@ export const useConsoleCraneStore = defineStore("console-crane", () => {
     if (history.value.length > 1) {
       history.value.pop(); // Remove current
       const prev = history.value[history.value.length - 1];
-      router.push({
+      getConsoleCraneRouter()?.push({
         name: prev.name,
         params: { data: encodeRouteParams(prev.params) },
       });
