@@ -62,26 +62,7 @@
 import { computed } from "vue";
 import { useRoute } from "vue-router";
 import { decodeRouteParams } from "../../route-params";
-import type { Chunk } from "../word-detail/types";
-
-interface PreviewData {
-  phrase?: string;
-  translation?: string;
-  context?: string;
-  chunks?: Chunk[];
-  direction?: { source: "ltr" | "rtl"; target: "ltr" | "rtl" };
-}
-
-interface PreviewCard {
-  kind: "recognition" | "cloze";
-  title: string;
-  /** Leitner levels this card type is reviewed at. */
-  levels: string;
-  /** Card front (prompt). */
-  front: string;
-  /** Revealed unit on the back (the blanked chunk, for cloze cards). */
-  answer?: string;
-}
+import { buildPreviewCards, type PreviewData } from "./cards";
 
 const route = useRoute();
 
@@ -89,38 +70,5 @@ const data = computed<PreviewData>(
   () => decodeRouteParams<PreviewData>(route.params.data as string) || {}
 );
 
-const cards = computed<PreviewCard[]>(() => {
-  const list: PreviewCard[] = [];
-  const phrase = data.value.phrase?.trim() || "";
-  const sentence = (data.value.context || "").trim();
-
-  // Recognition card — always available (Levels 1-2, shipped today).
-  if (phrase) {
-    list.push({
-      kind: "recognition",
-      title: "Recognition",
-      levels: "Levels 1–2",
-      front: phrase,
-    });
-  }
-
-  // Fill-in-the-blank cards — one per confirmed chunk found in the source
-  // sentence (Levels 3-5, proposed in PRFAQ-001 Phase 1). The first occurrence
-  // of each chunk is blanked.
-  for (const chunk of data.value.chunks || []) {
-    const unit = (chunk.text || "").trim();
-    if (!unit || !sentence) continue;
-    const idx = sentence.toLowerCase().indexOf(unit.toLowerCase());
-    if (idx === -1) continue;
-    list.push({
-      kind: "cloze",
-      title: "Fill in the blank",
-      levels: "Levels 3–5",
-      front: sentence.slice(0, idx) + "_____" + sentence.slice(idx + unit.length),
-      answer: unit,
-    });
-  }
-
-  return list;
-});
+const cards = computed(() => buildPreviewCards(data.value));
 </script>
