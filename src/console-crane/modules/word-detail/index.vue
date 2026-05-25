@@ -338,8 +338,12 @@ function startPracticeWithAI() {
     "practice-config",
     {
       phrase: cleanText(getProps().word || ""),
+      translation: cleanText(wordData.value?.translation?.phrase || ""),
       context: context.value,
       chunks: wordData.value?.chunks || [],
+      direction: wordData.value?.direction,
+      language_info: wordData.value?.language_info,
+      linguistic_data: wordData.value?.linguistic_data,
     },
     true
   );
