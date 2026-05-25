@@ -5,9 +5,9 @@ import { encodeRouteParams } from "../src/console-crane/route-params";
 
 // Drive the route :data payload via a hoisted holder (same approach as
 // flashcard-preview.test.ts), plus holders for the saved-phrase lookup, the
-// freemium flag, and window.open calls.
-const { routeHolder, savedHolder, profileHolder, openHolder } = vi.hoisted(
-  () => ({
+// freemium flag, window.open calls, and the login ref.
+const { routeHolder, savedHolder, profileHolder, openHolder, loginHolder } =
+  vi.hoisted(() => ({
     routeHolder: { data: "" },
     savedHolder: { value: null as { _id: string } | null },
     profileHolder: {
@@ -16,8 +16,9 @@ const { routeHolder, savedHolder, profileHolder, openHolder } = vi.hoisted(
       fetchSubscription: () => Promise.resolve(),
     },
     openHolder: { calls: [] as string[] },
-  })
-);
+    // `ref` is filled in by the modular-rest mock so tests can toggle login.
+    loginHolder: { ref: null as { value: boolean } | null },
+  }));
 
 vi.mock("vue-router", () => ({
   useRoute: () => ({ params: { data: routeHolder.data } }),
@@ -31,6 +32,14 @@ vi.mock("../src/stores/profile", () => ({
 vi.mock("../src/common/static/global", () => ({
   getSubturtleDashboardUrlWithToken: (path?: string) => `OPEN:${path ?? ""}`,
 }));
+// Real Vue ref so the component's template + isLogin watch stay reactive; the
+// heavy modular-rest plugin (chrome APIs, @modular-rest/client) is mocked away.
+vi.mock("../src/plugins/modular-rest", async () => {
+  const { ref } = await import("vue");
+  const isLogin = ref(true);
+  loginHolder.ref = isLogin;
+  return { isLogin };
+});
 
 // Pilotui Button → minimal stub that re-emits click (mirrors word-detail.test.ts).
 vi.mock("pilotui/elements", () => ({
@@ -72,6 +81,8 @@ beforeEach(() => {
   profileHolder.isFreemium = false;
   profileHolder.freemiumAllocation = null;
   openHolder.calls = [];
+  // Default to logged in; the logged-out test flips this before mounting.
+  if (loginHolder.ref) loginHolder.ref.value = true;
   vi.spyOn(window, "open").mockImplementation((url?: string | URL) => {
     openHolder.calls.push(String(url));
     return null;
@@ -82,13 +93,16 @@ describe("PracticeConfig page (voice-only)", () => {
   it("prompts to save first and reveals the save widget on demand", async () => {
     const w = mountWith({ phrase: "had to" });
     await flushPromises();
-    // Step 1: a prompt + "Let's save it" — no save widget, no config card yet.
+    // The voice picker is always shown; the not-saved footer adds the prompt.
+    expect(w.text()).toContain("Choose a coach voice");
+    expect(w.find(".voice-picker-stub").exists()).toBe(true);
+    // Step 1: a prompt + "Let's save it" — no save widget yet.
     expect(w.text()).toContain("Let's save it");
     expect(w.find(".save-stub").exists()).toBe(false);
-    expect(w.text()).not.toContain("Choose a coach voice");
-    // Step 2: clicking it reveals the real save widget.
+    // Step 2: clicking it reveals the real save widget; the picker stays put.
     await w.find("button.pilot-btn").trigger("click");
     expect(w.find(".save-stub").exists()).toBe(true);
+    expect(w.find(".voice-picker-stub").exists()).toBe(true);
     w.unmount();
   });
 
@@ -102,6 +116,22 @@ describe("PracticeConfig page (voice-only)", () => {
     expect(w.find(".voice-picker-stub").exists()).toBe(true);
     expect(w.text()).toContain("Start");
     expect(w.find(".save-stub").exists()).toBe(false);
+    w.unmount();
+  });
+
+  it("shows the voice picker and a login prompt when logged out", async () => {
+    loginHolder.ref!.value = false;
+    const w = mountWith({ phrase: "had to" });
+    await flushPromises();
+    // Voice picker is previewable without auth, plus an inline login CTA that
+    // sets expectations that saving follows login before practice can start.
+    expect(w.text()).toContain("Choose a coach voice");
+    expect(w.find(".voice-picker-stub").exists()).toBe(true);
+    expect(w.text()).toContain("Log in & save first");
+    expect(w.text()).toContain("needs a saved phrase");
+    // Not the save-first flow, and no Start until they log in.
+    expect(w.text()).not.toContain("Let's save it");
+    expect(w.text()).not.toContain("Start");
     w.unmount();
   });
 
@@ -168,8 +198,9 @@ describe("PracticeConfig page (voice-only)", () => {
     expect(w.text()).toContain("used all 3 free AI sessions");
 
     await w.find("button.pilot-btn").trigger("click");
-    // Upgrade opens the dashboard root, not a practice session.
+    // Upgrade opens the dashboard subscription settings, not a practice session.
     expect(openHolder.calls).toHaveLength(1);
+    expect(openHolder.calls[0]).toContain("/settings/subscription");
     expect(openHolder.calls[0]).not.toContain("session=");
     w.unmount();
   });

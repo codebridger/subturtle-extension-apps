@@ -142,8 +142,10 @@
         </div>
       </section>
 
-      <!-- Phrase actions, kept right under the translation so they're easy to spot -->
-      <div v-if="isLogin && wordData?.translation?.phrase" class="flex items-center gap-2 flex-wrap">
+      <!-- Phrase actions, kept right under the translation so they're easy to spot.
+           Shown to logged-out users too: flashcard preview has no auth guard, and
+           the practice config page handles the login prompt itself. -->
+      <div v-if="wordData?.translation?.phrase" class="flex items-center gap-2 flex-wrap">
         <Button label="Practice with AI" size="sm" text @click="startPracticeWithAI">
           <template #icon>
             <i class="mr-2 i-solar-microphone-3-bold" />
