@@ -132,12 +132,16 @@ describe("WordDetail page", () => {
     wrapper.unmount();
   });
 
-  it("hides the action buttons when logged out", async () => {
+  it("still shows the action buttons when logged out", async () => {
+    // Flashcard preview has no auth guard, and practice-config shows its own
+    // login prompt — so both buttons are offered to logged-out users too.
     (isLogin as unknown as { value: boolean }).value = false;
     const { wrapper } = mountWordDetail({ word: "Kinsta Plan" });
     await flushPromises();
 
-    expect(buttonLabels(wrapper).join("|")).not.toContain("Practice with AI");
+    const labels = buttonLabels(wrapper).join("|");
+    expect(labels).toContain("Practice with AI");
+    expect(labels).toContain("Preview flashcard");
     wrapper.unmount();
   });
 

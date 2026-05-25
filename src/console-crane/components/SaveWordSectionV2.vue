@@ -70,6 +70,11 @@ const props = defineProps<{
   chunks?: Chunk[];
 }>();
 
+const emit = defineEmits<{
+  /** Fired after a successful save, carrying the created phrase document. */
+  saved: [PhraseType];
+}>();
+
 const selectBundleRef = ref();
 const selectedBundles = ref<string[]>([]);
 const existingBundles = ref<PhraseBundleType[]>([]);
@@ -351,6 +356,10 @@ async function savePhrase() {
     suggestedName.value = "";
     await loadExistingBundles();
     await profileStore.fetchSubscription();
+
+    if (existedPhrase.value) {
+      emit("saved", existedPhrase.value);
+    }
 
     if (selectBundleRef.value?.closeDropdown) {
       selectBundleRef.value.closeDropdown();
