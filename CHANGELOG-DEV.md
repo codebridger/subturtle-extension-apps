@@ -1,3 +1,12 @@
+# [1.12.0-dev.3](https://github.com/codebridger/subturtle-extension-apps/compare/v1.12.0-dev.2...v1.12.0-dev.3) (2026-05-25)
+
+
+### Features
+
+* **practice-now:** emphasize practiced phrase + cover login flows ([8ff3408](https://github.com/codebridger/subturtle-extension-apps/commit/8ff340831d3ca35dcbc97ddfcf7088f7f382582b))
+* **practice-now:** open config to logged-out users + clearer CTAs ([2f09e05](https://github.com/codebridger/subturtle-extension-apps/commit/2f09e0577de43a55d995e9277446d313b058beef))
+* **practice-now:** voice session config + dashboard deep-link ([db1a3fc](https://github.com/codebridger/subturtle-extension-apps/commit/db1a3fc08f2579c2d6c958a2e8c289c95e592339))
+
 # [1.12.0-dev.2](https://github.com/codebridger/subturtle-extension-apps/compare/v1.12.0-dev.1...v1.12.0-dev.2) (2026-05-24)
 
 
