@@ -8,16 +8,17 @@
     the real save UI is shown inline so the user can save and proceed.
   -->
   <div class="flex flex-col min-h-full px-6 py-8 dark:bg-gray-950">
-    <!-- Header -->
-    <div class="mb-5">
-      <div class="flex items-center gap-2">
-        <i class="i-solar-microphone-3-bold text-xl text-purple-500" />
-        <h1 class="text-base font-semibold text-gray-900 dark:text-gray-100">Practice now</h1>
+    <!-- Header: "Practice now" is a small eyebrow; the phrase is the focal point. -->
+    <div class="mb-6">
+      <div class="flex items-center gap-1.5 mb-2">
+        <i class="i-solar-microphone-3-bold text-base text-purple-500" />
+        <span class="text-[11px] uppercase tracking-wider font-semibold text-purple-500 dark:text-purple-300">Practice now</span>
       </div>
-      <p v-if="data.phrase" class="text-sm text-gray-600 dark:text-gray-300 mt-1 break-words"
+      <h1 v-if="data.phrase"
+        class="text-2xl font-bold leading-snug text-gray-900 dark:text-gray-100 break-words"
         :dir="data.direction?.source">
         {{ data.phrase }}
-      </p>
+      </h1>
     </div>
 
     <!-- Resolving saved state -->

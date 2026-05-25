@@ -6,8 +6,14 @@ import { encodeRouteParams } from "../src/console-crane/route-params";
 // Drive the route :data payload via a hoisted holder (same approach as
 // flashcard-preview.test.ts), plus holders for the saved-phrase lookup, the
 // freemium flag, window.open calls, and the login ref.
-const { routeHolder, savedHolder, profileHolder, openHolder, loginHolder } =
-  vi.hoisted(() => ({
+const {
+  routeHolder,
+  savedHolder,
+  profileHolder,
+  openHolder,
+  loginHolder,
+  sendHolder,
+} = vi.hoisted(() => ({
     routeHolder: { data: "" },
     savedHolder: { value: null as { _id: string } | null },
     profileHolder: {
@@ -18,6 +24,8 @@ const { routeHolder, savedHolder, profileHolder, openHolder, loginHolder } =
     openHolder: { calls: [] as string[] },
     // `ref` is filled in by the modular-rest mock so tests can toggle login.
     loginHolder: { ref: null as { value: boolean } | null },
+    // Captures the login-window message dispatched by the logged-out CTA.
+    sendHolder: { calls: [] as any[] },
   }));
 
 vi.mock("vue-router", () => ({
@@ -40,6 +48,13 @@ vi.mock("../src/plugins/modular-rest", async () => {
   loginHolder.ref = isLogin;
   return { isLogin };
 });
+// Spy on the login-window dispatch instead of hitting the chrome runtime shim.
+vi.mock("../src/common/helper/massage", () => ({
+  sendMessage: (arg: any) => {
+    sendHolder.calls.push(arg);
+    return Promise.resolve({});
+  },
+}));
 
 // Pilotui Button → minimal stub that re-emits click (mirrors word-detail.test.ts).
 vi.mock("pilotui/elements", () => ({
@@ -70,6 +85,7 @@ vi.mock("../src/console-crane/components/VoicePicker.vue", () => ({
 }));
 
 import PracticeConfig from "../src/console-crane/modules/practice-config/index.vue";
+import { OpenLoginWindowMessage } from "../src/common/types/messaging";
 
 function mountWith(payload: Record<string, unknown>) {
   routeHolder.data = encodeRouteParams(payload);
@@ -81,6 +97,7 @@ beforeEach(() => {
   profileHolder.isFreemium = false;
   profileHolder.freemiumAllocation = null;
   openHolder.calls = [];
+  sendHolder.calls = [];
   // Default to logged in; the logged-out test flips this before mounting.
   if (loginHolder.ref) loginHolder.ref.value = true;
   vi.spyOn(window, "open").mockImplementation((url?: string | URL) => {
@@ -132,6 +149,36 @@ describe("PracticeConfig page (voice-only)", () => {
     // Not the save-first flow, and no Start until they log in.
     expect(w.text()).not.toContain("Let's save it");
     expect(w.text()).not.toContain("Start");
+    w.unmount();
+  });
+
+  it("dispatches the login-window message from the logged-out CTA", async () => {
+    loginHolder.ref!.value = false;
+    const w = mountWith({ phrase: "had to" });
+    await flushPromises();
+
+    // The only button in the logged-out footer is the login CTA.
+    await w.find("button.pilot-btn").trigger("click");
+    expect(sendHolder.calls).toHaveLength(1);
+    expect(sendHolder.calls[0]).toBeInstanceOf(OpenLoginWindowMessage);
+    w.unmount();
+  });
+
+  it("advances past the login prompt once the user logs in", async () => {
+    loginHolder.ref!.value = false;
+    const w = mountWith({ phrase: "had to" });
+    await flushPromises();
+    expect(w.text()).toContain("Log in & save first");
+
+    // Simulate a completed login: the isLogin watch re-checks the saved state.
+    // Still unsaved here, so the page lands on the save-first flow.
+    loginHolder.ref!.value = true;
+    await flushPromises();
+
+    expect(w.text()).not.toContain("Log in & save first");
+    expect(w.text()).toContain("Let's save it");
+    // The voice picker persists across the transition (never unmounted).
+    expect(w.find(".voice-picker-stub").exists()).toBe(true);
     w.unmount();
   });
 
