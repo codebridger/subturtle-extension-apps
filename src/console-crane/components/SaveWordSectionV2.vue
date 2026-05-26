@@ -4,16 +4,11 @@
       :isDisabled="!!(isSaving || isAtLimit)" @action="savePhrase" @upgrade="handleUpgrade" class="mb-4">
       <InputGroup>
         <SelectPhraseBundleV2 class="flex-1" ref="selectBundleRef" v-model:selected-bundles="selectedBundles"
-          :excluded-bundle-ids="existingBundles.map((b) => b._id)" />
-        <Button :label="isAtLimit
-            ? 'Upgrade'
-            : !selectedBundles.length
-              ? 'Add to Bundles'
-              : `Add to ${selectedBundles.length} Bundle${selectedBundles.length > 1 ? 's' : ''
-              }`
-          " :icon-name="isAtLimit ? 'pi pi-crown' : ''" size="lg" @click="isAtLimit ? handleUpgrade() : savePhrase()"
-          :disabled="!selectedBundles.length || isSaving" :is-loading="isSaving"
-          class="border-none bg-gradient-to-r from-pink-500 to-purple-600 shadow-md hover:from-pink-600 hover:to-purple-700 text-white font-semibold dark:from-pink-700 dark:to-purple-900">
+          :suggested-name="useSuggested ? suggestedName : ''" @update:suggested-name="suggestedName = $event" />
+        <Button :label="isAtLimit ? 'Upgrade' : saveLabel"
+          :icon-name="isAtLimit ? 'pi pi-crown' : ''" size="lg" @click="isAtLimit ? handleUpgrade() : savePhrase()"
+          :disabled="isAtLimit ? false : (!canSave || isSaving)" :is-loading="isSaving"
+          :class="freemiumSaveActive ? ACTIVE_SAVE_CLASS : DISABLED_SAVE_CLASS">
           <template #icon>
             <i :class="isAtLimit ? 'pi pi-crown' : 'mr-4 i-ep-collection'" />
           </template>
@@ -23,35 +18,22 @@
     <template v-else>
       <div class="flex w-full">
         <SelectPhraseBundleV2 ref="selectBundleRef" v-model:selected-bundles="selectedBundles"
-          :excluded-bundle-ids="existingBundles.map((b) => b._id)" />
-        <Button :label="!selectedBundles.length
-            ? 'Add to Bundles'
-            : `Add to ${selectedBundles.length} Bundle${selectedBundles.length > 1 ? 's' : ''
-            }`
-          " size="lg" @click="savePhrase" :disabled="!selectedBundles.length || isSaving" :is-loading="isSaving"
-          class="border-none bg-gradient-to-r from-pink-500 to-purple-600 shadow-md hover:from-pink-600 hover:to-purple-700 text-white font-semibold dark:from-pink-700 dark:to-purple-900">
+          :suggested-name="useSuggested ? suggestedName : ''" @update:suggested-name="suggestedName = $event" />
+        <Button :label="saveLabel" size="lg" @click="savePhrase" :disabled="!canSave || isSaving" :is-loading="isSaving"
+          :class="plainSaveActive ? ACTIVE_SAVE_CLASS : DISABLED_SAVE_CLASS">
           <template #icon>
             <i class="mr-4 i-ep-collection" />
           </template>
         </Button>
       </div>
     </template>
-    <!-- Existing Bundles as Fieldset -->
-    <Fieldset v-if="existingBundles.length > 0" class="saved-bundles-fieldset bg-white dark:bg-gray-900"
-      legend="Saved in">
-      <div class="flex flex-wrap gap-1.5">
-        <Button v-for="bundle in existingBundles" :key="bundle._id" :label="bundle.title" chip rounded="full" size="sm"
-          @chip-click="removePhraseFromBundle(bundle._id)" class="saved-chip" />
-      </div>
-    </Fieldset>
   </div>
 </template>
 
 <script setup lang="ts">
 import { InputGroup, Button } from "pilotui";
-import Fieldset from "../../common/components/Fieldset.vue";
 import SelectPhraseBundleV2 from "./SelectPhraseBundleV2.vue";
-import { onMounted, ref, watch, computed } from "vue";
+import { ref, watch, computed } from "vue";
 import {
   authentication,
   dataProvider,
@@ -68,6 +50,9 @@ import { useDefaultBundleStore } from "../../stores/default-bundle";
 import { useProfileStore } from "../../stores/profile";
 import FreemiumLimitCounter from "./FreemiumLimitCounter.vue";
 import { analytic } from "../../plugins/mixpanel";
+import { BundleSuggestionService } from "../../common/services/bundle-suggestion.service";
+import { findSavedPhrase } from "../../common/services/phrase.service";
+import type { Chunk } from "../modules/word-detail/types";
 
 const props = defineProps<{
   phrase: string;
@@ -82,18 +67,102 @@ const props = defineProps<{
     target: string;
   };
   linguistic_data?: any;
+  chunks?: Chunk[];
+}>();
+
+const emit = defineEmits<{
+  /** Fired after a successful save, carrying the created phrase document. */
+  saved: [PhraseType];
 }>();
 
 const selectBundleRef = ref();
 const selectedBundles = ref<string[]>([]);
 const existingBundles = ref<PhraseBundleType[]>([]);
 const existedPhrase = ref<PhraseType | null>(null);
+// Bundle ids the phrase is already saved in (the "synced" baseline for dirty checks).
+const originalBundleIds = ref<string[]>([]);
 
 const isSaving = ref(false);
-const isRemoving = ref(false);
+
+// Bundle suggestion (first save from a page).
+const suggestedName = ref("");
+const useSuggested = ref(false);
 
 const defaultBundleStore = useDefaultBundleStore();
 const profileStore = useProfileStore();
+
+// When the user picks a real bundle, drop the suggestion.
+watch(selectedBundles, (val) => {
+  if (val.length) useSuggested.value = false;
+});
+
+// Removing an already-saved bundle (via the chip ×) unsaves it immediately.
+let isRemovingBundle = false;
+watch(selectedBundles, async (newSel) => {
+  if (isRemovingBundle) return;
+  if (!existedPhrase.value?._id) return;
+
+  const removed = originalBundleIds.value.filter((id) => !newSel.includes(id));
+  if (!removed.length) return;
+
+  isRemovingBundle = true;
+  try {
+    await Promise.all(
+      removed.map((bundleId) =>
+        functionProvider.run({
+          name: "removePhrase",
+          args: {
+            phraseId: existedPhrase.value!._id,
+            bundleId,
+            refId: authentication.user?.id,
+          },
+        })
+      )
+    );
+    analytic.track("phrase_removed");
+    originalBundleIds.value = originalBundleIds.value.filter(
+      (id) => !removed.includes(id)
+    );
+    existingBundles.value = existingBundles.value.filter(
+      (b) => !removed.includes(b._id)
+    );
+    await profileStore.fetchSubscription();
+  } catch (error) {
+    console.error("Error removing phrase from bundle:", error);
+    // Revert the deselection on failure.
+    selectedBundles.value = Array.from(new Set([...newSel, ...removed]));
+  } finally {
+    isRemovingBundle = false;
+  }
+});
+
+// Dirty = there's a selected bundle that isn't saved yet (a pending addition),
+// or a suggested (not-yet-created) bundle is in play. Removals are applied
+// immediately (see the removal watcher), so they don't count as dirty.
+const isDirty = computed(() => {
+  if (useSuggested.value && suggestedName.value.trim()) return true;
+  const origSet = new Set(originalBundleIds.value);
+  return selectedBundles.value.some((id) => !origSet.has(id));
+});
+
+const canSave = computed(() => isDirty.value);
+
+// Save button styling: vivid gradient when actionable, muted grey when not.
+const ACTIVE_SAVE_CLASS =
+  "border-none bg-gradient-to-r from-pink-500 to-purple-600 shadow-md hover:from-pink-600 hover:to-purple-700 text-white font-semibold dark:from-pink-700 dark:to-purple-900";
+const DISABLED_SAVE_CLASS =
+  "border-none bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 shadow-none cursor-not-allowed";
+
+// Plain (non-freemium) Save button is active only when there are changes.
+const plainSaveActive = computed(() => canSave.value && !isSaving.value);
+// Freemium button doubles as "Upgrade" at the limit (always actionable then).
+const freemiumSaveActive = computed(
+  () => isAtLimit.value || (canSave.value && !isSaving.value)
+);
+
+// The chosen / suggested bundle is shown inside the selector field, so the
+// button stays compact.
+const saveLabel = computed(() => "Save");
 
 const showFreemiumCounter = computed(
   () => !!(profileStore.isFreemium && profileStore.freemiumAllocation)
@@ -112,141 +181,186 @@ watch(
   () => [props.phrase, props.translation],
   async () => {
     selectedBundles.value = [];
+    useSuggested.value = false;
+    suggestedName.value = "";
+
     await loadExistingBundles();
 
-    // Auto-select previous bundles for new phrases (not already saved)
-    if (existingBundles.value.length === 0) {
-      const defaultBundles = defaultBundleStore.getDefaultBundles();
-      selectedBundles.value = defaultBundles;
+    // Already-saved phrase: nothing to default.
+    if (existingBundles.value.length > 0) return;
+
+    // Per-page suggestion (matched bundle from this page, or an AI name).
+    // Cached per URL by the service, so this is at most one server call per page.
+    const suggestion = await BundleSuggestionService.instance.getForCurrentPage();
+
+    // 1. An existing bundle from this same page.
+    if (suggestion.matchedBundle) {
+      selectedBundles.value = [suggestion.matchedBundle._id];
+      return;
     }
+
+    // 2. A suggested name from the page title (first save from this page).
+    if (suggestion.suggestedName) {
+      suggestedName.value = suggestion.suggestedName;
+      useSuggested.value = true;
+      return;
+    }
+
+    // 3. Last-used bundles (existing behaviour).
+    selectedBundles.value = defaultBundleStore.getDefaultBundles();
   },
   { immediate: true, deep: true }
 );
 
-onMounted(() => {
-  loadExistingBundles();
-});
-
-async function loadExistingBundles() {
-  if (!props.phrase || !props.translation) return;
+/**
+ * Load the bundles the phrase is already saved in, set the dirty baseline, and
+ * preselect them in the selector so they show as chips. Returns true when the
+ * phrase already exists (is saved somewhere).
+ */
+async function loadExistingBundles(): Promise<boolean> {
+  if (!props.phrase || !props.translation) return false;
 
   try {
-    // First, find the phrase
-    existedPhrase.value = await dataProvider
-      .findOne({
-        database: DATABASE.USER_CONTENT,
-        collection: COLLECTIONS.PHRASE,
-        query: {
-          refId: authentication.user?.id,
-          phrase: props.phrase.trim(),
-          translation: props.translation.trim(),
-        },
-      })
-      .then((doc) => doc as PhraseType | null);
+    // Shared lookup (matches by phrase + owner; translation excluded on purpose).
+    existedPhrase.value = await findSavedPhrase(props.phrase);
 
     if (!existedPhrase.value) {
       existingBundles.value = [];
-      return;
+      originalBundleIds.value = [];
+      selectedBundles.value = [];
+      return false;
     }
 
-    // Find all bundles that contain this phrase
     const bundles = await dataProvider.find<PhraseBundleType>({
       database: DATABASE.USER_CONTENT,
       collection: COLLECTIONS.PHRASE_BUNDLE,
       query: {
         refId: authentication.user?.id,
-        phrases: {
-          $in: [existedPhrase.value._id],
-        },
+        phrases: { $in: [existedPhrase.value._id] },
       },
-      options: {
-        sort: "-_id",
-      },
+      options: { sort: "-_id" },
     });
 
     existingBundles.value = bundles;
+    originalBundleIds.value = bundles.map((b) => b._id);
+    // Preselect the saved bundles so they appear inside the selector.
+    selectedBundles.value = [...originalBundleIds.value];
+    return originalBundleIds.value.length > 0;
   } catch (error) {
     console.error("Error loading existing bundles:", error);
     existingBundles.value = [];
+    originalBundleIds.value = [];
+    return false;
   }
 }
 
-async function removePhraseFromBundle(bundleId: string) {
-  if (!existedPhrase.value || isRemoving.value) return;
-
-  isRemoving.value = true;
-
+/** Find an existing bundle of the user with this exact title, or null. */
+async function findBundleByTitle(title: string): Promise<string | null> {
   try {
-    // Use the same approach as the dashboard - call the removePhrase function
-    await functionProvider
-      .run({
-        name: "removePhrase",
-        args: {
-          phraseId: existedPhrase.value._id,
-          bundleId: bundleId,
-          refId: authentication.user?.id,
-        },
-      })
-      .then(() => {
-        analytic.track("phrase_removed");
-      });
-
-    // Reload existing bundles to update UI
-    await loadExistingBundles();
-    // Refresh freemium counter
-    await profileStore.fetchSubscription();
-  } catch (error) {
-    console.error("Error removing phrase from bundle:", error);
-  } finally {
-    isRemoving.value = false;
+    const existing = await dataProvider.findOne<PhraseBundleType>({
+      database: DATABASE.USER_CONTENT,
+      collection: COLLECTIONS.PHRASE_BUNDLE,
+      query: { refId: authentication.user?.id, title },
+    });
+    return (existing as any)?._id || null;
+  } catch {
+    return null;
   }
+}
+
+/**
+ * Resolve the bundle ids to save into. When the user kept the suggested bundle,
+ * reuse an existing bundle with the same name if one exists (the refId+title
+ * index is unique), otherwise create it. Returns [] if nothing to save.
+ */
+async function resolveBundleIds(): Promise<string[]> {
+  if (selectedBundles.value.length) return selectedBundles.value;
+
+  if (useSuggested.value && suggestedName.value.trim()) {
+    const title = suggestedName.value.trim();
+
+    // Reuse an existing same-named bundle (avoids E11000 duplicate key).
+    const existingId = await findBundleByTitle(title);
+    if (existingId) return [existingId];
+
+    try {
+      const created = await dataProvider.insertOne({
+        database: DATABASE.USER_CONTENT,
+        collection: COLLECTIONS.PHRASE_BUNDLE,
+        doc: { title, refId: authentication.user?.id },
+      });
+      analytic.track("phrase-bundle_created");
+      const id = (created as any)?._id;
+      return id ? [id] : [];
+    } catch (error) {
+      // A duplicate may have been created concurrently — fall back to it.
+      const fallbackId = await findBundleByTitle(title);
+      if (fallbackId) return [fallbackId];
+      throw error;
+    }
+  }
+
+  return [];
 }
 
 async function savePhrase() {
-  if (!selectedBundles.value.length) return;
-
+  if (!canSave.value || isSaving.value) return;
   isSaving.value = true;
 
   try {
-    // Use the enhanced server function with linguistic type
-    const result = await functionProvider
+    // Save adds the phrase to newly selected (not-yet-saved) bundles.
+    // Removals are applied immediately by the removal watcher.
+    const finalSelected = await resolveBundleIds();
+    const originalSet = new Set(originalBundleIds.value);
+    const toAdd = finalSelected.filter((id) => !originalSet.has(id));
+
+    if (!toAdd.length) {
+      isSaving.value = false;
+      return;
+    }
+
+    existedPhrase.value = await functionProvider
       .run<PhraseType>({
         name: "createPhrase",
         args: {
           phrase: props.phrase.trim(),
           translation: props.translation.trim(),
           translation_language: TranslateService.instance.targetLanguage.trim(),
-          bundleIds: selectedBundles.value,
+          bundleIds: toAdd,
           refId: authentication.user?.id,
-          type: "linguistic", // Specify linguistic type
-          // Add linguistic-specific data from the word detail context
+          type: "linguistic",
           context: props.context || "",
           direction: props.direction,
           language_info: props.language_info,
           linguistic_data: props.linguistic_data,
+          chunks: props.chunks || [],
+          sourceUrl: typeof location !== "undefined" ? location.href : undefined,
         },
       })
       .then((result) => {
-        analytic.track("phrase_saved", {
-          freemium: profileStore.isFreemium,
-        });
-
+        analytic.track("phrase_saved", { freemium: profileStore.isFreemium });
         return result;
       });
 
-    // Update the existedPhrase reference if it's a new phrase
-    existedPhrase.value = result;
+    // Remember the bundles now in use as defaults for future saves.
+    if (finalSelected.length) defaultBundleStore.setDefaultBundles(finalSelected);
 
-    // Store selected bundles as new defaults for future saves
-    defaultBundleStore.setDefaultBundles(selectedBundles.value);
+    // This page now has a saved phrase; drop the cached suggestion so the next
+    // open matches the bundle instead of re-suggesting a name.
+    if (typeof location !== "undefined") {
+      BundleSuggestionService.instance.clear(location.href);
+    }
 
-    // Clear selection and reload existing bundles
-    selectedBundles.value = [];
+    // Re-sync the baseline + selection from the server.
+    useSuggested.value = false;
+    suggestedName.value = "";
     await loadExistingBundles();
-    // Refresh freemium counter
     await profileStore.fetchSubscription();
 
-    // Close the dropdown after successful save
+    if (existedPhrase.value) {
+      emit("saved", existedPhrase.value);
+    }
+
     if (selectBundleRef.value?.closeDropdown) {
       selectBundleRef.value.closeDropdown();
     }
@@ -265,55 +379,6 @@ function handleUpgrade() {
 <style scoped>
 :deep(.p-button.p-button-outlined) {
   color: var(--surface-border-color) !important;
-}
-
-:deep(.saved-bundles-fieldset) {
-  margin-top: 6px;
-  margin-bottom: 6px;
-}
-
-:deep(.saved-bundles-fieldset .p-fieldset-content) {
-  padding: 8px 12px;
-}
-
-:deep(.saved-bundles-fieldset .p-fieldset-legend) {
-  padding: 4px 8px;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-:deep(.saved-chip) {
-  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%);
-  color: white;
-  border: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  padding: 6px 12px;
-  border-radius: 14px;
-  box-shadow: 0 1px 4px rgba(59, 130, 246, 0.2);
-  transition: all 0.2s ease;
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-}
-
-:deep(.saved-chip:hover) {
-  transform: translateY(-0.5px);
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
-  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 50%, #7c3aed 100%);
-}
-
-:deep(.saved-chip .p-chip-remove-icon) {
-  margin-left: 6px;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 0.75rem;
-  transition: color 0.2s ease;
-}
-
-:deep(.saved-chip .p-chip-remove-icon:hover) {
-  color: white;
-  transform: scale(1.1);
 }
 
 :deep(.p-inputgroup) {

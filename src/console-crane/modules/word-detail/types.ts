@@ -1,15 +1,15 @@
-export type Example = {
-  /** Example sentence showing the text in use */
-  source: string;
-  /** Translation of the example sentence */
-  target: string;
-};
-
-export type RelatedExpression = {
-  /** Related word or expression */
-  source: string;
-  /** Translation of the related expression */
-  target: string;
+/** A reusable language pattern found inside the user's selection. */
+export type Chunk = {
+  /** The exact reusable pattern as it appears in the selection */
+  text: string;
+  /** Kind of pattern (collocation, phrasal_verb, idiom, discourse_marker, other) */
+  type: string;
+  /** Short explanation of the chunk's meaning/usage in the target language */
+  definition?: string;
+  /** Pronunciation of the chunk written in the target language alphabet */
+  transliteration?: string;
+  /** Model confidence that this is a useful learnable chunk (0-1) */
+  confidence: number;
 };
 
 export type LinguisticData = {
@@ -19,25 +19,12 @@ export type LinguisticData = {
   type: string;
   /** Clear explanation of meaning, contextualized to usage */
   definition: string;
-  /** Information about how and when to use this text */
-  // usage_notes: string;
-  /** Phonetic guidance (especially for non-Latin script languages) */
+  /** Phonetic guidance written in the target language alphabet */
   phonetic: {
-    ipa: string;
     transliteration: string;
   };
   /** Indication of formality level */
   formality_level: "formal" | "neutral" | "informal";
-  /** When the literal meaning differs significantly from idiomatic usage */
-  // literal_translation: string;
-  /** Cultural context important for proper understanding */
-  // cultural_notes: string;
-  /** Additional grammatical information when relevant */
-  // grammar_notes: string;
-  /** Example sentences showing the text in use, with translations */
-  examples: Example[];
-  /** Similar or connected expressions with translations */
-  related_expressions: RelatedExpression[];
 };
 
 export type LanguageLearningData = {
@@ -64,4 +51,20 @@ export type LanguageLearningData = {
   };
   /** Linguistic analysis data in target language */
   linguistic_data: LinguisticData;
+  /** Reusable patterns found inside the selection (cap 2; empty for short/cross-language). */
+  chunks: Chunk[];
+};
+
+/** Result of the per-page bundle suggestion call. */
+export type BundleSuggestion = {
+  matchedBundle: { _id: string; title: string } | null;
+  suggestedName: string | null;
+};
+
+/** Response shape of the translationAdvice RPC. */
+export type TranslationAdvice = {
+  /** Plain-text answer to the user's question, when they asked for advice. */
+  reply?: string;
+  /** Updated chunks, when the user asked to change the highlighted patterns. */
+  chunks?: Chunk[];
 };

@@ -1,12 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { setActivePinia, createPinia } from "pinia";
 
-// Mock the router so the test doesn't pull in the real page components and
-// their service dependencies. We capture every router.push() call to assert
-// the encoded params and route name.
+// The store reaches the router lazily through the navigation holder
+// (src/console-crane/navigation.ts) rather than importing it directly, which
+// avoids a circular ESM init. Mock the holder so the test doesn't pull in the
+// real page components, and capture every push() call to assert the encoded
+// params and route name.
 const { mockPush } = vi.hoisted(() => ({ mockPush: vi.fn() }));
-vi.mock("../src/console-crane/router", () => ({
-  router: { push: mockPush },
+vi.mock("../src/console-crane/navigation", () => ({
+  getConsoleCraneRouter: () => ({ push: mockPush }),
+  setConsoleCraneRouter: vi.fn(),
 }));
 
 import { useConsoleCraneStore } from "../src/console-crane/stores/console-crane";
@@ -125,6 +128,16 @@ describe("useConsoleCraneStore", () => {
       expect(store.isOnMainPage).toBe(true);
 
       store.toggleConsoleCrane("settings", undefined, true);
+      expect(store.isOnMainPage).toBe(false);
+    });
+
+    it("isOnMainPage is false on the practice-config and flashcard-preview sub-pages", () => {
+      const store = useConsoleCraneStore();
+
+      store.toggleConsoleCrane("practice-config", { phrase: "x" }, true);
+      expect(store.isOnMainPage).toBe(false);
+
+      store.toggleConsoleCrane("flashcard-preview", { phrase: "x" }, true);
       expect(store.isOnMainPage).toBe(false);
     });
   });
