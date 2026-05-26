@@ -1,3 +1,10 @@
+## [1.11.2](https://github.com/codebridger/subturtle-extension-apps/compare/v1.11.1...v1.11.2) (2026-05-06)
+
+
+### Bug Fixes
+
+* tweak the release ([9a7ec39](https://github.com/codebridger/subturtle-extension-apps/commit/9a7ec39342bd062d370a696ca469e6d8dc34b9b0))
+
 ## [1.11.1](https://github.com/codebridger/subturtle-extension-apps/compare/v1.11.0...v1.11.1) (2026-05-06)
 
 
