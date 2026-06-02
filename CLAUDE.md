@@ -60,6 +60,10 @@ Implications:
 - **Asset URLs need `web_accessible_resources`.** `chrome.runtime.getURL("/assets/foo.png")` returns `chrome-extension://invalid/` for paths not declared accessible. The manifest already exposes `assets/*` to all URLs.
 - Webpack entry points live in [webpack.config.js](webpack.config.js) — add a new entry there for any new content script.
 
+## Code comments
+
+Multi-line comments and docstrings are fine — encouraged, even, where the *why* is non-obvious (ESM init-order traps, cross-bundle behaviour, browser/extension quirks). Match the surrounding style (`navigation.ts`, `modular-rest.ts`, the `word-detail` JSDoc). There is **no** "one short line max" rule; don't collapse an explanatory block to a single line just to be terse.
+
 ## Shared APIs
 
 ### ConsoleCrane bridge
