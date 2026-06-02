@@ -1,3 +1,15 @@
+# [1.13.0](https://github.com/codebridger/subturtle-extension-apps/compare/v1.12.0...v1.13.0) (2026-06-02)
+
+
+### Bug Fixes
+
+* **popup:** render Practice/Preview console pages in the popup router ([ff2935c](https://github.com/codebridger/subturtle-extension-apps/commit/ff2935cc6d888dbbf22963196544c81db7226bec))
+
+
+### Features
+
+* **auth:** add dev-gated password login + MCP-driven CCW agent workflow ([b4b6e46](https://github.com/codebridger/subturtle-extension-apps/commit/b4b6e4685d7c9f561ec169a3064388d4965014b9))
+
 # [1.12.0](https://github.com/codebridger/subturtle-extension-apps/compare/v1.11.2...v1.12.0) (2026-05-26)
 
 
