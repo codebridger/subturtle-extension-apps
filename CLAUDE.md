@@ -141,6 +141,7 @@ And the `SettingsObject` type in [src/common/types/messaging.ts](src/common/type
 - **The mount root in Nibble must not block the page.** Set `width: 0; height: 0; position: fixed; top: 0; left: 0`. Children use their own `position: fixed` to position themselves relative to the viewport.
 - **Theme dark class lives on `.subturtle-scope`, not `<html>`.** Tailwind's `dark:` rules are rewritten by `postcss-prefix-selector` to `.subturtle-scope.dark ...` — so the same element must carry both classes. The settings store handles this and a `MutationObserver` keeps Vue Teleport subtrees in sync.
 - **`src/stores/profile.ts` imports types from a sibling repo.** The path `../../../dashboard-app/frontend/types/database.type` resolves to a directory _next to_ this repo's root, not inside it. The actual repo is [`codebridger/subturtle-dashboard-app`](https://github.com/codebridger/subturtle-dashboard-app); local builds work because devs check both repos out side-by-side. CI clones the dashboard repo into `../dashboard-app/` before `yarn build` runs (see [.github/workflows/release.yml](.github/workflows/release.yml)). Don't try to "fix" the import to a relative-internal path or vendor the file — both will drift.
+- **Playwright Chromium download isn't on CCW's Trusted allowlist.** The chrome-extension-tester-mcp's `postinstall` runs `playwright install chromium`, which pulls from `cdn.playwright.dev` / `playwright.download.prss.microsoft.com`. CCW environments must use Custom network access with those hosts added — see [§ Cloud agent workflow](#cloud-agent-workflow-claude-code-on-the-web). The setup script caches Chromium into the VM snapshot so per-session cost is zero.
 
 ## Adding things
 
@@ -312,6 +313,8 @@ tests/
   selection-popup.test.ts           # @mousedown.prevent.stop regression
   nibble-surface.test.ts            # bridge-driven hide/show
   translate-card.test.ts            # popup translate input flow
+  login-password.test.ts            # popup password form (ENABLE_PASSWORD_AUTH=true)
+  login-password-disabled.test.ts   # popup password form hidden when flag is unset
   e2e/
     extension-fixture.ts            # chromium.launchPersistentContext + extension load
     server.mjs                      # static fixtures HTTP server
@@ -320,12 +323,132 @@ tests/
     nibble-flow.spec.ts             # content script mounting + Persian emitOpen
     console-crane-lifecycle.spec.ts # modal stays open while Nibble toggles off
     translate-flow.spec.ts          # full Persian translate-and-save with page.route stubs
+    password-login.spec.ts          # popup password form end-to-end with stubbed /user/login
     visual-scale.spec.ts            # rem→px rewrite regression net
 ```
 
 ### Test totals
 
-79 unit / component tests across 9 files; 11 E2E specs across 5 files. Full suite runs in ~15s once Playwright's Chromium is warm.
+138 unit / component tests across 19 files; 16 E2E specs across 6 files. Full suite runs in ~20s once Playwright's Chromium is warm.
+
+## Cloud agent workflow (Claude Code on the Web)
+
+Lets a cloud Claude agent on [Claude Code on the Web (CCW)](https://code.claude.com/docs/en/web-quickstart) clone the repo, build the extension, install it into a headless Chromium, log in with username/password against the live dev server at `https://dev.dashboard.subturtle.app/`, and drive popup + content scripts with screenshots — no Google OAuth, no local backend.
+
+The agent path uses **only** the [chrome-extension-tester-mcp](https://github.com/BHUVAN-RJ/chrome-extension-testing-mcp) MCP server (declared in [.mcp.json](.mcp.json)). It is independent of the `tests/e2e/` Playwright fixture and shares no code with it; CI verify runs the spec, the agent runs the MCP.
+
+### One-time CCW environment setup
+
+Done once per CCW environment from [claude.ai/code](https://claude.ai/code) — these settings live in the cloud UI, not the repo.
+
+**Network access:** `Custom`, keeping the Trusted defaults plus Playwright's Chromium-download hosts. Without these, the setup script's `npm install -g chrome-extension-tester-mcp` hangs while pulling Chromium:
+```
+cdn.playwright.dev
+playwright.download.prss.microsoft.com
+```
+
+**Environment variables** (`.env` format, no quotes):
+```
+ENABLE_PASSWORD_AUTH=true
+SUBTURTLE_API_URL=https://dev.dashboard.subturtle.app
+SUBTURTLE_DASHBOARD_URL=https://dev.dashboard.subturtle.app
+AGENT_EMAIL=<provided by user>
+AGENT_PASSWORD=<provided by user>
+# stubs sufficient for the build, not used by the agent flow:
+MIXPANEL_PROJECT_TOKEN=dev_stub
+MIXPANEL_API_HOST=https://api-js.mixpanel.com
+GOOGLE_TRANSLATE_KEY=dev_stub
+GOOGLE_TRANSLATE_PROXY_URL=https://translate.googleapis.com
+UNINSTALL_FORM_URL=https://example.com/uninstall
+GOOGLE_OAUTH_CLIENT_ID=dev_stub
+```
+
+`AGENT_EMAIL` / `AGENT_PASSWORD` are not consumed by the build — they exist so the agent's Bash step can reference `$AGENT_EMAIL` / `$AGENT_PASSWORD` without hardcoding into the prompt. They must match an account that exists on the dev server (the agent does not register; the human or dashboard team seeds the account).
+
+**Setup script** (runs as root on Ubuntu 24.04, cached as a VM snapshot — first session ~5 min, subsequent ones reuse the cache):
+```bash
+#!/bin/bash
+set -e
+
+cd "${CLAUDE_PROJECT_DIR:-/workspace}"
+
+# 1. Install extension deps.
+yarn install --frozen-lockfile
+
+# 2. Materialize .env.production from CCW env vars (dotenv-webpack's safe:true
+#    requires every key in .env.example to be present at build time).
+cat > .env.production <<EOF
+MIXPANEL_PROJECT_TOKEN=${MIXPANEL_PROJECT_TOKEN}
+MIXPANEL_API_HOST=${MIXPANEL_API_HOST}
+GOOGLE_TRANSLATE_KEY=${GOOGLE_TRANSLATE_KEY}
+GOOGLE_TRANSLATE_PROXY_URL=${GOOGLE_TRANSLATE_PROXY_URL}
+UNINSTALL_FORM_URL=${UNINSTALL_FORM_URL}
+SUBTURTLE_API_URL=${SUBTURTLE_API_URL}
+SUBTURTLE_DASHBOARD_URL=${SUBTURTLE_DASHBOARD_URL}
+GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}
+ENABLE_PASSWORD_AUTH=${ENABLE_PASSWORD_AUTH}
+EOF
+
+# 3. Build the extension once into dist/.
+NODE_ENV=production yarn build
+
+# 4. Install the MCP globally so Playwright Chromium is downloaded once
+#    into the cached snapshot. npx in .mcp.json resolves to this install.
+npm install -g chrome-extension-tester-mcp@^2.1
+```
+
+### Driving the extension via the MCP
+
+Once the environment is set up and the agent session starts, the cached snapshot already has `dist/` built and Playwright Chromium installed. The full login + screenshot loop becomes:
+
+```
+# 1. Load the unpacked extension into headless Chromium.
+load_extension({ extension_path: "$PWD/dist" })
+
+# 2. Get a JWT from the dev server with the credentials in CCW env vars.
+#    modular-rest's authentication.login POSTs to /user/login.
+#    The password MUST be base64-encoded — modular-rest's client library
+#    does this internally, but raw curl has to pre-encode. Without it
+#    the server returns HTTP 412 {"status":"error","e":{}}.
+PW_B64=$(printf '%s' "$AGENT_PASSWORD" | base64)
+curl -sX POST "$SUBTURTLE_API_URL/user/login" \
+  -H 'Content-Type: application/json' \
+  -d "{\"idType\":\"email\",\"id\":\"$AGENT_EMAIL\",\"password\":\"$PW_B64\"}"
+# → { "status": "success", "token": "<jwt>" }
+
+# 3. Inject the JWT into chrome.storage.sync — same slot background.ts:62
+#    reads on every load. The extension is now "logged in".
+extension_storage({ action: "set", area: "sync", data: { token: "<jwt>" } })
+
+# 4. Open the popup and screenshot the logged-in view.
+interact_with_popup({ action: "open" })
+take_screenshot({ output_path: ".agent/popup.png" })
+# Expected: "Logged In Successfully!" view (LoginView.vue:57-68 v-else branch).
+```
+
+The MCP exposes 14 tools — others worth knowing about: `inspect_dom` (eval JS in a page), `monitor_network` (capture requests during navigation), `send_message_to_background` (drive `chrome.runtime.onMessage` listeners), `get_service_worker_logs` (read background SW console output), `run_assertion` (returns structured PASS/FAIL). Full reference: the [chrome-extension-tester-mcp README](https://github.com/BHUVAN-RJ/chrome-extension-testing-mcp).
+
+### Why password auth exists in this build
+
+`ENABLE_PASSWORD_AUTH` gates the email + password form in [src/popup/views/LoginView.vue](src/popup/views/LoginView.vue) at build time via `dotenv-webpack`. CCW builds set it true so the agent (or a human dev) can log in by typing credentials; stable + dev release builds in [.github/workflows/release.yml](.github/workflows/release.yml) set it false so production users see only Google OAuth. The agent's direct-API path doesn't need the UI, but the UI is what makes manual testing possible.
+
+### How auth works under the hood
+
+The agent's direct-API path POSTs `/user/login` (via `curl`) and gets a JWT. Injecting that JWT into `chrome.storage.sync["token"]` (via the MCP's `extension_storage` tool) lands it in the *same slot* the post-OAuth `StoreUserTokenMessage` path uses — see [src/background.ts:62](src/background.ts) for the read side. modular-rest's client, the profile store, the translate service, and ConsoleCrane all see no difference between an OAuth-issued token and a password-issued token.
+
+### Local dev fallback (no CCW, no MCP)
+
+```bash
+echo "ENABLE_PASSWORD_AUTH=true" >> .env.production   # plus the other 8 keys
+yarn build && yarn dev    # webpack --watch
+# Load dist/ at chrome://extensions, click the extension icon, use the form.
+```
+
+The popup form drives `authentication.login` from `@modular-rest/client`, hitting whatever `SUBTURTLE_API_URL` points at. No MCP, no Playwright — just the same UI a real user would see.
+
+### Boundary
+
+The agent path uses only the MCP. `tests/e2e/` is the testing ground for CI verify and stays untouched by agent tooling; the two never share code. If you need to add a new agent capability, route it through the MCP's tools or a new MCP — not through the Playwright fixture.
 
 ## Verification checklist
 
@@ -341,6 +464,7 @@ Automated:
 - Per-host Nibble toggle persists and normalizes (`www.` strip, case fold, dedup). → [tests/settings-host.test.ts](tests/settings-host.test.ts).
 - ConsoleCrane on Persian / CJK / emoji inputs throws no `InvalidCharacterError` from `btoa` — covered at the encode level, the bridge level, and the full select-and-save flow. → [tests/route-params.test.ts](tests/route-params.test.ts), [tests/e2e/nibble-flow.spec.ts](tests/e2e/nibble-flow.spec.ts), [tests/e2e/translate-flow.spec.ts](tests/e2e/translate-flow.spec.ts).
 - Visual scale is consistent on default-html-fontsize and 24px-html-fontsize hosts (postcss `rem→px` rewrite regression net). → [tests/e2e/visual-scale.spec.ts](tests/e2e/visual-scale.spec.ts).
+- Password login form: build-flag gating, validation, success path lands JWT in `chrome.storage.sync["token"]`, 401 surfaces inline error. → [tests/login-password.test.ts](tests/login-password.test.ts), [tests/login-password-disabled.test.ts](tests/login-password-disabled.test.ts), [tests/e2e/password-login.spec.ts](tests/e2e/password-login.spec.ts).
 
 Still manual:
 
@@ -374,3 +498,5 @@ Still manual:
 - Playwright fixtures server: [tests/e2e/server.mjs](tests/e2e/server.mjs)
 - Typecheck wrapper (with upstream-error filter): [scripts/typecheck.mjs](scripts/typecheck.mjs)
 - Vue 3 SFC ambient declaration: [src/vue-shim.d.ts](src/vue-shim.d.ts)
+- MCP server config (chrome-extension-tester for CCW): [.mcp.json](.mcp.json)
+- Popup LoginView (password form + OAuth buttons): [src/popup/views/LoginView.vue](src/popup/views/LoginView.vue)

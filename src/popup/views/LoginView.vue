@@ -39,18 +39,77 @@
           <div class="flex-1 text-left px-4">With Google Account</div>
         </button>
 
-        <!-- Login with Phone -->
-        <button
-          disabled
-          class="flex items-center justify-center text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-800 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <div
-            class="p-2 py-3 flex justify-center items-center border-r-[1px] border-gray-300 dark:border-gray-700"
+        <!-- Login with Email & Password (dev/agent only, gated by ENABLE_PASSWORD_AUTH at build time) -->
+        <template v-if="enablePasswordAuth">
+          <button
+            v-if="!passwordFormOpen"
+            :disabled="pending"
+            @click="passwordFormOpen = true"
+            data-testid="open-password-form"
+            class="flex items-center justify-center text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-800 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span class="i-flat-color-icons-phone" />
-          </div>
-          <div class="flex-1 text-left px-4">With Phone Number</div>
-        </button>
+            <div
+              class="p-2 py-3 flex justify-center items-center border-r-[1px] border-gray-300 dark:border-gray-700"
+            >
+              <span class="i-flat-color-icons-key" />
+            </div>
+            <div class="flex-1 text-left px-4">With Email & Password</div>
+          </button>
+
+          <form
+            v-else
+            @submit.prevent="loginWithPassword"
+            data-testid="password-form"
+            class="flex flex-col space-y-2 bg-gray-100 dark:bg-gray-800 rounded-md p-3"
+          >
+            <input
+              v-model="passwordEmail"
+              type="email"
+              autocomplete="email"
+              required
+              placeholder="Email"
+              data-testid="password-email"
+              :disabled="pending"
+              class="px-3 py-2 rounded text-gray-900 dark:text-white bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            />
+            <input
+              v-model="passwordValue"
+              type="password"
+              autocomplete="current-password"
+              required
+              placeholder="Password"
+              data-testid="password-value"
+              :disabled="pending"
+              class="px-3 py-2 rounded text-gray-900 dark:text-white bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            />
+            <p
+              v-if="loginError"
+              data-testid="password-error"
+              class="text-red-600 dark:text-red-400 text-xs"
+            >
+              {{ loginError }}
+            </p>
+            <div class="flex space-x-2">
+              <button
+                type="button"
+                @click="closePasswordForm"
+                :disabled="pending"
+                data-testid="password-cancel"
+                class="px-3 py-2 rounded text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
+              >
+                Back
+              </button>
+              <button
+                type="submit"
+                :disabled="pending || !isPasswordFormValid"
+                data-testid="password-submit"
+                class="flex-1 px-3 py-2 rounded text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {{ pending ? "Signing in…" : "Sign in" }}
+              </button>
+            </div>
+          </form>
+        </template>
       </div>
     </template>
 
@@ -70,7 +129,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import {
   GetCurrentChromeUserToken,
   LoginStatusResponse,
@@ -79,11 +138,31 @@ import {
 import { sendMessage, sendMessageToTabs } from "../../common/helper/massage";
 import { get } from "../helper/http";
 import { joinToBaseUrl } from "../../common/helper/url";
-import { loginWithLastSession, isLogin } from "../../plugins/modular-rest";
+import {
+  authentication,
+  loginWithLastSession,
+  isLogin,
+} from "../../plugins/modular-rest";
 
 const pending = ref(false);
 
 const chromeUserRes = ref<LoginStatusResponse | null>();
+
+// Build-flag gated: dev/agent-only password form. Stable/prod builds omit the
+// key in .env.production so this resolves to false and the form is hidden.
+const enablePasswordAuth = process.env.ENABLE_PASSWORD_AUTH === "true";
+
+const passwordFormOpen = ref(false);
+const passwordEmail = ref("");
+const passwordValue = ref("");
+const loginError = ref<string | null>(null);
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const isPasswordFormValid = computed(
+  () =>
+    emailRegex.test(passwordEmail.value.trim()) &&
+    passwordValue.value.length >= 8
+);
 
 onMounted(async () => {
   chromeUserRes.value = await sendMessage<LoginStatusResponse>(
@@ -193,6 +272,51 @@ function launchWebAuthFlow(authURL) {
       throw new Error("No access_token found");
     }
   });
+}
+
+async function loginWithPassword() {
+  if (!isPasswordFormValid.value) return;
+  pending.value = true;
+  loginError.value = null;
+
+  try {
+    await authentication.login(
+      {
+        idType: "email",
+        id: passwordEmail.value.trim(),
+        password: passwordValue.value,
+      },
+      true
+    );
+
+    const token = authentication.getToken;
+    if (!token) {
+      loginError.value = "Invalid email or password.";
+      return;
+    }
+    await handleTokenLogin(token);
+    passwordValue.value = "";
+  } catch (err: any) {
+    // modular-rest rejects with the server response or a network error. We
+    // surface a generic message for the credential-mismatch case so we don't
+    // leak whether the email exists, and a network-specific message when the
+    // request never reached the server.
+    if (err instanceof TypeError || err?.message?.includes("Failed to fetch")) {
+      loginError.value = "Could not reach the server.";
+    } else if (err?.status === false || err?.error) {
+      loginError.value = "Invalid email or password.";
+    } else {
+      loginError.value = "Something went wrong. Please try again.";
+    }
+  } finally {
+    pending.value = false;
+  }
+}
+
+function closePasswordForm() {
+  passwordFormOpen.value = false;
+  passwordValue.value = "";
+  loginError.value = null;
 }
 
 function closeWindow() {

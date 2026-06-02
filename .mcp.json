@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "chrome-extension-tester": {
+      "command": "npx",
+      "args": ["-y", "chrome-extension-tester-mcp@^2.1"]
+    }
+  }
+}
