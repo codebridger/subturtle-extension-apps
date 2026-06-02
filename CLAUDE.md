@@ -114,6 +114,8 @@ Also emits `loading: boolean` mirroring its internal pending state — bind it o
 
 If you ever need this from a content-script bundle that runs alongside ConsoleCrane, use the [bridge](#consolecrane-bridge) instead — don't double-mount the same component on the same page.
 
+**The popup hosts the console pages in its own router — no modal.** `WordDetailModule`'s "Practice with AI" / "Preview flashcard" buttons open the `practice-config` / `flashcard-preview` console pages. On the popup page there's no `console-crane.js` content script and so no modal to render into. Instead the popup registers those console modules as routes in [its own router](src/popup/router.ts) (each wrapped in a back-header [ConsolePageScaffold](src/popup/components/ConsolePageScaffold.vue) under [src/popup/views/](src/popup/views/)), and [src/popup/App.vue](src/popup/App.vue) `provide()`s an `openConsolePage(page, params)` navigator that `router.push`es that route (params Unicode-safely encoded via `encodeRouteParams`). `WordDetailModule` `inject`s it, so the actions render as full popup pages with a working Back. In the console-crane content script there's no provider, so the same module falls back to the store-driven modal (unchanged). Home is `<keep-alive>`d (`include="HomeView"`) so Back returns to the existing translation rather than a blank input. The console modules (`practice-config`, `flashcard-preview`) are router-agnostic — they read only `route.params.data` — so they work in either router unchanged. Regression-tested in [tests/e2e/popup-console-crane.spec.ts](tests/e2e/popup-console-crane.spec.ts).
+
 ### Settings store
 
 [src/common/store/settings.ts](src/common/store/settings.ts) — Pinia store, syncs through background via `SYNC_SETTINGS`. Holds:
@@ -325,6 +327,7 @@ tests/
     translate-flow.spec.ts          # full Persian translate-and-save with page.route stubs
     password-login.spec.ts          # popup password form end-to-end with stubbed /user/login
     visual-scale.spec.ts            # rem→px rewrite regression net
+    popup-console-crane.spec.ts     # popup.html: Practice/Preview navigate to console pages in the popup router (no modal)
 ```
 
 ### Test totals
@@ -461,6 +464,7 @@ Automated:
 - Selection → Subturtle icon → translated card → Save → ConsoleCrane opens with WordDetail rendering Persian content. → [tests/e2e/translate-flow.spec.ts](tests/e2e/translate-flow.spec.ts).
 - Toggling Nibble OFF for a host **while ConsoleCrane is open** does NOT close the modal or release the body scroll lock. → [tests/e2e/console-crane-lifecycle.spec.ts](tests/e2e/console-crane-lifecycle.spec.ts).
 - Popup translate input: auto-focus on open, spinner while pending, re-submit different word resets, no double-fetch on enter mash. → [tests/translate-card.test.ts](tests/translate-card.test.ts).
+- On `popup.html`, translating a phrase then clicking **Practice with AI** / **Preview flashcard** navigates to the matching console page in the popup's own router (no modal); **Back** returns to the kept-alive Home with the translation intact. → [tests/e2e/popup-console-crane.spec.ts](tests/e2e/popup-console-crane.spec.ts).
 - Per-host Nibble toggle persists and normalizes (`www.` strip, case fold, dedup). → [tests/settings-host.test.ts](tests/settings-host.test.ts).
 - ConsoleCrane on Persian / CJK / emoji inputs throws no `InvalidCharacterError` from `btoa` — covered at the encode level, the bridge level, and the full select-and-save flow. → [tests/route-params.test.ts](tests/route-params.test.ts), [tests/e2e/nibble-flow.spec.ts](tests/e2e/nibble-flow.spec.ts), [tests/e2e/translate-flow.spec.ts](tests/e2e/translate-flow.spec.ts).
 - Visual scale is consistent on default-html-fontsize and 24px-html-fontsize hosts (postcss `rem→px` rewrite regression net). → [tests/e2e/visual-scale.spec.ts](tests/e2e/visual-scale.spec.ts).
