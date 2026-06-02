@@ -8,6 +8,8 @@ import HomeView from "./views/HomeView.vue";
 import LoginView from "./views/LoginView.vue";
 import IntroView from "./views/IntroView.vue";
 import HelpView from "./views/HelpView.vue";
+import PracticeConfigView from "./views/PracticeConfigView.vue";
+import FlashcardPreviewView from "./views/FlashcardPreviewView.vue";
 
 const routes: RouteRecordRaw[] = [
   {
@@ -29,6 +31,19 @@ const routes: RouteRecordRaw[] = [
     path: "/help",
     name: "help",
     component: HelpView,
+  },
+  // Console pages, hosted in the popup router so they render as full popup pages
+  // (not a modal). Reached from WordDetailModule's phrase actions via the
+  // openConsolePage navigator provided in App.vue. `:data` is the encoded params.
+  {
+    path: "/practice-config/:data",
+    name: "practice-config",
+    component: PracticeConfigView,
+  },
+  {
+    path: "/flashcard-preview/:data",
+    name: "flashcard-preview",
+    component: FlashcardPreviewView,
   },
 ];
 

@@ -88,6 +88,7 @@ jobs:
           SUBTURTLE_API_URL=http://localhost:4173
           SUBTURTLE_DASHBOARD_URL=http://localhost:4173/_dashboard_stub
           GOOGLE_OAUTH_CLIENT_ID=ci_e2e_stub_oauth_client
+          ENABLE_PASSWORD_AUTH=true
           EOF
 
       - name: Build extension
@@ -169,6 +170,7 @@ jobs:
           SUBTURTLE_API_URL=${SUBTURTLE_API_URL}
           SUBTURTLE_DASHBOARD_URL=${SUBTURTLE_DASHBOARD_URL}
           GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}
+          ENABLE_PASSWORD_AUTH=false
           EOF
 
       - name: Bump versions for build
