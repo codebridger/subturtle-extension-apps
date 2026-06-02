@@ -297,6 +297,10 @@ import { getSubturtleDashboardUrlWithToken } from "../../common/static/global";
 import { useSettingsStore } from "../../common/store/settings";
 import TranslateCard from "../components/TranslateCard.vue";
 
+// Named so App.vue's <keep-alive include="HomeView"> can cache this view —
+// returning from a console page (Back) then restores the existing translation.
+defineOptions({ name: "HomeView" });
+
 const router = useRouter();
 const isLoading = ref(false);
 const showLogoutConfirm = ref(false);

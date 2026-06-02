@@ -333,38 +333,45 @@ const context = computed(() => {
   return wordData.value?.context || getProps().context || "";
 });
 
+/**
+ * How phrase actions open a console page. The popup provides a router-based
+ * navigator (`openConsolePage`) that renders practice/flashcard as full popup
+ * pages. In the console-crane content script there is no provider, so we fall
+ * back to the store-driven modal. Keeps this shared module agnostic to its host.
+ */
+const openConsolePage = inject<
+  ((page: string, params: Record<string, any>) => void) | null
+>("openConsolePage", null);
+
+function openConsole(page: string, params: Record<string, any>) {
+  if (openConsolePage) openConsolePage(page, params);
+  else useConsoleCraneStore().toggleConsoleCrane(page, params, true);
+}
+
 /** Open the AI practice config page for this phrase. */
 function startPracticeWithAI() {
   analytic.track("practice-now_opened");
-  useConsoleCraneStore().toggleConsoleCrane(
-    "practice-config",
-    {
-      phrase: cleanText(getProps().word || ""),
-      translation: cleanText(wordData.value?.translation?.phrase || ""),
-      context: context.value,
-      chunks: wordData.value?.chunks || [],
-      direction: wordData.value?.direction,
-      language_info: wordData.value?.language_info,
-      linguistic_data: wordData.value?.linguistic_data,
-    },
-    true
-  );
+  openConsole("practice-config", {
+    phrase: cleanText(getProps().word || ""),
+    translation: cleanText(wordData.value?.translation?.phrase || ""),
+    context: context.value,
+    chunks: wordData.value?.chunks || [],
+    direction: wordData.value?.direction,
+    language_info: wordData.value?.language_info,
+    linguistic_data: wordData.value?.linguistic_data,
+  });
 }
 
 /** Open the flashcard cloze preview page for this phrase. */
 function openFlashcardPreview() {
   analytic.track("flashcard-preview_opened");
-  useConsoleCraneStore().toggleConsoleCrane(
-    "flashcard-preview",
-    {
-      phrase: cleanText(getProps().word || ""),
-      translation: cleanText(wordData.value?.translation?.phrase || ""),
-      context: context.value,
-      chunks: wordData.value?.chunks || [],
-      direction: wordData.value?.direction,
-    },
-    true
-  );
+  openConsole("flashcard-preview", {
+    phrase: cleanText(getProps().word || ""),
+    translation: cleanText(wordData.value?.translation?.phrase || ""),
+    context: context.value,
+    chunks: wordData.value?.chunks || [],
+    direction: wordData.value?.direction,
+  });
 }
 
 /**
