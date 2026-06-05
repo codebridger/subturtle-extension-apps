@@ -1,3 +1,10 @@
+# [1.13.0-dev.2](https://github.com/codebridger/subturtle-extension-apps/compare/v1.13.0-dev.1...v1.13.0-dev.2) (2026-06-02)
+
+
+### Bug Fixes
+
+* **popup:** render Practice/Preview console pages in the popup router ([ff2935c](https://github.com/codebridger/subturtle-extension-apps/commit/ff2935cc6d888dbbf22963196544c81db7226bec))
+
 # [1.13.0-dev.1](https://github.com/codebridger/subturtle-extension-apps/compare/v1.12.0...v1.13.0-dev.1) (2026-06-02)
 
 
