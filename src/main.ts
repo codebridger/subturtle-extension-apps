@@ -89,7 +89,7 @@ function start() {
         .then((_) => {
           registerGlobalEvents();
         })
-        .catch((_) => analytic.track("Error on initiating"));
+        .catch((_) => analytic.track("extension_init-failed"));
     }
 
     //

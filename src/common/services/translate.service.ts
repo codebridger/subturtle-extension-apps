@@ -7,6 +7,7 @@ import { Dictionary } from "../types/general.type";
 
 import proxy from "./proxy.service";
 import { functionProvider } from "@modular-rest/client";
+import { authentication } from "../../plugins/modular-rest";
 import {
   Chunk,
   LanguageLearningData,
@@ -132,6 +133,8 @@ export class TranslateService {
           targetLanguage: this.languageTitle,
           phrase: text,
           context: context || "",
+          // For the server-side translation_requested analytics event.
+          userId: authentication.user?.id,
         },
       });
 
@@ -169,6 +172,8 @@ export class TranslateService {
           targetLanguage: this.languageTitle,
           phrase: text,
           context: context || "",
+          // For the server-side translation_requested analytics event.
+          userId: authentication.user?.id,
         },
       });
 

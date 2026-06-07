@@ -186,7 +186,7 @@ export default defineComponent({
     hoveredWord(value) {
       if (value.length) {
         this.translateWord(value);
-        analytic.track("Word hovered", { word: value });
+        analytic.track("phrase_hovered", { word: value });
       }
     },
   },

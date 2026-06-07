@@ -136,6 +136,7 @@ import {
   StoreUserTokenMessage,
 } from "../../common/types/messaging";
 import { sendMessage, sendMessageToTabs } from "../../common/helper/massage";
+import { analytic } from "../../plugins/mixpanel";
 import { get } from "../helper/http";
 import { joinToBaseUrl } from "../../common/helper/url";
 import {
@@ -240,6 +241,9 @@ async function handleTokenLogin(token: string) {
   await sendMessage(message);
   sendMessageToTabs(message);
   await loginWithLastSession();
+  // Fired only on an explicit login from this view — session restores on
+  // startup do not pass through here.
+  analytic.track("user_logged-in");
 }
 
 function launchWebAuthFlow(authURL) {

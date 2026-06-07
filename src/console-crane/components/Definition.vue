@@ -139,7 +139,7 @@ export default defineComponent({
           });
         });
 
-      analytic.track("Definition translated");
+      analytic.track("definition_translated");
     },
   },
 });

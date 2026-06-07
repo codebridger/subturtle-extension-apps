@@ -96,6 +96,13 @@ function onMouseLeave(e: MouseEvent) {
 }
 
 function OpenWordDetail() {
+  analytic.track("phrase_clicked", {
+    word:
+      markerStore.words.length > 1
+        ? markerStore.selectedPhrase
+        : props.modelValue,
+    platform: window.location.hostname,
+  });
   if (markerStore.words.length > 1) {
     emitOpen({
       page: "word-detail",
