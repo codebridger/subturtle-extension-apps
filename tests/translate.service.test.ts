@@ -5,6 +5,9 @@ vi.mock("@modular-rest/client", () => ({
   functionProvider: {
     run: vi.fn(),
   },
+  // translate.service reads authentication.user?.id to attach a userId for the
+  // server-side translation_requested event.
+  authentication: { user: { id: "test-user-id" } },
 }));
 
 import { TranslateService } from "../src/common/services/translate.service";

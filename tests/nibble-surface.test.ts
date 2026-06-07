@@ -30,6 +30,7 @@ vi.mock("../src/nibble/composables/useTextSelection", async () => {
 // the child stub doesn't trigger a real fetch chain just by importing.
 vi.mock("@modular-rest/client", () => ({
   functionProvider: { run: vi.fn() },
+  authentication: { user: { id: "test-user-id" } },
 }));
 
 import NibbleSurface from "../src/nibble/components/NibbleSurface.vue";

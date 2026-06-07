@@ -6,8 +6,7 @@ import {
 import { Dictionary } from "../types/general.type";
 
 import proxy from "./proxy.service";
-import { functionProvider } from "@modular-rest/client";
-import { authentication } from "../../plugins/modular-rest";
+import { functionProvider, authentication } from "@modular-rest/client";
 import {
   Chunk,
   LanguageLearningData,
