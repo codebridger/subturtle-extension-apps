@@ -1,3 +1,12 @@
+## [1.14.1](https://github.com/codebridger/subturtle-extension-apps/compare/v1.14.0...v1.14.1) (2026-06-08)
+
+
+### Bug Fixes
+
+* **console-crane:** align bundle selector height with the Save button ([cf057a0](https://github.com/codebridger/subturtle-extension-apps/commit/cf057a095e85ac7d55824cafe5f06eeb2568d06a)), closes [#86exw6kme](https://github.com/codebridger/subturtle-extension-apps/issues/86exw6kme)
+* **console-crane:** isolate modal from host-page color/flex CSS leaks ([2b89736](https://github.com/codebridger/subturtle-extension-apps/commit/2b89736bcb6664f2ecb82ba902ef1bb5a83dcc61)), closes [#86exw6kme](https://github.com/codebridger/subturtle-extension-apps/issues/86exw6kme)
+* self-heal stale auth token on translate instead of failing ([6ef3766](https://github.com/codebridger/subturtle-extension-apps/commit/6ef3766e482c0c97476b4d8aac59fe2f92f7376b))
+
 # [1.14.0](https://github.com/codebridger/subturtle-extension-apps/compare/v1.13.0...v1.14.0) (2026-06-08)
 
 
