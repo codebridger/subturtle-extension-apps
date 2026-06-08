@@ -313,6 +313,108 @@ describe("loginWithLastSession", () => {
   });
 });
 
+describe("recoverSession (withAuthRetry's system-wide recovery)", () => {
+  let mod: typeof import("../src/plugins/modular-rest");
+
+  beforeEach(async () => {
+    setActivePinia(createPinia());
+    auth.isLogin = false;
+    auth.user = null;
+    auth.getToken = null;
+    auth.loginAsAnonymous.mockReset();
+    auth.logout.mockReset();
+    auth.logout.mockImplementation(() => {
+      auth.isLogin = false;
+      auth.user = null;
+      auth.getToken = null;
+    });
+
+    profileStore.logout.mockReset();
+    analyticMock.reset.mockReset();
+
+    getSendMessageMock().mockReset();
+    stubBackgroundLoginStatus(null);
+    (globalThis as any).chrome.tabs.sendMessage.mockReset?.();
+
+    vi.resetModules();
+    mod = await import("../src/plugins/modular-rest");
+
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "debug").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  it("tears a registered session down (logout) then re-establishes anonymous", async () => {
+    // A registered user whose token just died: must be fully torn down so no
+    // phantom logged-in state lingers, then downgraded to a fresh anon session.
+    auth.isLogin = true;
+    auth.user = { id: "user-1", type: "user", email: "x@y.z" };
+    auth.getToken = "dead-token";
+    auth.loginAsAnonymous.mockImplementation(async () => {
+      auth.isLogin = true;
+      auth.user = null;
+      auth.getToken = "fresh-anon";
+      return { token: "fresh-anon" };
+    });
+
+    const ok = await mod.recoverSession();
+    await new Promise((r) => setTimeout(r, 0));
+
+    // logout() teardown ran first...
+    expect(auth.logout).toHaveBeenCalled();
+    expect(profileStore.logout).toHaveBeenCalled();
+    expect(analyticMock.reset).toHaveBeenCalled();
+    // ...then a fresh anonymous session was established and persisted.
+    expect(auth.loginAsAnonymous).toHaveBeenCalledTimes(1);
+    expect(ok).toBe(true);
+    const last = storeTokenCalls().at(-1)?.[0] as StoreUserTokenMessage;
+    expect(last.token).toBe("fresh-anon");
+    // A clear-broadcast (null) preceded the fresh-token write.
+    expect(storeTokenCalls().some(([m]) => (m as any).token === null)).toBe(
+      true
+    );
+  });
+
+  it("for an anonymous session, skips the logout teardown and just re-auths", async () => {
+    // The common stale-anon-token case: `user` is null. No registered identity
+    // to reset, so no logout broadcast that would re-roll other tabs' sessions.
+    auth.isLogin = false;
+    auth.user = null;
+    auth.getToken = null;
+    auth.loginAsAnonymous.mockImplementation(async () => {
+      auth.isLogin = true;
+      auth.getToken = "fresh-anon";
+      return { token: "fresh-anon" };
+    });
+
+    const ok = await mod.recoverSession();
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(auth.logout).not.toHaveBeenCalled();
+    expect(profileStore.logout).not.toHaveBeenCalled();
+    expect(analyticMock.reset).not.toHaveBeenCalled();
+    expect(auth.loginAsAnonymous).toHaveBeenCalledTimes(1);
+    expect(ok).toBe(true);
+    // No clear-broadcast — only the fresh-token write.
+    expect(storeTokenCalls().some(([m]) => (m as any).token === null)).toBe(
+      false
+    );
+    const last = storeTokenCalls().at(-1)?.[0] as StoreUserTokenMessage;
+    expect(last.token).toBe("fresh-anon");
+  });
+
+  it("returns false when the anonymous re-auth fails after a registered teardown", async () => {
+    auth.isLogin = true;
+    auth.user = { id: "user-1", type: "user" };
+    auth.loginAsAnonymous.mockRejectedValue(new Error("network down"));
+
+    const ok = await mod.recoverSession();
+
+    expect(auth.logout).toHaveBeenCalled();
+    expect(ok).toBe(false);
+  });
+});
+
 describe("chrome.runtime.onMessage StoreUserTokenMessage listener", () => {
   beforeEach(async () => {
     setActivePinia(createPinia());

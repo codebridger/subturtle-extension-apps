@@ -14,6 +14,7 @@ import {
 } from "../../console-crane/modules/word-detail/types";
 import { LanguageDetector } from "../helper/language-detection";
 import { useSettingsStore } from "../store/settings";
+import { withAuthRetry } from "../helper/auth-recovery";
 
 // Cache interface for translation results
 interface TranslationCache {
@@ -124,18 +125,20 @@ export class TranslateService {
 
     // If not cached, fetch from API
     try {
-      const result = await functionProvider.run<string>({
-        name: "translateWithContext",
-        args: {
-          translationType: "simple",
-          sourceLanguage: "auto",
-          targetLanguage: this.languageTitle,
-          phrase: text,
-          context: context || "",
-          // For the server-side translation_requested analytics event.
-          userId: authentication.user?.id,
-        },
-      });
+      const result = await withAuthRetry(() =>
+        functionProvider.run<string>({
+          name: "translateWithContext",
+          args: {
+            translationType: "simple",
+            sourceLanguage: "auto",
+            targetLanguage: this.languageTitle,
+            phrase: text,
+            context: context || "",
+            // For the server-side translation_requested analytics event.
+            userId: authentication.user?.id,
+          },
+        })
+      );
 
       // Cache the result
       this.cacheResult(cacheKey, result);
@@ -163,18 +166,20 @@ export class TranslateService {
 
     // If not cached, fetch from API
     try {
-      const data = await functionProvider.run<LanguageLearningData>({
-        name: "translateWithContext",
-        args: {
-          translationType: "detailed",
-          sourceLanguage: "auto",
-          targetLanguage: this.languageTitle,
-          phrase: text,
-          context: context || "",
-          // For the server-side translation_requested analytics event.
-          userId: authentication.user?.id,
-        },
-      });
+      const data = await withAuthRetry(() =>
+        functionProvider.run<LanguageLearningData>({
+          name: "translateWithContext",
+          args: {
+            translationType: "detailed",
+            sourceLanguage: "auto",
+            targetLanguage: this.languageTitle,
+            phrase: text,
+            context: context || "",
+            // For the server-side translation_requested analytics event.
+            userId: authentication.user?.id,
+          },
+        })
+      );
 
       // Add context and phrase to the result
       data.context = context;
@@ -203,18 +208,20 @@ export class TranslateService {
     currentChunks?: Chunk[];
     history?: { role: "user" | "assistant"; text: string }[];
   }): Promise<TranslationAdvice> {
-    return functionProvider.run<TranslationAdvice>({
-      name: "translationAdvice",
-      args: {
-        phrase: params.phrase,
-        context: params.context || "",
-        message: params.message,
-        currentChunks: params.currentChunks || [],
-        history: params.history || [],
-        sourceLanguage: "auto",
-        targetLanguage: this.languageTitle,
-      },
-    });
+    return withAuthRetry(() =>
+      functionProvider.run<TranslationAdvice>({
+        name: "translationAdvice",
+        args: {
+          phrase: params.phrase,
+          context: params.context || "",
+          message: params.message,
+          currentChunks: params.currentChunks || [],
+          history: params.history || [],
+          sourceLanguage: "auto",
+          targetLanguage: this.languageTitle,
+        },
+      })
+    );
   }
 
   async translateByDictionaryapi(word: string) {

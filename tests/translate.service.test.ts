@@ -1,13 +1,25 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { setActivePinia, createPinia } from "pinia";
 
+// Controllable @modular-rest/client mock. translate.service reads
+// authentication.user?.id for analytics; withAuthRetry's recovery path (in
+// helper/auth-recovery) calls authentication.loginAsAnonymous and reads
+// isLogin/getToken. Exposing those lets the self-heal integration tests drive
+// a successful recovery without the network — and, because withAuthRetry now
+// calls reauthAnonymously intra-module, mocking at this boundary is the only
+// way to control recovery from a consumer test.
+// vi.hoisted so `auth` exists before the hoisted vi.mock factory runs (a
+// top-level import of translate.service pulls @modular-rest/client in eagerly).
+const auth = vi.hoisted(() => ({
+  user: { id: "test-user-id" } as { id: string } | null,
+  isLogin: true,
+  getToken: "anon-token" as string | null,
+  loginAsAnonymous: vi.fn(),
+}));
+
 vi.mock("@modular-rest/client", () => ({
-  functionProvider: {
-    run: vi.fn(),
-  },
-  // translate.service reads authentication.user?.id to attach a userId for the
-  // server-side translation_requested event.
-  authentication: { user: { id: "test-user-id" } },
+  functionProvider: { run: vi.fn() },
+  authentication: auth,
 }));
 
 import { TranslateService } from "../src/common/services/translate.service";
@@ -34,9 +46,14 @@ describe("TranslateService cache", () => {
     runMock.mockReset();
     runMock.mockResolvedValue("translated");
 
+    auth.loginAsAnonymous.mockClear();
+    auth.isLogin = true;
+    auth.getToken = "anon-token";
+
     // fetchSimpleTranslation logs to console.error on failure paths;
     // silence to keep test output clean.
     vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -97,6 +114,63 @@ describe("TranslateService cache", () => {
     runMock.mockResolvedValue("ok");
     const result = await svc.fetchSimpleTranslation("hello", "ctx");
     expect(result).toBe("ok");
+    expect(runMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+// Regression net for the "Translation failed / User not found" report: a stale
+// anonymous token in chrome.storage.sync must self-heal — translation wraps its
+// calls in withAuthRetry, which recovers an anonymous session and retries once.
+// The retry POLICY itself is covered in tests/auth-recovery.test.ts; here we
+// only assert translation is wired to it and the recovered result still caches.
+describe("TranslateService auth recovery (integration)", () => {
+  let svc: TranslateService;
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    useSettingsStore().language = "en";
+    (TranslateService.instance as any).translationCache = {};
+    svc = TranslateService.instance;
+
+    runMock.mockReset();
+    auth.loginAsAnonymous.mockClear();
+    auth.loginAsAnonymous.mockImplementation(async () => {
+      auth.isLogin = true;
+    });
+    auth.isLogin = true;
+    auth.getToken = "anon-token";
+
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "debug").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("self-heals on 'User not found' and caches the retried result", async () => {
+    runMock.mockRejectedValueOnce("User not found").mockResolvedValueOnce("ok");
+
+    const first = await svc.fetchSimpleTranslation("hello", "ctx");
+    const second = await svc.fetchSimpleTranslation("hello", "ctx");
+
+    expect(first).toBe("ok");
+    expect(second).toBe("ok");
+    expect(auth.loginAsAnonymous).toHaveBeenCalledTimes(1);
+    // 2 from the recover+retry of the first call, none from the cached second.
+    expect(runMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("self-heals on the detailed translation path too", async () => {
+    runMock
+      .mockRejectedValueOnce({ hasError: true, error: "User not found" })
+      .mockResolvedValueOnce({ phrase: "", context: "" });
+
+    const result = await svc.fetchDetailedTranslation("hello", "ctx");
+
+    expect(result).toBeTruthy();
+    expect(auth.loginAsAnonymous).toHaveBeenCalledTimes(1);
     expect(runMock).toHaveBeenCalledTimes(2);
   });
 });

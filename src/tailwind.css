@@ -1,3 +1,57 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ── Host-page isolation hardening ──────────────────────────────────────────
+   postcss-prefix-selector scopes OUR selectors to `.subturtle-scope`, but
+   scoping does nothing to stop the *host page's* element/universal rules from
+   cascading INTO our elements. Two such leaks broke the ConsoleCrane header on
+   dark host pages — most visibly studio.youtube.com (ClickUp 86exw6kme), whose
+   header rendered washed-out and pushed down with big gaps below.
+
+   The rules below carry an explicit `.subturtle-scope` so the prefixer's
+   idempotent guard leaves them as-is. They sit after `@tailwind utilities` and
+   are deliberately low-specificity (one class + one tag = 0,1,1) so our own
+   `text-*` / `flex-*` / `shrink-*` utilities (0,2,0) always win — these only
+   take effect where we set nothing, which is exactly where a host value would
+   otherwise leak in.
+
+   1) Inherited text color. Tailwind preflight sets no base `color`, so an
+      un-colored element inherits the host's. studio sets `html { color:#fff }`,
+      which painted our header IconButtons (pilotui sets a text color only in
+      dark mode) near-white on the white light-theme modal. Pin a base color
+      per theme so the extension UI never inherits the host's. */
+.subturtle-scope {
+  color: #111827; /* gray-900 — light-theme base text */
+}
+.subturtle-scope.dark {
+  color: #f3f4f6; /* gray-100 — dark-theme base text */
+}
+
+/* 2) Inherited flex-grow. studio is a Polymer app whose iron-flex-layout sets
+      `flex: 1 0 1e-9px` on generic elements; it leaked onto our flex children
+      (the header <section>, the word-detail content column and its buttons),
+      growing them to fill the modal — a tall empty header band and large gaps
+      between cards. Restore the CSS-default `flex: 0 1 auto`; intentional
+      growth/non-shrink still comes from our `flex-1` / `shrink-0` utilities. */
+.subturtle-scope div,
+.subturtle-scope section,
+.subturtle-scope header,
+.subturtle-scope footer,
+.subturtle-scope main,
+.subturtle-scope article,
+.subturtle-scope aside,
+.subturtle-scope nav,
+.subturtle-scope form,
+.subturtle-scope fieldset,
+.subturtle-scope ul,
+.subturtle-scope ol,
+.subturtle-scope li,
+.subturtle-scope dl,
+.subturtle-scope p,
+.subturtle-scope span,
+.subturtle-scope a,
+.subturtle-scope button,
+.subturtle-scope label {
+  flex: 0 1 auto;
+}
