@@ -197,6 +197,8 @@ A top-level `concurrency:` block keys on `github.ref`, so two pushes to the same
 
 If you squash-merge PRs, GitHub uses the **PR title** as the squash commit message, so PR titles must follow this convention to drive the right bump.
 
+**Always include the ClickUp task ID in the commit message.** Reference it as `#<task-id>` (e.g. `fix(console-crane): align bundle selector height #86exw6kme`), matching existing history (`#86et9bk39`, `CU-86exvrzy8`). It can go in the subject or the body, and it links the commit back to the task in ClickUp. When a change closes a task, put the ID on every commit for that task; for squash-merged PRs put it in the PR title.
+
 ### `prepareCmd` does not build
 
 [release.config.cjs](release.config.cjs) `prepareCmd` only runs `scripts/sync-manifest-version.mjs`. The build/zip happen earlier as explicit workflow steps so they're visible in CI logs and have access to the env file. Don't move build/zip back into `prepareCmd`.
