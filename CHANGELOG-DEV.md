@@ -1,3 +1,15 @@
+# [1.14.0-dev.1](https://github.com/codebridger/subturtle-extension-apps/compare/v1.13.0...v1.14.0-dev.1) (2026-06-08)
+
+
+### Bug Fixes
+
+* **analytics:** import authentication from client lib so unit suites load ([902436f](https://github.com/codebridger/subturtle-extension-apps/commit/902436f1b15a93739527cdbd8eed6e3eca7aed70))
+
+
+### Features
+
+* **analytics:** align events with docs/metrics conventions, close tracking gaps ([6e3236e](https://github.com/codebridger/subturtle-extension-apps/commit/6e3236e70bae3cd55a3d060311c85a4b36238723))
+
 # [1.13.0-dev.3](https://github.com/codebridger/subturtle-extension-apps/compare/v1.13.0-dev.2...v1.13.0-dev.3) (2026-06-08)
 
 
