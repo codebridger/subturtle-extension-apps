@@ -241,6 +241,30 @@ GITHUB_TOKEN=$(gh auth token) yarn release:dry
 
 This prints the version + notes that would be generated without writing anything or creating a release.
 
+## Verifying changes
+
+**The default way to verify any extension change — locally or in CCW — is to drive the [`chrome-extension-tester`](https://github.com/BHUVAN-RJ/chrome-extension-testing-mcp) (Playwright) MCP yourself.** It's declared in [.mcp.json](.mcp.json), loads at Claude Code startup, and runs a real headless Chromium with the unpacked `dist/` loaded. Prefer it over handing back for a manual reload and over leaning on the committed `tests/e2e/` suite for per-change checks: it drives the *real* built bundle against the *real* dev server, opens both `popup.html` and the content-script surfaces, and needs no human to reload the extension.
+
+Loop after any change:
+
+```bash
+yarn build        # rebuild dist/ first — the MCP loads the built bundle, not source
+```
+
+```
+load_extension({ extension_path: "<abs>/dist" })                     # launch + load unpacked
+interact_with_popup({ action: "open" | "type" | "click" | "get_text" })
+inspect_dom({ script })                                              # eval JS / check content-script DOM
+extension_storage({ action: "set", area: "sync", data: { token } }) # logged-in flows
+take_screenshot({ output_path })  /  run_assertion({ script })       # capture + PASS/FAIL
+```
+
+Prerequisites: `dist/` built and `.env.production` carrying `ENABLE_PASSWORD_AUTH=true` (so the popup login form renders). For logged-in flows, mint a JWT against the dev server and inject it into `chrome.storage.sync["token"]` via `extension_storage`; the curl/login detail and the full 14-tool reference live in [§ Cloud agent workflow](#cloud-agent-workflow-claude-code-on-the-web) — the CCW-specific configuration of this same MCP.
+
+**MCP vs `tests/e2e/`.** Both are Playwright; they share no code and do different jobs. The MCP is the *interactive, per-change* check (this section). The [`tests/e2e/`](tests/e2e/) specs are the *committed regression suite* CI verify runs on every push/PR — extend them when a behaviour earns a permanent net, not as your day-to-day check. See [§ Boundary](#boundary).
+
+**Can't reach:** real `youtube.com` / `netflix.com` subtitle surfaces — `main.js`'s manifest match is locked to those hosts, so they stay manual (see [§ Verification checklist](#verification-checklist)).
+
 ## Testing
 
 Three test layers, all wired into a single CI verify gate that blocks releases on a red.
@@ -341,6 +365,8 @@ tests/
 ## Cloud agent workflow (Claude Code on the Web)
 
 Lets a cloud Claude agent on [Claude Code on the Web (CCW)](https://code.claude.com/docs/en/web-quickstart) clone the repo, build the extension, install it into a headless Chromium, log in with username/password against the live dev server at `https://dev.dashboard.subturtle.app/`, and drive popup + content scripts with screenshots — no Google OAuth, no local backend.
+
+> This same MCP is the repo-wide default for verifying **any** change, local or cloud — see [§ Verifying changes](#verifying-changes). What follows is its CCW-specific (cloud) configuration.
 
 The agent path uses **only** the [chrome-extension-tester-mcp](https://github.com/BHUVAN-RJ/chrome-extension-testing-mcp) MCP server (declared in [.mcp.json](.mcp.json)). It is independent of the `tests/e2e/` Playwright fixture and shares no code with it; CI verify runs the spec, the agent runs the MCP.
 
@@ -459,7 +485,7 @@ The agent path uses only the MCP. `tests/e2e/` is the testing ground for CI veri
 
 ## Verification checklist
 
-Most of this is automated by `yarn test` + `yarn test:e2e` — the items below are what the test suite already pins, with cross-references to the spec files. Re-run them by hand only if you're touching code the suite can't reach (the YouTube / Netflix subtitle path) or if you want a manual sanity pass on a real site.
+Most of this is automated by `yarn test` + `yarn test:e2e` — the items below are what the test suite already pins, with cross-references to the spec files. Re-run them by hand only if you're touching code the suite can't reach (the YouTube / Netflix subtitle path) or if you want a manual sanity pass on a real site. When verifying by hand, default to the chrome-extension-tester MCP — see [§ Verifying changes](#verifying-changes).
 
 Automated:
 
@@ -506,5 +532,6 @@ Still manual:
 - Playwright fixtures server: [tests/e2e/server.mjs](tests/e2e/server.mjs)
 - Typecheck wrapper (with upstream-error filter): [scripts/typecheck.mjs](scripts/typecheck.mjs)
 - Vue 3 SFC ambient declaration: [src/vue-shim.d.ts](src/vue-shim.d.ts)
-- MCP server config (chrome-extension-tester for CCW): [.mcp.json](.mcp.json)
+- Default verification workflow (chrome-extension-tester MCP): [§ Verifying changes](#verifying-changes)
+- MCP server config (chrome-extension-tester — default verify tool + CCW): [.mcp.json](.mcp.json)
 - Popup LoginView (password form + OAuth buttons): [src/popup/views/LoginView.vue](src/popup/views/LoginView.vue)
