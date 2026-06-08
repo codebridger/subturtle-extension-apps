@@ -1,3 +1,10 @@
+# [1.14.0-dev.2](https://github.com/codebridger/subturtle-extension-apps/compare/v1.14.0-dev.1...v1.14.0-dev.2) (2026-06-08)
+
+
+### Bug Fixes
+
+* **console-crane:** isolate modal from host-page color/flex CSS leaks ([2b89736](https://github.com/codebridger/subturtle-extension-apps/commit/2b89736bcb6664f2ecb82ba902ef1bb5a83dcc61)), closes [#86exw6kme](https://github.com/codebridger/subturtle-extension-apps/issues/86exw6kme)
+
 # [1.14.0-dev.1](https://github.com/codebridger/subturtle-extension-apps/compare/v1.13.0...v1.14.0-dev.1) (2026-06-08)
 
 
