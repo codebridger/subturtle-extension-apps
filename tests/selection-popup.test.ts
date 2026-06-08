@@ -6,6 +6,7 @@ import { createTestingPinia } from "@pinia/testing";
 // network layer so a stray click in another test can't fire a real request.
 vi.mock("@modular-rest/client", () => ({
   functionProvider: { run: vi.fn() },
+  authentication: { user: { id: "test-user-id" } },
 }));
 
 import SelectionPopup from "../src/nibble/components/SelectionPopup.vue";
