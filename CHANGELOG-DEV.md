@@ -1,3 +1,10 @@
+## [1.14.1-dev.2](https://github.com/codebridger/subturtle-extension-apps/compare/v1.14.1-dev.1...v1.14.1-dev.2) (2026-06-08)
+
+
+### Bug Fixes
+
+* self-heal stale auth token on translate instead of failing ([6ef3766](https://github.com/codebridger/subturtle-extension-apps/commit/6ef3766e482c0c97476b4d8aac59fe2f92f7376b))
+
 ## [1.14.1-dev.1](https://github.com/codebridger/subturtle-extension-apps/compare/v1.14.0...v1.14.1-dev.1) (2026-06-08)
 
 
