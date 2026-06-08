@@ -82,6 +82,10 @@ import { ref } from "vue";
 import { useProfileStore } from "../stores/profile";
 import { analytic } from "./mixpanel";
 import { debug, error, log } from "../common/helper/log";
+import {
+  reauthAnonymously,
+  setSessionRecovery,
+} from "../common/helper/auth-recovery";
 
 GlobalOptions.set({
   host: process.env.SUBTURTLE_API_URL || "",
@@ -176,42 +180,15 @@ export async function loginWithLastSession() {
       }
       return true;
     })
-    .finally(() => {
+    .finally(async () => {
       if (!authentication.isLogin) {
         debug("Login with last session failed, trying anonymous login");
-
-        authentication
-          .loginAsAnonymous()
-          .then(async () => {
-            debug(
-              "Subturtle Anonymous login succeded",
-              authentication.isLogin
-            );
-            // Persist the anonymous token so subsequent mounts (other bundles
-            // on the same page, the popup, page reloads) reuse it instead of
-            // each calling /user/loginAnonymous and stranding the previous
-            // anonymous user — which the server then 412s on the next call.
-            // Writes to chrome.storage.sync (cross-context) and to this
-            // page's localStorage (modular-rest's own per-origin cache).
-            const token = authentication.getToken;
-            if (token) {
-              try {
-                await sendMessage(new StoreUserTokenMessage(token));
-              } catch (err) {
-                error(
-                  "Subturtle: persisting anonymous token to background failed",
-                  err
-                );
-              }
-              // if (typeof localStorage !== "undefined") {
-              //   localStorage.setItem("token", token);
-              // }
-            }
-            updateIsLogin();
-          })
-          .catch((err) => {
-            console.error("Subturtle anonymous login failed", err);
-          });
+        // Establish + persist an anonymous session (shared primitive), then
+        // refresh the reactive isLogin ref. This is the first-session
+        // bootstrap; the same reauthAnonymously also backs translate's
+        // mid-session token self-heal (see TranslateService.withAuthRetry).
+        const ok = await reauthAnonymously();
+        if (ok) updateIsLogin();
       }
     });
 }
@@ -233,3 +210,38 @@ export async function logout(sendAuthStatusToOtherParts = true) {
     await sendMessage(message);
   }
 }
+
+/**
+ * Session recovery used by withAuthRetry when a request fails on a dead/stale
+ * token (translate is the canonical caller). Always ends by establishing a
+ * fresh anonymous session so the retry has a usable token.
+ *
+ * For a REGISTERED user whose token died, it first tears the dead session down
+ * via logout(): resets the profile store, the reactive isLogin ref and the
+ * analytics identity, removes the stored token from the background, and
+ * broadcasts StoreUserTokenMessage(null) to every tab. (The cross-tab
+ * broadcast is a no-op from a content script — which has no chrome.tabs — but
+ * fires fully from the popup.) That cleanly downgrades them to anonymous across
+ * the whole extension instead of leaving a phantom logged-in UI behind.
+ *
+ * For an ANONYMOUS session (the common stale-anon-token case — `user` is null,
+ * since loginAsAnonymous never sets a user), the logout teardown is skipped:
+ * there's no registered identity to reset and no reason to broadcast a logout
+ * that would re-roll every other tab's anon session. A contained
+ * reauthAnonymously is enough.
+ *
+ * logout() alone is NOT enough — it leaves no token, so the retry would just
+ * fail again; reauthAnonymously() is what makes the session usable.
+ */
+export async function recoverSession(): Promise<boolean> {
+  if (authentication.user?.type?.toLowerCase() === "user") {
+    await logout();
+  }
+  return reauthAnonymously();
+}
+
+// Upgrade withAuthRetry's recovery from the bare reauthAnonymously default to
+// the system-wide recoverSession above. modular-rest is imported by every
+// bundle before any translate runs, so this override is always in effect in
+// production; unit tests that don't load this plugin keep the bare default.
+setSessionRecovery(recoverSession);
