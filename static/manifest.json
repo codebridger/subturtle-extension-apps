@@ -1,6 +1,6 @@
 {
-	"name": "Subturtle",
-	"description": "Turn video subtitles into English lessons. Learn new vocabulary in context as you watch on YouTube and Netflix.",
+	"name": "Subturtle: Learn English with Subtitles, Videos & AI Coach",
+	"description": "Learn English from any video or web page: tap a subtitle word for its meaning, save and review words, and speak with an AI coach.",
 	"version": "1.14.1.2",
 	"manifest_version": 3,
 	"icons": {
