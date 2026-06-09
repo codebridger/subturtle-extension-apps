@@ -1,3 +1,10 @@
+# [1.15.0](https://github.com/codebridger/subturtle-extension-apps/compare/v1.14.1...v1.15.0) (2026-06-09)
+
+
+### Features
+
+* Updated the package title and description ([fc73a6c](https://github.com/codebridger/subturtle-extension-apps/commit/fc73a6c545846055f86cad9b3cabeaf09e1d2f5d))
+
 ## [1.14.1](https://github.com/codebridger/subturtle-extension-apps/compare/v1.14.0...v1.14.1) (2026-06-08)
 
 
