@@ -17,6 +17,46 @@ yarn typecheck    # tsc --noEmit via the upstream-error filter
 
 Load `dist/` as an unpacked extension at `chrome://extensions`. There is no separate dev server — the bundler writes straight to `dist/`, and Chrome reloads when you click the reload button on the extension card.
 
+## Sibling repositories
+
+This extension does not stand alone — it depends on two other `codebridger` repos. They are normally checked out **next to** this repo (`../`), and devs work on all of them side-by-side from the `subturtle-all-apps.code-workspace`.
+
+| Sibling | Repo | Consumed here as | Local checkout |
+| --- | --- | --- | --- |
+| Server / Dashboard | [`codebridger/subturtle-dashboard-app`](https://github.com/codebridger/subturtle-dashboard-app) | TS types imported by [src/stores/profile.ts](src/stores/profile.ts) via `../../../dashboard-app/frontend/types/database.type`; also the live dev API/auth server at `https://dev.dashboard.subturtle.app/`. | `../dashboard-app` — the import path resolves to a dir of that exact name next to this repo's root. CI clones it there (see [release.yml](.github/workflows/release.yml)). |
+| pilotUI | [`codebridger/pilotui`](https://github.com/codebridger/pilotui) | npm dependency `pilotui@^1.29.0` — the Tailwind/Vue component library the whole UI builds on. | `node_modules/pilotui` (a published, built artifact — **not** the source repo). Clone the repo separately to edit the source. |
+
+### Working across siblings (download / search / branch)
+
+When a change on this repo's branch needs a matching change in a sibling — a new field on a `dashboard-app` type, a fix in a `pilotui` component — you can pull the sibling in and work on it. **Do this on a feature branch in the sibling; never commit to the sibling's `main` just to make this repo's branch pass.** The goal is to verify this repo's branch against the modified sibling while keeping the sibling's `main` clean.
+
+1. **Search locally first.** The sibling is often already on disk next to this repo. Confirm before cloning:
+   ```bash
+   git -C ../dashboard-app remote -v      # expect codebridger/subturtle-dashboard-app
+   ls node_modules/pilotui                # the built pilotui (read-only artifact)
+   ```
+   `dashboard-app` may also be checked out under its full name `../subturtle-dashboard-app`; the import path needs a dir literally named `dashboard-app`, so symlink or clone into that name.
+2. **Download it if missing.**
+   ```bash
+   git clone https://github.com/codebridger/subturtle-dashboard-app.git ../dashboard-app
+   git clone https://github.com/codebridger/pilotui.git ../pilotui
+   ```
+3. **Branch the sibling, then change it.**
+   ```bash
+   git -C ../dashboard-app checkout -b <feature-branch>   # e.g. feat/new-bundle-field
+   # …edit types/components in the sibling…
+   ```
+   This keeps the sibling's `main` untouched while this repo's branch is tested against the patched code.
+4. **Point this repo at the local pilotui to test a patch** (the dashboard types are already read straight off `../dashboard-app`):
+   ```bash
+   (cd ../pilotui && yarn link) && yarn link pilotui    # use local pilotui source
+   # …verify…
+   yarn unlink pilotui && yarn install --force          # revert before committing
+   ```
+   Never leave a `yarn link` / `file:` override in `package.json` when you commit — CI installs `pilotui@^1.29.0` from the registry.
+
+Same confirm-before-acting rule as always: never push a sibling branch or open a PR against a sibling without explicit per-action user confirmation.
+
 ## Bundles (+ popup, background)
 
 | Bundle | Entry | Runs on | Purpose |
@@ -146,7 +186,7 @@ And the `SettingsObject` type in [src/common/types/messaging.ts](src/common/type
 - **Selection popup must `@mousedown.prevent.stop`.** Otherwise clicking the popup deselects the page text, the composable detects the empty selection, and the popup unmounts mid-click.
 - **The mount root in Nibble must not block the page.** Set `width: 0; height: 0; position: fixed; top: 0; left: 0`. Children use their own `position: fixed` to position themselves relative to the viewport.
 - **Theme dark class lives on `.subturtle-scope`, not `<html>`.** Tailwind's `dark:` rules are rewritten by `postcss-prefix-selector` to `.subturtle-scope.dark ...` — so the same element must carry both classes. The settings store handles this and a `MutationObserver` keeps Vue Teleport subtrees in sync.
-- **`src/stores/profile.ts` imports types from a sibling repo.** The path `../../../dashboard-app/frontend/types/database.type` resolves to a directory _next to_ this repo's root, not inside it. The actual repo is [`codebridger/subturtle-dashboard-app`](https://github.com/codebridger/subturtle-dashboard-app); local builds work because devs check both repos out side-by-side. CI clones the dashboard repo into `../dashboard-app/` before `yarn build` runs (see [.github/workflows/release.yml](.github/workflows/release.yml)). Don't try to "fix" the import to a relative-internal path or vendor the file — both will drift.
+- **`src/stores/profile.ts` imports types from a sibling repo.** The path `../../../dashboard-app/frontend/types/database.type` resolves to a directory _next to_ this repo's root, not inside it. The actual repo is [`codebridger/subturtle-dashboard-app`](https://github.com/codebridger/subturtle-dashboard-app); local builds work because devs check both repos out side-by-side. CI clones the dashboard repo into `../dashboard-app/` before `yarn build` runs (see [.github/workflows/release.yml](.github/workflows/release.yml)). Don't try to "fix" the import to a relative-internal path or vendor the file — both will drift. See [§ Sibling repositories](#sibling-repositories) for how to pull in / branch the dashboard and pilotui repos.
 - **Playwright Chromium download isn't on CCW's Trusted allowlist.** The chrome-extension-tester-mcp's `postinstall` runs `playwright install chromium`, which pulls from `cdn.playwright.dev` / `playwright.download.prss.microsoft.com`. CCW environments must use Custom network access with those hosts added — see [§ Cloud agent workflow](#cloud-agent-workflow-claude-code-on-the-web). The setup script caches Chromium into the VM snapshot so per-session cost is zero.
 
 ## Adding things
