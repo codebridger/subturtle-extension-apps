@@ -1,7 +1,8 @@
 <template>
-  <div class="relative w-full">
+  <div ref="rootRef" class="relative w-full">
     <Select v-model="selected" :options="options" multiple custom labelKey="title" valueKey="_id"
-      :placeholder="showSuggestion ? '' : 'Select Phrase Bundles to save...'">
+      :placeholder="showSuggestion ? '' : 'Select Phrase Bundles to save...'" @open="isDropdownOpen = true"
+      @close="isDropdownOpen = false">
       <template #selected="{
         selectedOption,
         selectedOptions,
@@ -107,6 +108,11 @@ const isCreating = ref(false);
 
 const searchedBundleName = ref("");
 const options = ref<PhraseBundleType[]>([]);
+
+// Component root — boundary for our own outside-click close (see below).
+const rootRef = ref<HTMLElement | null>(null);
+// Mirrors pilotui Select's internal open state via its open/close events.
+const isDropdownOpen = ref(false);
 
 // In-field suggested bundle (shown only when nothing is selected yet).
 const isEditingSuggested = ref(false);
@@ -273,18 +279,57 @@ watch(searchedBundleName, () => {
   }, 300); // 300ms debounce
 });
 
+/**
+ * Close the pilotui Select dropdown.
+ *
+ * pilotui's Select owns its open state internally and exposes no close method or
+ * `open` prop — the only outside-driven close it offers is its own document
+ * click handler, which bails whenever the click lands inside ANY `.relative`
+ * ancestor (Select.vue `handleClickOutside`). Inside the ConsoleCrane modal —
+ * where almost everything sits under a Tailwind `relative` wrapper — that guard
+ * matches on nearly every click, so the dropdown effectively never closes.
+ *
+ * We drive pilotui's own close path instead by dispatching the Escape key its
+ * trigger button already handles (`handleKeydown` → `closeDropdown`). It's
+ * idempotent: closing an already-closed dropdown is a no-op, so this can't
+ * accidentally re-open. Used both for our outside-click handler and by
+ * SaveWordSectionV2 after a successful save.
+ */
+function closeDropdown() {
+  const trigger = rootRef.value?.querySelector<HTMLButtonElement>(
+    'button[aria-haspopup="true"]'
+  );
+  trigger?.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+  );
+}
+
+/**
+ * Close the dropdown when the user clicks anywhere outside this component.
+ * Replaces pilotui's `.relative`-based outside detection, which misfires inside
+ * the modal (see closeDropdown). We only act while open and only for clicks that
+ * land outside our root, so in-dropdown interactions (multi-select toggles,
+ * search, create, chip removal, suggestion edit) are untouched.
+ */
+function handleOutsidePointer(event: Event) {
+  if (!isDropdownOpen.value) return;
+  const root = rootRef.value;
+  if (root && !root.contains(event.target as Node)) {
+    closeDropdown();
+  }
+}
+
 onMounted(() => {
   fetchOptions();
+  document.addEventListener("pointerdown", handleOutsidePointer);
 });
 
 onBeforeUnmount(() => {
   if (searchDebounceTimer) {
     clearTimeout(searchDebounceTimer);
   }
+  document.removeEventListener("pointerdown", handleOutsidePointer);
 });
-
-// Expose method for compatibility (Select manages its own open state)
-function closeDropdown() { }
 
 defineExpose({
   closeDropdown,
@@ -323,5 +368,27 @@ defineExpose({
 /* The visible trigger button fills the stretched chain. */
 .relative.w-full :deep(.flex.flex-col > .relative > .relative > button) {
   flex: 1 1 auto;
+}
+
+/*
+  Keep the open dropdown panel inside its own max-height instead of spilling the
+  bundle list out of the modal (ClickUp 86exzbh61). pilotui only gives the
+  option list an internal scroll in `confirm` mode; in the `custom` mode we use
+  here the list container is a plain `flex-1` with no overflow, so a long list
+  grows past the panel's max-height and out of the modal. Make the panel a flex
+  column and let the list region scroll within it.
+
+  Targets pilotui's internal markup (the absolutely-positioned listbox panel and
+  its `flex-1` body); a pilotui nesting change would make this a cosmetic
+  regression, not a functional break.
+*/
+.relative.w-full :deep([role="listbox"]) {
+  display: flex;
+  flex-direction: column;
+}
+
+.relative.w-full :deep([role="listbox"] > .flex-1) {
+  min-height: 0;
+  overflow-y: auto;
 }
 </style>
