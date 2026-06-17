@@ -1,7 +1,7 @@
 {
 	"name": "Subturtle: Learn English with Subtitles, Videos & AI Coach",
 	"description": "Learn English from any video or web page: tap a subtitle word for its meaning, save and review words, and speak with an AI coach.",
-	"version": "1.15.0.1",
+	"version": "1.15.0.2",
 	"manifest_version": 3,
 	"icons": {
 		"128": "/assets/logo-128.png",
@@ -80,5 +80,5 @@
 			]
 		}
 	],
-	"version_name": "1.15.0-dev.1"
+	"version_name": "1.15.0-dev.2"
 }
