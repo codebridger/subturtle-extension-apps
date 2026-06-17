@@ -1,8 +1,8 @@
 <template>
   <div ref="rootRef" class="relative w-full">
     <Select v-model="selected" :options="options" multiple custom labelKey="title" valueKey="_id"
-      :placeholder="showSuggestion ? '' : 'Select Phrase Bundles to save...'" @open="isDropdownOpen = true"
-      @close="isDropdownOpen = false">
+      :placeholder="showSuggestion ? '' : 'Select Phrase Bundles to save...'" @open="onDropdownOpen"
+      @close="onDropdownClose">
       <template #selected="{
         selectedOption,
         selectedOptions,
@@ -319,6 +319,80 @@ function handleOutsidePointer(event: Event) {
   }
 }
 
+/**
+ * Size and place the open dropdown so it never runs past the modal frame
+ * (ClickUp 86exzbh61 follow-up). The save section sits near the bottom of the
+ * ConsoleCrane modal, so pilotui's fixed downward max-h-96 panel spilled below
+ * the visible frame — forcing a modal scroll on top of the list's own scroll.
+ *
+ * pilotui has no placement API, so on open we measure the trigger against the
+ * nearest scroll frame and set inline styles on its absolutely-positioned panel:
+ * flip it upward when it can't fully open downward and there's more room above,
+ * and cap its height to the available space (minus a gap) in whichever direction
+ * it opens. The list scrolls internally within that cap (see scoped styles).
+ */
+function positionDropdown() {
+  const root = rootRef.value;
+  if (!root) return;
+  const panel = root.querySelector<HTMLElement>('[role="listbox"]');
+  const trigger = root.querySelector<HTMLElement>('button[aria-haspopup="true"]');
+  if (!panel || !trigger) return;
+
+  const GAP = 12; // breathing room between the panel and the frame edge
+  const MAX = 336; // pilotui's max-h-96 (24rem → 336px after the rem→px rewrite)
+
+  const frameEl =
+    root.closest<HTMLElement>(".overflow-y-auto") ?? document.documentElement;
+  const frame = frameEl.getBoundingClientRect();
+  const t = trigger.getBoundingClientRect();
+
+  const below = frame.bottom - t.bottom - GAP;
+  const above = t.top - frame.top - GAP;
+
+  // Flip up only when the list can't fully open downward and there's more room
+  // above; otherwise keep the natural downward placement.
+  const openUp = below < MAX && above > below;
+  const avail = Math.max(0, openUp ? above : below);
+
+  panel.style.maxHeight = `${Math.min(MAX, avail)}px`;
+  if (openUp) {
+    panel.style.top = "auto";
+    panel.style.bottom = "calc(100% + 4px)";
+    panel.style.marginTop = "0";
+  } else {
+    // Clear any prior upward placement (panel is reused across reposition runs).
+    panel.style.top = "";
+    panel.style.bottom = "";
+    panel.style.marginTop = "";
+  }
+}
+
+// Reposition the open dropdown when the viewport or modal body changes size /
+// scrolls; torn down again on close so the listeners only live while open.
+let removeReposition: (() => void) | null = null;
+
+function onDropdownOpen() {
+  isDropdownOpen.value = true;
+  nextTick(positionDropdown);
+
+  if (removeReposition) return;
+  const handler = () => positionDropdown();
+  const frameEl: Window | HTMLElement =
+    rootRef.value?.closest<HTMLElement>(".overflow-y-auto") ?? window;
+  window.addEventListener("resize", handler);
+  frameEl.addEventListener("scroll", handler, { passive: true });
+  removeReposition = () => {
+    window.removeEventListener("resize", handler);
+    frameEl.removeEventListener("scroll", handler);
+  };
+}
+
+function onDropdownClose() {
+  isDropdownOpen.value = false;
+  removeReposition?.();
+  removeReposition = null;
+}
+
 onMounted(() => {
   fetchOptions();
   document.addEventListener("pointerdown", handleOutsidePointer);
@@ -329,6 +403,7 @@ onBeforeUnmount(() => {
     clearTimeout(searchDebounceTimer);
   }
   document.removeEventListener("pointerdown", handleOutsidePointer);
+  removeReposition?.();
 });
 
 defineExpose({
