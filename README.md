@@ -49,6 +49,7 @@ Latest updates
 ## Table of Contents
 
 - [Project Overview](#project-overview)
+- [Sibling Repositories](#sibling-repositories)
 - [Architecture](#architecture)
   - [Main Modules](#main-modules)
   - [Data Flow](#data-flow)
@@ -72,6 +73,19 @@ Latest updates
 ## Project Overview
 
 Subturtle is a Chrome extension designed to help users learn English while watching videos online. It provides features such as word translation on hover, full subtitle translation, and detailed word information. The extension supports platforms like YouTube and Netflix, with plans for more.
+
+---
+
+## Sibling Repositories
+
+This extension is one of three side-by-side `codebridger` repositories. The other two are normally checked out **next to** this repo (`../`) and developed together via the `subturtle-all-apps.code-workspace`.
+
+| Sibling | Repository | Role | How it's used here |
+| --- | --- | --- | --- |
+| Server / Dashboard | [`codebridger/subturtle-dashboard-app`](https://github.com/codebridger/subturtle-dashboard-app) | Backend API, auth, and user dashboard (dev server at `https://dev.dashboard.subturtle.app/`). | The extension imports shared TypeScript types from it (`src/stores/profile.ts`) and talks to its API at runtime. Cloned to `../dashboard-app` locally and in CI. |
+| pilotUI | [`codebridger/pilotui`](https://github.com/codebridger/pilotui) | Shared Tailwind/Vue component library. | Installed as the npm dependency `pilotui` and used across the popup, ConsoleCrane, and subtitle UIs. |
+
+**For contributors and AI agents:** a change in this repo sometimes needs a matching change in a sibling. You can **search for the sibling locally first** (it's usually already cloned next to this repo) and **download/clone it if it's missing**. When you need to modify a sibling to test this repo's branch, do it on a **feature branch in the sibling** rather than committing to its `main`. The full search/clone/branch/link workflow is documented in [CLAUDE.md § Sibling repositories](./CLAUDE.md#sibling-repositories).
 
 ---
 
