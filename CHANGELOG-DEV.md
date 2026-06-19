@@ -1,3 +1,10 @@
+# [1.16.0-dev.1](https://github.com/codebridger/subturtle-extension-apps/compare/v1.15.1...v1.16.0-dev.1) (2026-06-19)
+
+
+### Features
+
+* **popup:** show extension version in home footer [#86](https://github.com/codebridger/subturtle-extension-apps/issues/86)exqazkq ([fe37a47](https://github.com/codebridger/subturtle-extension-apps/commit/fe37a47f980a54cace443555da14a182f68f6502)), closes [#86exqazkq](https://github.com/codebridger/subturtle-extension-apps/issues/86exqazkq)
+
 ## [1.15.1-dev.1](https://github.com/codebridger/subturtle-extension-apps/compare/v1.15.0...v1.15.1-dev.1) (2026-06-17)
 
 
