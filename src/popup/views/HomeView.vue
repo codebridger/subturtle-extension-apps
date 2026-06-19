@@ -283,6 +283,13 @@
             </span>
           </router-link>
         </div>
+
+        <!-- Extension version -->
+        <div
+          class="text-center text-xs text-gray-400 dark:text-gray-500 select-text"
+        >
+          v{{ appVersion }}
+        </div>
       </div>
     </div>
   </transition>
@@ -293,7 +300,10 @@ import { computed, onMounted, ref, watch } from "vue";
 import { getAsset } from "../helper/assets";
 import { isLogin, logout } from "../../plugins/modular-rest";
 import { useRouter } from "vue-router";
-import { getSubturtleDashboardUrlWithToken } from "../../common/static/global";
+import {
+  getSubturtleDashboardUrlWithToken,
+  getExtensionVersion,
+} from "../../common/static/global";
 import { useSettingsStore } from "../../common/store/settings";
 import TranslateCard from "../components/TranslateCard.vue";
 
@@ -304,6 +314,7 @@ defineOptions({ name: "HomeView" });
 const router = useRouter();
 const isLoading = ref(false);
 const showLogoutConfirm = ref(false);
+const appVersion = getExtensionVersion();
 
 const settings = useSettingsStore();
 const currentHost = ref<string>("");
