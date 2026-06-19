@@ -1,3 +1,11 @@
+## [1.15.1](https://github.com/codebridger/subturtle-extension-apps/compare/v1.15.0...v1.15.1) (2026-06-17)
+
+
+### Bug Fixes
+
+* **console-crane:** close bundle selector dropdown and contain its list [#86](https://github.com/codebridger/subturtle-extension-apps/issues/86)exzbh61 ([f9f1c8e](https://github.com/codebridger/subturtle-extension-apps/commit/f9f1c8e465f81ae14a8bdf40f42d7642f702be4c)), closes [#86exzbh61](https://github.com/codebridger/subturtle-extension-apps/issues/86exzbh61)
+* **console-crane:** keep bundle list within the modal frame [#86](https://github.com/codebridger/subturtle-extension-apps/issues/86)exzbh61 ([ca49b14](https://github.com/codebridger/subturtle-extension-apps/commit/ca49b143cbefa8d6d3097066c0295ce8819a2795)), closes [#86exzbh61](https://github.com/codebridger/subturtle-extension-apps/issues/86exzbh61)
+
 # [1.15.0](https://github.com/codebridger/subturtle-extension-apps/compare/v1.14.1...v1.15.0) (2026-06-09)
 
 
