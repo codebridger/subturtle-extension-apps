@@ -257,12 +257,27 @@ Pushes to `dev` cut prereleases on the `dev` channel — versions look like `1.1
 The release workflow targets one of two GitHub Environments per run, picked from the branch via `environment: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}`. Push to `main` → `prod` environment; push to `dev` → `dev` environment. With the job bound to an environment, `${{ secrets.X }}` / `${{ vars.X }}` resolve environment-first then fall back to repo-level — so the `env:` block in the "Write .env.production" step is the same for both branches.
 
 **Per-environment** (`Settings → Environments → prod` / `dev`) — same keys in both, different values:
-- Secret: `MIXPANEL_PROJECT_TOKEN`
+- Secrets: `MIXPANEL_PROJECT_TOKEN`, `GOOGLE_OAUTH_CLIENT_ID`
 - Variables: `SUBTURTLE_API_URL`, `SUBTURTLE_DASHBOARD_URL`
 
 **Repository-level** (`Settings → Secrets and variables → Actions`) — shared by both:
-- Secrets: `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_TRANSLATE_KEY`
+- Secrets: `GOOGLE_TRANSLATE_KEY`
 - Variables: `MIXPANEL_API_HOST`, `GOOGLE_TRANSLATE_PROXY_URL`, `UNINSTALL_FORM_URL`
+
+**Google sign-in uses two OAuth clients, and they must belong to the same Google project as
+the server the build talks to** — the server only accepts access tokens issued to its own
+clients:
+
+| Used by | Where it is set | `prod` build | `dev` build |
+| --- | --- | --- | --- |
+| "With Google Account" (`launchWebAuthFlow`) | `GOOGLE_OAUTH_CLIENT_ID` secret, per environment | web client in `subturtle-prod` | web client in `subturtle-dev` |
+| "With Current Chrome User" (`getAuthToken`) | `oauth2.client_id` in [static/manifest.json](static/manifest.json) | Chrome-extension client in `subturtle-prod` | same (one manifest) |
+
+The manifest client is a *Chrome extension* client bound to the Web Store item id
+(`gaplicnpaiidofkoeonioomcnadoofkf`), so `getAuthToken` only works in the store-published
+build; unpacked builds get a different id and cannot use it, which is why one committed
+value is enough. The web client works in any build whose
+`https://<extension-id>.chromiumapp.org/` redirect is registered on it — the store id is.
 
 When forking, recreate the two environments and the repo-level entries above.
 
