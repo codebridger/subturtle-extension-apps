@@ -15,6 +15,7 @@
         <button
           :disabled="!chromeUserRes || !chromeUserRes.token || pending"
           class="flex items-center justify-center text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-800 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          data-testid="login-with-chrome"
           @click="loginWithChrome"
         >
           <div
@@ -174,14 +175,22 @@ onMounted(async () => {
 async function loginWithChrome() {
   pending.value = true;
 
-  if (GetCurrentChromeUserToken.checkResponse(chromeUserRes)) {
+  // chromeUserRes is a ref, and <script setup> only unwraps refs in the template,
+  // so read .value here. checkResponse() looks for .status/.token on what it is
+  // given; handed the ref itself it always returned false and this button never
+  // sent a request at all.
+  const chromeUser = chromeUserRes.value;
+
+  if (GetCurrentChromeUserToken.checkResponse(chromeUser)) {
+    // chrome.identity.getAuthToken returns a Google access token issued to the
+    // manifest's oauth2.client_id, so it signs in through the same route as the
+    // launchWebAuthFlow token below; the server accepts it only when that client
+    // is one of SubTurtle's.
     const url = joinToBaseUrl(
-      `/auth/google/token-login?token=${chromeUserRes.token}`
+      `/auth/google/access-token-login?access_token=${encodeURIComponent(chromeUser.token)}`
     );
 
-    const { status, token } = await get(url, {
-      token: chromeUserRes.token,
-    }).catch((err) => {
+    const { status, token } = await get(url).catch((err) => {
       console.log("err", err);
       return { status: "error", token: null };
     });
