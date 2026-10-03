@@ -283,6 +283,32 @@ When forking, recreate the two environments and the repo-level entries above.
 
 The default `GITHUB_TOKEN` is enough for the bot to push the release commit and tag, as long as the `main` (or `dev`) ruleset doesn't require PRs. Currently main only blocks force pushes and deletions; no PR rule.
 
+### Chrome Web Store publishing
+
+[.github/workflows/webstore.yml](.github/workflows/webstore.yml) runs after every successful `Release` run on `main`. It downloads the `subturtle-v*.zip` that release attached and hands it to [scripts/publish-webstore.mjs](scripts/publish-webstore.mjs). That script calls the Web Store v2 API in order: `fetchStatus`, then `upload`, then `publish` (submit for review). Google's review still applies. The design is ported from `codebridger/kilogent-browser`, which uses the same store publisher.
+
+- **Stable only.** A dev zip's `1.17.0.3` would rank above the next stable `1.17.0` and block every later stable upload. Three layers keep dev builds out: the workflow only listens to `main`, it refuses a prerelease tag, and the script refuses any zip whose manifest has a `version_name`.
+- **Safe to re-run.** If the store already has this version or a later one, the script does nothing. If an *older* submission is still in review, it fails with a clear message, because the store refuses uploads while a review is pending (`NOT_UPDATEABLE`). In that case, re-run it with Actions → Chrome Web Store → Run workflow (`tag` input) once the review is decided.
+- **Manifest limits.** The store refuses a `name` over 75 characters or a `description` over 132, but only checks at upload time. `--self-test` runs in the `verify` job to catch this before a release is cut.
+- **The item and its listing are set up in the dashboard.** The API can't create items or edit the listing, privacy or distribution tabs.
+
+**Auth is keyless, through Workload Identity Federation.** A store publisher accepts only one service account. Subturtle and Kilogent share the **CodeBridger** publisher, so both repos use `chrome-webstore-publisher@kilogent-crew-prod.iam.gserviceaccount.com`. The pool is `github-pool` and the provider is `github`, in GCP project `kilogent-crew-prod`. The provider admits any `codebridger/*` repo. Each repo also needs its own `roles/iam.workloadIdentityUser` binding on the service account:
+
+```bash
+gcloud iam service-accounts add-iam-policy-binding \
+  chrome-webstore-publisher@kilogent-crew-prod.iam.gserviceaccount.com --project=kilogent-crew-prod \
+  --role=roles/iam.workloadIdentityUser \
+  --member="principalSet://iam.googleapis.com/projects/726107194881/locations/global/workloadIdentityPools/github-pool/attribute.repository/codebridger/subturtle-extension-apps"
+```
+
+The **repository variables** are not secrets. If they are unset, the job is skipped with a notice:
+- `WEBSTORE_PUBLISHER_ID`, `WEBSTORE_ITEM_ID` (`gaplicnpaiidofkoeonioomcnadoofkf`)
+- `WEBSTORE_WIF_PROVIDER` (`projects/726107194881/locations/global/workloadIdentityPools/github-pool/providers/github`)
+- `WEBSTORE_SERVICE_ACCOUNT`
+- `WEBSTORE_PUBLISH_TYPE` is optional: `DEFAULT_PUBLISH` (the default, live once approved) or `STAGED_PUBLISH`.
+
+The job runs in the `chrome-web-store` GitHub environment, so a required reviewer can be added there without editing the workflow.
+
 ### Local rehearsal
 
 ```bash
