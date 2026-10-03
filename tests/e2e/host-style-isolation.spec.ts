@@ -162,4 +162,51 @@ test.describe("host-page style isolation (our theme class)", () => {
     // tailwind.css: `.subturtle-scope.subturtle-dark { color: #f3f4f6 }`.
     expect(scopeColor).toBe("rgb(243, 244, 246)");
   });
+
+  // The persisted half of the same report: Product Hunt turned dark on its
+  // NEXT load. Two writers shared the host's storage and <body> — the settings
+  // store's old `localStorage.theme`, and pilotui's plugin install, whose
+  // `appSetting.init()` reads `theme` (adding `dark` to <body> when it says
+  // dark) and writes seven generic keys into every site. src/plugins/pilotui.ts
+  // now skips that init; settings.ts caches the theme only on extension pages.
+  test("leaves the host's localStorage and <body> untouched", async ({
+    context,
+    serviceWorker,
+  }) => {
+    await serviceWorker.evaluate(async () => {
+      await chrome.storage.local.set({
+        settings: { theme: "light", language: "en", nibbleDisabledDomains: [] },
+      });
+    });
+
+    const page = await context.newPage();
+    // The site's own theme preference, in place before our scripts run.
+    await page.addInitScript(() => {
+      if (!localStorage.getItem("theme")) localStorage.setItem("theme", "dark");
+    });
+    await page.goto("/index.html");
+    const root = page.locator("#subturtle-console-crane-root");
+    await expect(root).toHaveClass(/\bsubturtle-light\b/, { timeout: 10_000 });
+
+    // Switch our theme from ConsoleCrane's own settings page, on this site.
+    await page.evaluate(() => {
+      window.dispatchEvent(
+        new CustomEvent("subturtle:console-crane:open", {
+          detail: { page: "settings", active: true },
+        })
+      );
+    });
+    await page
+      .locator("#subturtle-console-crane button", { hasText: /^Dark$/ })
+      .click();
+    await expect(root).toHaveClass(/\bsubturtle-dark\b/);
+
+    const host = await page.evaluate(() => ({
+      // mixpanel's own `__mpq_*` queue keys are namespaced; ignore them.
+      keys: Object.keys(localStorage).filter((k) => !k.startsWith("__mpq")),
+      theme: localStorage.getItem("theme"),
+      bodyHasDark: document.body.classList.contains("dark"),
+    }));
+    expect(host).toEqual({ keys: ["theme"], theme: "dark", bodyHasDark: false });
+  });
 });

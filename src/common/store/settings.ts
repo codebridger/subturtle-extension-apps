@@ -20,6 +20,18 @@ export const THEME_CLASS = {
   light: "subturtle-light",
 } as const;
 
+/**
+ * A synchronous theme cache, so the popup paints in the right theme before the
+ * background answers. ONLY on the extension's own pages (popup.html): in a
+ * content script `localStorage` is the HOST PAGE's storage. We used to write
+ * `localStorage.theme` there — the very key next-themes sites such as Product
+ * Hunt keep their own theme in — so switching our theme on a site switched
+ * the site's theme on its next load. Content scripts get the theme from
+ * chrome.storage via the background (`fetchSettingsFromBackground`) instead.
+ */
+const THEME_CACHE_KEY = "subturtle-theme";
+const isExtensionPage = () => location.protocol === "chrome-extension:";
+
 export const useSettingsStore = defineStore("settings", () => {
   const theme = ref<Theme>("dark");
   const language = ref<string>("");
@@ -117,7 +129,7 @@ export const useSettingsStore = defineStore("settings", () => {
   function setTheme(newTheme: Theme) {
     theme.value = newTheme;
     applyThemeToDOM(newTheme);
-    localStorage.setItem("theme", newTheme);
+    if (isExtensionPage()) localStorage.setItem(THEME_CACHE_KEY, newTheme);
 
     syncSettingsToBackground();
 
@@ -125,7 +137,9 @@ export const useSettingsStore = defineStore("settings", () => {
   }
 
   function initializeTheme() {
-    const savedTheme = localStorage.getItem("theme") as Theme;
+    const savedTheme = isExtensionPage()
+      ? (localStorage.getItem(THEME_CACHE_KEY) as Theme | null)
+      : null;
     theme.value = savedTheme || "dark";
     applyThemeToDOM(savedTheme || "dark");
   }
