@@ -1,3 +1,10 @@
+## [1.16.1](https://github.com/codebridger/subturtle-extension-apps/compare/v1.16.0...v1.16.1) (2026-10-03)
+
+
+### Bug Fixes
+
+* **theme:** namespace the dark class so host-page CSS can't see it ([9644edc](https://github.com/codebridger/subturtle-extension-apps/commit/9644edcfe7f24f0b8ae415bb77bafcf3545d1cd7))
+
 # [1.16.0](https://github.com/codebridger/subturtle-extension-apps/compare/v1.15.1...v1.16.0) (2026-09-23)
 
 
