@@ -1,10 +1,13 @@
-// Detects system theme and toggles the 'dark' class on a given element
+import { THEME_CLASS } from "../common/store/settings";
+
+// Detects system theme and toggles the dark theme class on a given element.
+// Uses the namespaced `subturtle-dark`, never a bare `dark` — see THEME_CLASS.
 export function useSystemTheme(targetEl: HTMLElement) {
   const setThemeClass = (isDark: boolean) => {
     if (isDark) {
-      targetEl.classList.add("dark");
+      targetEl.classList.add(THEME_CLASS.dark);
     } else {
-      targetEl.classList.remove("dark");
+      targetEl.classList.remove(THEME_CLASS.dark);
     }
   };
 

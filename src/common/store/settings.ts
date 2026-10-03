@@ -10,6 +10,16 @@ import {
 } from "../types/messaging";
 import { Theme } from "../types/general.type";
 
+/**
+ * Classes put on `.subturtle-scope` elements for the effective theme.
+ * Namespaced so host-page CSS keyed on `.dark` / `.light` can't see them —
+ * see `applyThemeToDOM` below and the dark-class rename in postcss.config.js.
+ */
+export const THEME_CLASS = {
+  dark: "subturtle-dark",
+  light: "subturtle-light",
+} as const;
+
 export const useSettingsStore = defineStore("settings", () => {
   const theme = ref<Theme>("dark");
   const language = ref<string>("");
@@ -60,14 +70,19 @@ export const useSettingsStore = defineStore("settings", () => {
   }
 
   function applyToScopeElement(el: Element) {
-    el.classList.remove("light", "dark");
-    el.classList.add(currentEffectiveTheme);
+    el.classList.remove(...Object.values(THEME_CLASS));
+    el.classList.add(THEME_CLASS[currentEffectiveTheme]);
   }
 
-  // The `dark` class lives on every `.subturtle-scope` element rather than
+  // The theme class lives on every `.subturtle-scope` element rather than
   // `<html>`, because postcss-prefix-selector rewrites Tailwind's dark rules to
-  // the compound form `.subturtle-scope.dark ...` — so the same element must
-  // carry both classes for dark utilities to take effect.
+  // the compound form `.subturtle-scope.subturtle-dark ...` — so the same
+  // element must carry both classes for dark utilities to take effect.
+  //
+  // It is namespaced (never a bare `dark` / `light`) because these elements
+  // sit in the host page's DOM, where the host's own CSS sees them: Product
+  // Hunt's `:has(.dark)` rule turned the whole site dark whenever our root
+  // carried `dark`. postcss.config.js renames `.dark` in our CSS to match.
   function applyThemeToDOM(themeValue: Theme) {
     currentEffectiveTheme = resolveTheme(themeValue);
 

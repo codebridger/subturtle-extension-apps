@@ -24,7 +24,7 @@
 .subturtle-scope {
   color: #111827; /* gray-900 — light-theme base text */
 }
-.subturtle-scope.dark {
+.subturtle-scope.subturtle-dark {
   color: #f3f4f6; /* gray-100 — dark-theme base text */
 }
 

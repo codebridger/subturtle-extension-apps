@@ -8,6 +8,19 @@ const prefixSelector = require("postcss-prefix-selector");
 // video grid layout.
 const SCOPE = ".subturtle-scope";
 
+// Our theme class is `subturtle-dark`, never the bare `dark`. The element that
+// carries it is injected into the HOST page's DOM, and host stylesheets key
+// their own dark mode off `.dark` too — Product Hunt ships
+// `:is(.dark, :has(.dark:not(.theme-isolate))) .theme-mirror { … }`, so a
+// `.dark` anywhere in the document (our mount root) flipped the whole site to
+// its dark palette. Every `.dark` class in OUR CSS — Tailwind's `dark:`
+// variants and pilotui's prebuilt `:is(.dark *)` rules alike — is renamed here
+// so it only ever matches the namespaced class settings.ts applies.
+// `(?![\w\\-])` leaves utility names such as `.dark\:bg-gray-800` untouched.
+const DARK_CLASS = ".subturtle-dark";
+const renameDarkClass = (selector) =>
+  selector.replace(/\.dark(?![\w\\-])/g, DARK_CLASS);
+
 // Tailwind emits sizes in `rem`, but `rem` is always relative to the host
 // page's <html> font-size — which themes (e.g. WordPress) routinely set to
 // 18-24px. The result: every label in ConsoleCrane scales with the page.
@@ -39,7 +52,9 @@ module.exports = {
     tailwindcss,
     prefixSelector({
       prefix: SCOPE,
-      transform(prefix, selector, prefixedSelector) {
+      transform(prefix, rawSelector, rawPrefixedSelector) {
+        const selector = renameDarkClass(rawSelector);
+        const prefixedSelector = renameDarkClass(rawPrefixedSelector);
         const trimmed = selector.trim();
 
         // Idempotent guard: lib-vue-components CSS gets visited more than once
@@ -65,12 +80,12 @@ module.exports = {
           return prefix;
         }
 
-        // Tailwind class-based dark mode emits selectors like `.dark .foo`.
-        // Merge `.dark` with the prefix as a compound selector so a single
-        // `.subturtle-scope.dark` element activates dark utilities for all
-        // its descendants — without requiring a separate `.dark` ancestor
-        // inside the scope.
-        if (/^\.dark(?=[\s.:>+~\[]|$)/.test(trimmed)) {
+        // Tailwind class-based dark mode emits selectors like `.dark .foo`
+        // (renamed to `.subturtle-dark .foo` above). Merge it with the prefix
+        // as a compound selector so a single `.subturtle-scope.subturtle-dark`
+        // element activates dark utilities for all its descendants — without
+        // requiring a separate dark ancestor inside the scope.
+        if (/^\.subturtle-dark(?=[\s.:>+~\[]|$)/.test(trimmed)) {
           return prefix + trimmed;
         }
 

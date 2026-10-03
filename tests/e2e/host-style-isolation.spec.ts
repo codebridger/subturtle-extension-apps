@@ -94,3 +94,72 @@ test.describe("host-page style isolation (ConsoleCrane header)", () => {
     ).toBeLessThan(100);
   });
 });
+
+// The reverse leak: OUR theme class reaching the HOST's CSS. Our mount roots
+// sit in the host DOM, so a bare `dark` class on them is visible to host
+// rules. Product Hunt ships
+//   :is(.dark, :has(.dark:not(.theme-isolate))) .theme-mirror { … }
+// — `<html>` "has" our `.dark` root, so the whole site flipped to its dark
+// palette whenever the extension's theme was dark. The theme class is now the
+// namespaced `subturtle-dark` (settings.ts THEME_CLASS + the postcss rename).
+test.describe("host-page style isolation (our theme class)", () => {
+  test("dark extension theme does not turn a host's .dark-keyed CSS dark", async ({
+    context,
+    serviceWorker,
+  }) => {
+    await serviceWorker.evaluate(async () => {
+      await chrome.storage.local.set({
+        settings: { theme: "dark", language: "en", nibbleDisabledDomains: [] },
+      });
+    });
+
+    const page = await context.newPage();
+    await page.goto("/index.html");
+
+    // Product Hunt's rule, plus the plain `.dark` / `.light` descendant forms
+    // a Tailwind host would emit.
+    await page.addStyleTag({
+      content: `
+        body { background: rgb(255, 255, 255); }
+        :is(.dark, :has(.dark:not(.theme-isolate))) body { background: rgb(1, 2, 3); }
+        :has(.light) body { color: rgb(4, 5, 6); }
+      `,
+    });
+
+    const root = page.locator("#subturtle-console-crane-root");
+    await expect(root).toBeAttached({ timeout: 10_000 });
+    // The theme is applied once settings load from the background.
+    await expect(root).toHaveClass(/\bsubturtle-dark\b/, { timeout: 5_000 });
+
+    const probe = await page.evaluate(() => ({
+      bareThemeClasses: Array.from(document.querySelectorAll(".dark, .light")).map(
+        (el) => el.id || el.className
+      ),
+      bodyBg: getComputedStyle(document.body).backgroundColor,
+      bodyColor: getComputedStyle(document.body).color,
+    }));
+    expect(probe.bareThemeClasses).toEqual([]);
+    expect(probe.bodyBg).toBe("rgb(255, 255, 255)");
+    expect(probe.bodyColor).not.toBe("rgb(4, 5, 6)");
+
+    // …and our own dark styling still works off the namespaced class.
+    await page.evaluate(() => {
+      window.dispatchEvent(
+        new CustomEvent("subturtle:console-crane:open", {
+          detail: {
+            page: "word-detail",
+            params: { word: "launch" },
+            active: true,
+          },
+        })
+      );
+    });
+    const modalSection = page.locator(
+      "#subturtle-console-crane section.absolute.rounded-xl"
+    );
+    await expect(modalSection).toBeVisible({ timeout: 5_000 });
+    const scopeColor = await root.evaluate((el) => getComputedStyle(el).color);
+    // tailwind.css: `.subturtle-scope.subturtle-dark { color: #f3f4f6 }`.
+    expect(scopeColor).toBe("rgb(243, 244, 246)");
+  });
+});
