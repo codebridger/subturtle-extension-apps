@@ -201,12 +201,61 @@ test.describe("host-page style isolation (our theme class)", () => {
       .click();
     await expect(root).toHaveClass(/\bsubturtle-dark\b/);
 
+    // Nothing of ours in the host's storage either — mixpanel's `__mpq_*` queue
+    // and `mp_*` cookie included (src/plugins/mixpanel.ts).
     const host = await page.evaluate(() => ({
-      // mixpanel's own `__mpq_*` queue keys are namespaced; ignore them.
-      keys: Object.keys(localStorage).filter((k) => !k.startsWith("__mpq")),
+      keys: Object.keys(localStorage),
       theme: localStorage.getItem("theme"),
       bodyHasDark: document.body.classList.contains("dark"),
+      cookies: document.cookie,
     }));
-    expect(host).toEqual({ keys: ["theme"], theme: "dark", bodyHasDark: false });
+    expect(host).toEqual({
+      keys: ["theme"],
+      theme: "dark",
+      bodyHasDark: false,
+      cookies: "",
+    });
+  });
+
+  // With mixpanel's cookie persistence off, identity comes from the anonymous
+  // id in chrome.storage.local. Events must still go out, carrying that id.
+  test("analytics still sends events, under the stored anonymous id", async ({
+    context,
+    serviceWorker,
+  }) => {
+    await serviceWorker.evaluate(async () => {
+      await chrome.storage.local.set({ analyticsAnonymousId: "e2e-anon-id" });
+    });
+
+    const page = await context.newPage();
+    const events: any[] = [];
+    // MIXPANEL_API_HOST is http://localhost:4173/_mixpanel_stub in the CI build.
+    await page.route("**/_mixpanel_stub/**", async (route) => {
+      const data = new URLSearchParams(route.request().postData() || "").get("data");
+      if (data) {
+        const decoded = JSON.parse(Buffer.from(data, "base64").toString("utf8"));
+        events.push(...(Array.isArray(decoded) ? decoded : [decoded]));
+      }
+      await route.fulfill({ status: 200, body: "1" });
+    });
+    await page.goto("/index.html");
+    await expect(page.locator("#subturtle-console-crane-root")).toBeAttached({
+      timeout: 10_000,
+    });
+
+    await page.evaluate(() => {
+      window.dispatchEvent(
+        new CustomEvent("subturtle:console-crane:open", {
+          detail: { page: "settings", active: true },
+        })
+      );
+    });
+
+    await expect
+      .poll(() => events.find((e) => e.event === "settings-page_viewed"))
+      .toBeTruthy();
+    const viewed = events.find((e) => e.event === "settings-page_viewed");
+    expect(viewed.properties.distinct_id).toBe("e2e-anon-id");
+    expect(await page.evaluate(() => document.cookie)).toBe("");
   });
 });
