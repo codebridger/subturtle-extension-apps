@@ -1,3 +1,11 @@
+## [1.16.2](https://github.com/codebridger/subturtle-extension-apps/compare/v1.16.1...v1.16.2) (2026-10-04)
+
+
+### Bug Fixes
+
+* **privacy:** keep extension state out of the host page's storage and cookies ([c04a183](https://github.com/codebridger/subturtle-extension-apps/commit/c04a183c3b2350ac50475c34da11403d4c5ca40f))
+* **theme:** stop writing the host page's localStorage and <body> ([bb9218c](https://github.com/codebridger/subturtle-extension-apps/commit/bb9218c34551ffbc90cd2166d6ad3250e41d678f))
+
 ## [1.16.1](https://github.com/codebridger/subturtle-extension-apps/compare/v1.16.0...v1.16.1) (2026-10-03)
 
 
