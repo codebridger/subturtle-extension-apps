@@ -80,7 +80,7 @@ import {
 } from "../common/types/messaging";
 import { ref } from "vue";
 import { useProfileStore } from "../stores/profile";
-import { analytic } from "./mixpanel";
+import { analytic, resetAnalyticsIdentity } from "./mixpanel";
 import { debug, error, log } from "../common/helper/log";
 import {
   reauthAnonymously,
@@ -202,7 +202,7 @@ export async function logout(sendAuthStatusToOtherParts = true) {
 
   updateIsLogin();
 
-  analytic.reset();
+  resetAnalyticsIdentity();
 
   if (sendAuthStatusToOtherParts) {
     const message = new StoreUserTokenMessage(null);
