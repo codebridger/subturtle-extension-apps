@@ -203,7 +203,7 @@
         >
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-medium text-gray-900 dark:text-white">Supported Platforms</h3>
-            <div class="flex items-center gap-8">
+            <div class="flex items-center gap-5">
               <a
                 href="https://www.netflix.com"
                 target="_blank"
@@ -226,6 +226,27 @@
                   alt="YouTube"
                 />
               </a>
+              <!-- Selecting text works on every site (nibble runs on <all_urls>). -->
+              <span
+                class="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 opacity-80"
+                title="Select text on any web page to translate and save it"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+                  />
+                </svg>
+                Any web page
+              </span>
             </div>
           </div>
         </div>
