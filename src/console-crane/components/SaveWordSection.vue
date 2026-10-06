@@ -42,8 +42,8 @@ watch(
   { immediate: true, deep: true }
 );
 
-onMounted(() => {
-  selectedBundles.value = defaultBundleStore.getDefaultBundles();
+onMounted(async () => {
+  selectedBundles.value = await defaultBundleStore.getDefaultBundles();
 });
 
 async function checkExisting() {
@@ -110,9 +110,9 @@ function updateBundles(bundleIds: string[], phraseId: string) {
     }),
   ];
 
-  return Promise.all(promiseList).then(() => {
-    defaultBundleStore.setDefaultBundles(bundleIds);
-  });
+  return Promise.all(promiseList).then(() =>
+    defaultBundleStore.setDefaultBundles(bundleIds)
+  );
 }
 
 async function savePhrase() {

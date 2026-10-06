@@ -47,7 +47,6 @@ import { analytic } from "../../../plugins/mixpanel";
 // Inject frame size from modal
 const frameSize = inject<{ width: number; height: number }>("frameSize");
 
-// Initialize settings from localStorage
 onMounted(() => {
   analytic.track("settings-page_viewed");
 });

@@ -54,6 +54,8 @@ const analyticMock = {
 };
 vi.mock("../src/plugins/mixpanel", () => ({
   analytic: analyticMock,
+  // Logout's identity reset; it calls mixpanel.reset() in production.
+  resetAnalyticsIdentity: () => analyticMock.reset(),
 }));
 
 function getSendMessageMock() {

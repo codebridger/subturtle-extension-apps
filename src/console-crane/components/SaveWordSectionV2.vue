@@ -207,7 +207,7 @@ watch(
     }
 
     // 3. Last-used bundles (existing behaviour).
-    selectedBundles.value = defaultBundleStore.getDefaultBundles();
+    selectedBundles.value = await defaultBundleStore.getDefaultBundles();
   },
   { immediate: true, deep: true }
 );
@@ -343,7 +343,8 @@ async function savePhrase() {
       });
 
     // Remember the bundles now in use as defaults for future saves.
-    if (finalSelected.length) defaultBundleStore.setDefaultBundles(finalSelected);
+    // Fire-and-forget: a failed write only costs the preselection next time.
+    if (finalSelected.length) void defaultBundleStore.setDefaultBundles(finalSelected);
 
     // This page now has a saved phrase; drop the cached suggestion so the next
     // open matches the bundle instead of re-suggesting a name.

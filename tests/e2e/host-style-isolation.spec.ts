@@ -94,3 +94,168 @@ test.describe("host-page style isolation (ConsoleCrane header)", () => {
     ).toBeLessThan(100);
   });
 });
+
+// The reverse leak: OUR theme class reaching the HOST's CSS. Our mount roots
+// sit in the host DOM, so a bare `dark` class on them is visible to host
+// rules. Product Hunt ships
+//   :is(.dark, :has(.dark:not(.theme-isolate))) .theme-mirror { … }
+// — `<html>` "has" our `.dark` root, so the whole site flipped to its dark
+// palette whenever the extension's theme was dark. The theme class is now the
+// namespaced `subturtle-dark` (settings.ts THEME_CLASS + the postcss rename).
+test.describe("host-page style isolation (our theme class)", () => {
+  test("dark extension theme does not turn a host's .dark-keyed CSS dark", async ({
+    context,
+    serviceWorker,
+  }) => {
+    await serviceWorker.evaluate(async () => {
+      await chrome.storage.local.set({
+        settings: { theme: "dark", language: "en", nibbleDisabledDomains: [] },
+      });
+    });
+
+    const page = await context.newPage();
+    await page.goto("/index.html");
+
+    // Product Hunt's rule, plus the plain `.dark` / `.light` descendant forms
+    // a Tailwind host would emit.
+    await page.addStyleTag({
+      content: `
+        body { background: rgb(255, 255, 255); }
+        :is(.dark, :has(.dark:not(.theme-isolate))) body { background: rgb(1, 2, 3); }
+        :has(.light) body { color: rgb(4, 5, 6); }
+      `,
+    });
+
+    const root = page.locator("#subturtle-console-crane-root");
+    await expect(root).toBeAttached({ timeout: 10_000 });
+    // The theme is applied once settings load from the background.
+    await expect(root).toHaveClass(/\bsubturtle-dark\b/, { timeout: 5_000 });
+
+    const probe = await page.evaluate(() => ({
+      bareThemeClasses: Array.from(document.querySelectorAll(".dark, .light")).map(
+        (el) => el.id || el.className
+      ),
+      bodyBg: getComputedStyle(document.body).backgroundColor,
+      bodyColor: getComputedStyle(document.body).color,
+    }));
+    expect(probe.bareThemeClasses).toEqual([]);
+    expect(probe.bodyBg).toBe("rgb(255, 255, 255)");
+    expect(probe.bodyColor).not.toBe("rgb(4, 5, 6)");
+
+    // …and our own dark styling still works off the namespaced class.
+    await page.evaluate(() => {
+      window.dispatchEvent(
+        new CustomEvent("subturtle:console-crane:open", {
+          detail: {
+            page: "word-detail",
+            params: { word: "launch" },
+            active: true,
+          },
+        })
+      );
+    });
+    const modalSection = page.locator(
+      "#subturtle-console-crane section.absolute.rounded-xl"
+    );
+    await expect(modalSection).toBeVisible({ timeout: 5_000 });
+    const scopeColor = await root.evaluate((el) => getComputedStyle(el).color);
+    // tailwind.css: `.subturtle-scope.subturtle-dark { color: #f3f4f6 }`.
+    expect(scopeColor).toBe("rgb(243, 244, 246)");
+  });
+
+  // The persisted half of the same report: Product Hunt turned dark on its
+  // NEXT load. Two writers shared the host's storage and <body> — the settings
+  // store's old `localStorage.theme`, and pilotui's plugin install, whose
+  // `appSetting.init()` reads `theme` (adding `dark` to <body> when it says
+  // dark) and writes seven generic keys into every site. src/plugins/pilotui.ts
+  // now skips that init; settings.ts caches the theme only on extension pages.
+  test("leaves the host's localStorage and <body> untouched", async ({
+    context,
+    serviceWorker,
+  }) => {
+    await serviceWorker.evaluate(async () => {
+      await chrome.storage.local.set({
+        settings: { theme: "light", language: "en", nibbleDisabledDomains: [] },
+      });
+    });
+
+    const page = await context.newPage();
+    // The site's own theme preference, in place before our scripts run.
+    await page.addInitScript(() => {
+      if (!localStorage.getItem("theme")) localStorage.setItem("theme", "dark");
+    });
+    await page.goto("/index.html");
+    const root = page.locator("#subturtle-console-crane-root");
+    await expect(root).toHaveClass(/\bsubturtle-light\b/, { timeout: 10_000 });
+
+    // Switch our theme from ConsoleCrane's own settings page, on this site.
+    await page.evaluate(() => {
+      window.dispatchEvent(
+        new CustomEvent("subturtle:console-crane:open", {
+          detail: { page: "settings", active: true },
+        })
+      );
+    });
+    await page
+      .locator("#subturtle-console-crane button", { hasText: /^Dark$/ })
+      .click();
+    await expect(root).toHaveClass(/\bsubturtle-dark\b/);
+
+    // Nothing of ours in the host's storage either — mixpanel's `__mpq_*` queue
+    // and `mp_*` cookie included (src/plugins/mixpanel.ts).
+    const host = await page.evaluate(() => ({
+      keys: Object.keys(localStorage),
+      theme: localStorage.getItem("theme"),
+      bodyHasDark: document.body.classList.contains("dark"),
+      cookies: document.cookie,
+    }));
+    expect(host).toEqual({
+      keys: ["theme"],
+      theme: "dark",
+      bodyHasDark: false,
+      cookies: "",
+    });
+  });
+
+  // With mixpanel's cookie persistence off, identity comes from the anonymous
+  // id in chrome.storage.local. Events must still go out, carrying that id.
+  test("analytics still sends events, under the stored anonymous id", async ({
+    context,
+    serviceWorker,
+  }) => {
+    await serviceWorker.evaluate(async () => {
+      await chrome.storage.local.set({ analyticsAnonymousId: "e2e-anon-id" });
+    });
+
+    const page = await context.newPage();
+    const events: any[] = [];
+    // MIXPANEL_API_HOST is http://localhost:4173/_mixpanel_stub in the CI build.
+    await page.route("**/_mixpanel_stub/**", async (route) => {
+      const data = new URLSearchParams(route.request().postData() || "").get("data");
+      if (data) {
+        const decoded = JSON.parse(Buffer.from(data, "base64").toString("utf8"));
+        events.push(...(Array.isArray(decoded) ? decoded : [decoded]));
+      }
+      await route.fulfill({ status: 200, body: "1" });
+    });
+    await page.goto("/index.html");
+    await expect(page.locator("#subturtle-console-crane-root")).toBeAttached({
+      timeout: 10_000,
+    });
+
+    await page.evaluate(() => {
+      window.dispatchEvent(
+        new CustomEvent("subturtle:console-crane:open", {
+          detail: { page: "settings", active: true },
+        })
+      );
+    });
+
+    await expect
+      .poll(() => events.find((e) => e.event === "settings-page_viewed"))
+      .toBeTruthy();
+    const viewed = events.find((e) => e.event === "settings-page_viewed");
+    expect(viewed.properties.distinct_id).toBe("e2e-anon-id");
+    expect(await page.evaluate(() => document.cookie)).toBe("");
+  });
+});

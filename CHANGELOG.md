@@ -1,3 +1,33 @@
+## [1.16.2](https://github.com/codebridger/subturtle-extension-apps/compare/v1.16.1...v1.16.2) (2026-10-04)
+
+
+### Bug Fixes
+
+* **privacy:** keep extension state out of the host page's storage and cookies ([c04a183](https://github.com/codebridger/subturtle-extension-apps/commit/c04a183c3b2350ac50475c34da11403d4c5ca40f))
+* **theme:** stop writing the host page's localStorage and <body> ([bb9218c](https://github.com/codebridger/subturtle-extension-apps/commit/bb9218c34551ffbc90cd2166d6ad3250e41d678f))
+
+## [1.16.1](https://github.com/codebridger/subturtle-extension-apps/compare/v1.16.0...v1.16.1) (2026-10-03)
+
+
+### Bug Fixes
+
+* **theme:** namespace the dark class so host-page CSS can't see it ([9644edc](https://github.com/codebridger/subturtle-extension-apps/commit/9644edcfe7f24f0b8ae415bb77bafcf3545d1cd7))
+
+# [1.16.0](https://github.com/codebridger/subturtle-extension-apps/compare/v1.15.1...v1.16.0) (2026-09-23)
+
+
+### Bug Fixes
+
+* **auth:** make "With Current Chrome User" actually sign in ([b09624a](https://github.com/codebridger/subturtle-extension-apps/commit/b09624a6d90fb6759ce9ec476ffe6c9d4372fdba))
+* **auth:** sign in with the SubTurtle Firebase projects' Google clients ([dd4a800](https://github.com/codebridger/subturtle-extension-apps/commit/dd4a80008fbafaf87f3017125332de83569b0760))
+* **auth:** sign in with the SubTurtle Firebase projects' Google clients ([#40](https://github.com/codebridger/subturtle-extension-apps/issues/40)) ([1115ee2](https://github.com/codebridger/subturtle-extension-apps/commit/1115ee2a7984893ea7eaffe27059f9a05a0e6b48))
+* **auth:** sign in with the SubTurtle Firebase projects' Google clients ([#41](https://github.com/codebridger/subturtle-extension-apps/issues/41)) ([e31c8fa](https://github.com/codebridger/subturtle-extension-apps/commit/e31c8fabba696261ba7a679646bb51267ed02f30))
+
+
+### Features
+
+* **popup:** show extension version in home footer [#86](https://github.com/codebridger/subturtle-extension-apps/issues/86)exqazkq ([fe37a47](https://github.com/codebridger/subturtle-extension-apps/commit/fe37a47f980a54cace443555da14a182f68f6502)), closes [#86exqazkq](https://github.com/codebridger/subturtle-extension-apps/issues/86exqazkq)
+
 ## [1.15.1](https://github.com/codebridger/subturtle-extension-apps/compare/v1.15.0...v1.15.1) (2026-06-17)
 
 
