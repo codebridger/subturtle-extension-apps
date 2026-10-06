@@ -1,3 +1,17 @@
+## [1.16.3-dev.2](https://github.com/codebridger/subturtle-extension-apps/compare/v1.16.3-dev.1...v1.16.3-dev.2) (2026-10-06)
+
+
+### Bug Fixes
+
+* shield the dashboard session on every dashboard host #z8zc9zywfj ([2b8a06e](https://github.com/codebridger/subturtle-extension-apps/commit/2b8a06eefe614a324600b8942001c9acd7ee173b)), closes [#z8zc9zywfj](https://github.com/codebridger/subturtle-extension-apps/issues/z8zc9zywfj)
+
+## [1.16.3-dev.1](https://github.com/codebridger/subturtle-extension-apps/compare/v1.16.2...v1.16.3-dev.1) (2026-10-06)
+
+
+### Bug Fixes
+
+* **popup:** list any web page as supported and drop the unused Google Translate permission #z8zc9zyg38 ([a9f00e4](https://github.com/codebridger/subturtle-extension-apps/commit/a9f00e4180348877dc877a52f46c302430f274b9)), closes [#z8zc9zyg38](https://github.com/codebridger/subturtle-extension-apps/issues/z8zc9zyg38)
+
 # [1.16.0-dev.3](https://github.com/codebridger/subturtle-extension-apps/compare/v1.16.0-dev.2...v1.16.0-dev.3) (2026-10-05)
 
 
