@@ -20,7 +20,15 @@ function isDashboardOrigin(): boolean {
     host === "subturtle.app" ||
     host === "www.subturtle.app" ||
     host === "dashboard.subturtle.app" ||
-    host === "www.dashboard.subturtle.app"
+    host === "www.dashboard.subturtle.app" ||
+    host === "dev.dashboard.subturtle.app" ||
+    // Firebase's default hosts for the same dashboards: before the dashboard moved
+    // visitors to its own domain, a stale extension token written here locked users
+    // out (logout reloaded straight back into it).
+    host === "subturtle-prod.web.app" ||
+    host === "subturtle-dev.web.app" ||
+    host === "subturtle-prod.firebaseapp.com" ||
+    host === "subturtle-dev.firebaseapp.com"
   );
 }
 
