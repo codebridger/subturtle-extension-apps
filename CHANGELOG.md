@@ -1,3 +1,10 @@
+## [1.16.4](https://github.com/codebridger/subturtle-extension-apps/compare/v1.16.3...v1.16.4) (2026-10-06)
+
+
+### Bug Fixes
+
+* shield the dashboard session on every dashboard host #z8zc9zywfj ([2b8a06e](https://github.com/codebridger/subturtle-extension-apps/commit/2b8a06eefe614a324600b8942001c9acd7ee173b)), closes [#z8zc9zywfj](https://github.com/codebridger/subturtle-extension-apps/issues/z8zc9zywfj)
+
 ## [1.16.3](https://github.com/codebridger/subturtle-extension-apps/compare/v1.16.2...v1.16.3) (2026-10-06)
 
 
