@@ -15,7 +15,6 @@
 	],
 	"host_permissions": [
 		"<all_urls>",
-		"https://translation.googleapis.com/",
 		"https://api-js.mixpanel.com/",
 		"https://ipapi.co/json/"
 	],

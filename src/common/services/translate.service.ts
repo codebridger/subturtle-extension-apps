@@ -3,8 +3,6 @@ import {
   WordFromDictionaryApi,
 } from "../types/dictionaryapi.type";
 
-import { Dictionary } from "../types/general.type";
-
 import proxy from "./proxy.service";
 import { functionProvider, authentication } from "@modular-rest/client";
 import {
@@ -78,36 +76,6 @@ export class TranslateService {
         delete this.translationCache[key];
       }
     });
-  }
-
-  async translateByGoogleTranslate(text: string | string[]) {
-    let key = process.env.GOOGLE_TRANSLATE_KEY;
-    let url = {
-      url: `https://translation.googleapis.com/language/translate/v2?key=${key}`,
-      proxyUrl: process.env.GOOGLE_TRANSLATE_PROXY_URL,
-    };
-
-    let body = {
-      q: text,
-      target: this.targetLanguage,
-    };
-
-    return proxy
-      .post(url, body)
-      .then((body: Dictionary) => body.data.translations)
-      .then((list) => {
-        let lang = "en";
-
-        let newList = list.map(
-          (item: { translatedText: string; detectedSourceLanguage: string }) =>
-            item.translatedText
-        ) as string[];
-
-        return {
-          lang,
-          list: newList,
-        };
-      });
   }
 
   async fetchSimpleTranslation(text: string | string[], context: string = "") {
