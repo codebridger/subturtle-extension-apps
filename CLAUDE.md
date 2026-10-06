@@ -185,7 +185,14 @@ And the `SettingsObject` type in [src/common/types/messaging.ts](src/common/type
 - **Nibble and ConsoleCrane roots must NOT have `pointer-events: none`.** Both are 0×0 fixed elements so they can't intercept clicks anyway, but `pointer-events: none` cascades into the modal and swallows all clicks. Leave the root unspecified for pointer events.
 - **Selection popup must `@mousedown.prevent.stop`.** Otherwise clicking the popup deselects the page text, the composable detects the empty selection, and the popup unmounts mid-click.
 - **The mount root in Nibble must not block the page.** Set `width: 0; height: 0; position: fixed; top: 0; left: 0`. Children use their own `position: fixed` to position themselves relative to the viewport.
-- **Theme dark class lives on `.subturtle-scope`, not `<html>`.** Tailwind's `dark:` rules are rewritten by `postcss-prefix-selector` to `.subturtle-scope.dark ...` — so the same element must carry both classes. The settings store handles this and a `MutationObserver` keeps Vue Teleport subtrees in sync.
+- **The theme class is `subturtle-dark` / `subturtle-light` (`THEME_CLASS` in [settings.ts](src/common/store/settings.ts)) on `.subturtle-scope`, not `<html>`.** Tailwind's `dark:` rules are rewritten by `postcss-prefix-selector` to `.subturtle-scope.subturtle-dark ...`, so the same element must carry both classes. The settings store handles this, and a `MutationObserver` keeps Vue Teleport subtrees in sync.
+- **Never put a bare `dark` / `light` class into the host DOM.** Our mount roots are visible to the host page's CSS. Product Hunt's `:is(.dark, :has(.dark…)) .theme-mirror` rule turned the whole site dark when our root had `dark`. [postcss.config.js](postcss.config.js) renames every `.dark` in our CSS to `.subturtle-dark`, including pilotui's prebuilt `:is(.dark *)` rules, so write `dark:` utilities as usual. Regression test: [tests/e2e/host-style-isolation.spec.ts](tests/e2e/host-style-isolation.spec.ts).
+- **`localStorage` in a content script is the host page's storage.** Never write a generic key there. The settings store used to save `localStorage.theme`, the same key Product Hunt (and any `next-themes` site) stores its own theme in, so switching our theme on a site changed the site's theme on its next load. Keep settings in `chrome.storage` through the background. The theme cache in [settings.ts](src/common/store/settings.ts) (`subturtle-theme`) is only used on `chrome-extension:` pages. Regression test: [tests/settings-theme-storage.test.ts](tests/settings-theme-storage.test.ts).
+  - The same applies to **cookies**, and to everything else we store:
+    - **Default bundles per page:** kept in [default-bundle.ts](src/stores/default-bundle.ts) in `chrome.storage.local`, capped at the 200 most recent pages. A copy that older builds left in the site's storage is moved over and removed on the first read.
+    - **Mixpanel:** [mixpanel.ts](src/plugins/mixpanel.ts) runs with `disable_persistence` and `batch_requests: false`. Otherwise it would set an `mp_<token>_mixpanel` cookie on the site's domain and queue events under `__mpq_*` keys. Anonymous identity comes from `analyticsAnonymousId` in `chrome.storage.local`. On logout, `resetAnalyticsIdentity()` rotates it only if a registered user was identified.
+  - Tests: [tests/host-storage.test.ts](tests/host-storage.test.ts), plus the "untouched" and "analytics still sends events" E2E tests in [host-style-isolation.spec.ts](tests/e2e/host-style-isolation.spec.ts).
+- **Never `app.use(pilotui)`.** pilotui's plugin install runs `appSetting.init()`, written for a dashboard that owns the page. It writes `theme`, `menu`, `layout`, `rtlClass`, `animation`, `navbar` and `semidark` into the host's `localStorage`, and adds or removes `dark` on the host's `<body>`. [src/plugins/pilotui.ts](src/plugins/pilotui.ts) registers only what components need: `PerfectScrollbar` and the global `<Popper>`. Regression test: "leaves the host's localStorage and \<body\> untouched" in [tests/e2e/host-style-isolation.spec.ts](tests/e2e/host-style-isolation.spec.ts).
 - **`src/stores/profile.ts` imports types from a sibling repo.** The path `../../../dashboard-app/frontend/types/database.type` resolves to a directory _next to_ this repo's root, not inside it. The actual repo is [`codebridger/subturtle-dashboard-app`](https://github.com/codebridger/subturtle-dashboard-app); local builds work because devs check both repos out side-by-side. CI clones the dashboard repo into `../dashboard-app/` before `yarn build` runs (see [.github/workflows/release.yml](.github/workflows/release.yml)). Don't try to "fix" the import to a relative-internal path or vendor the file — both will drift. See [§ Sibling repositories](#sibling-repositories) for how to pull in / branch the dashboard and pilotui repos.
 - **Playwright Chromium download isn't on CCW's Trusted allowlist.** The chrome-extension-tester-mcp's `postinstall` runs `playwright install chromium`, which pulls from `cdn.playwright.dev` / `playwright.download.prss.microsoft.com`. CCW environments must use Custom network access with those hosts added — see [§ Cloud agent workflow](#cloud-agent-workflow-claude-code-on-the-web). The setup script caches Chromium into the VM snapshot so per-session cost is zero.
 
@@ -282,6 +289,32 @@ value is enough. The web client works in any build whose
 When forking, recreate the two environments and the repo-level entries above.
 
 The default `GITHUB_TOKEN` is enough for the bot to push the release commit and tag, as long as the `main` (or `dev`) ruleset doesn't require PRs. Currently main only blocks force pushes and deletions; no PR rule.
+
+### Chrome Web Store publishing
+
+[.github/workflows/webstore.yml](.github/workflows/webstore.yml) runs after every successful `Release` run on `main`. It downloads the `subturtle-v*.zip` that release attached and hands it to [scripts/publish-webstore.mjs](scripts/publish-webstore.mjs). That script calls the Web Store v2 API in order: `fetchStatus`, then `upload`, then `publish` (submit for review). Google's review still applies. The design is ported from `codebridger/kilogent-browser`, which uses the same store publisher.
+
+- **Stable only.** A dev zip's `1.17.0.3` would rank above the next stable `1.17.0` and block every later stable upload. Three layers keep dev builds out: the workflow only listens to `main`, it refuses a prerelease tag, and the script refuses any zip whose manifest has a `version_name`.
+- **Safe to re-run.** If the store already has this version or a later one, the script does nothing. If an *older* submission is still in review, it fails with a clear message, because the store refuses uploads while a review is pending (`NOT_UPDATEABLE`). In that case, re-run it with Actions → Chrome Web Store → Run workflow (`tag` input) once the review is decided.
+- **Manifest limits.** The store refuses a `name` over 75 characters or a `description` over 132, but only checks at upload time. `--self-test` runs in the `verify` job to catch this before a release is cut.
+- **The item and its listing are set up in the dashboard.** The API can't create items or edit the listing, privacy or distribution tabs.
+
+**Auth is keyless, through Workload Identity Federation.** A store publisher accepts only one service account. Subturtle and Kilogent share the **CodeBridger** publisher, so both repos use `chrome-webstore-publisher@kilogent-crew-prod.iam.gserviceaccount.com`. The pool is `github-pool` and the provider is `github`, in GCP project `kilogent-crew-prod`. The provider admits any `codebridger/*` repo. Each repo also needs its own `roles/iam.workloadIdentityUser` binding on the service account:
+
+```bash
+gcloud iam service-accounts add-iam-policy-binding \
+  chrome-webstore-publisher@kilogent-crew-prod.iam.gserviceaccount.com --project=kilogent-crew-prod \
+  --role=roles/iam.workloadIdentityUser \
+  --member="principalSet://iam.googleapis.com/projects/726107194881/locations/global/workloadIdentityPools/github-pool/attribute.repository/codebridger/subturtle-extension-apps"
+```
+
+The **repository variables** are not secrets. If they are unset, the job is skipped with a notice:
+- `WEBSTORE_PUBLISHER_ID`, `WEBSTORE_ITEM_ID` (`gaplicnpaiidofkoeonioomcnadoofkf`)
+- `WEBSTORE_WIF_PROVIDER` (`projects/726107194881/locations/global/workloadIdentityPools/github-pool/providers/github`)
+- `WEBSTORE_SERVICE_ACCOUNT`
+- `WEBSTORE_PUBLISH_TYPE` is optional: `DEFAULT_PUBLISH` (the default, live once approved) or `STAGED_PUBLISH`.
+
+The job runs in the `chrome-web-store` GitHub environment, so a required reviewer can be added there without editing the workflow.
 
 ### Local rehearsal
 

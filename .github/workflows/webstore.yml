@@ -1,0 +1,129 @@
+name: Chrome Web Store
+
+# Publishes the STABLE build to the Chrome Web Store after `release.yml` has cut a GitHub Release
+# on `main`. Same design as codebridger/kilogent-browser's webstore.yml (same store publisher).
+#
+# WHAT IT PUBLISHES is the zip already attached to the release by @semantic-release/github, not a
+# rebuild: the store gets the exact bytes people can download from GitHub. `dev` prereleases are
+# never published — their four-part manifest version would outrank every later stable one (see
+# scripts/publish-webstore.mjs).
+#
+# WHEN IT ACTS. A Release run on `main` that cut nothing (no releasable commits) still concludes
+# `success`; it is recognised by the latest stable release being OLDER than that run, and skipped
+# before any Google call. Re-running is safe either way: the script no-ops on a version the store
+# already has.
+#
+# CONFIGURATION — repository variables, none of them secret. Unset means the job is skipped with a
+# notice, so this file can land before the store side is set up.
+#
+#   WEBSTORE_PUBLISHER_ID      Developer Dashboard → Account → Publisher ID (the CodeBridger publisher)
+#   WEBSTORE_ITEM_ID           the extension's id in the store
+#   WEBSTORE_WIF_PROVIDER      projects/<number>/locations/global/workloadIdentityPools/<pool>/providers/<provider>
+#   WEBSTORE_SERVICE_ACCOUNT   the service account added in Developer Dashboard → Settings
+#   WEBSTORE_PUBLISH_TYPE      optional, DEFAULT_PUBLISH (default) or STAGED_PUBLISH
+#
+# NO KEY FILE. GitHub's OIDC token is exchanged for the service account's access token through
+# Workload Identity Federation, so there is no long-lived credential to leak or rotate. A store
+# publisher accepts only ONE service account, so this repo shares Kilogent's — see CLAUDE.md
+# § Chrome Web Store publishing.
+#
+# Re-run it for any release by hand: Actions → Chrome Web Store → Run workflow, with the tag.
+
+on:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to publish (e.g. v1.17.0). Empty means the latest stable release.
+        required: false
+
+concurrency:
+  group: webstore
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    # `event == 'push'` keeps out Release runs triggered by a pull request whose head branch is
+    # named `main` (a fork's); `branches: [main]` above filters on the head branch only.
+    if: >-
+      github.event_name == 'workflow_dispatch'
+      || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    # An environment, so a required reviewer can be put in front of the store without editing this
+    # file: Settings → Environments → chrome-web-store.
+    environment: chrome-web-store
+    permissions:
+      contents: read
+      id-token: write # Workload Identity Federation
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Self-test the publish script
+        run: node scripts/publish-webstore.mjs --self-test
+
+      - name: Find the release and its zip
+        id: find
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CONFIGURED: ${{ vars.WEBSTORE_PUBLISHER_ID != '' && vars.WEBSTORE_ITEM_ID != '' && vars.WEBSTORE_WIF_PROVIDER != '' && vars.WEBSTORE_SERVICE_ACCOUNT != '' }}
+          INPUT_TAG: ${{ inputs.tag }}
+          RUN_STARTED_AT: ${{ github.event.workflow_run.run_started_at }}
+        run: |
+          set -euo pipefail
+          if [ "$CONFIGURED" != "true" ]; then
+            echo "::notice::Chrome Web Store is not configured (see the top of webstore.yml) — skipping."
+            echo "go=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+
+          # `gh release view` with no tag resolves the latest STABLE release — prereleases are
+          # never "latest", which is what keeps dev builds out of the store.
+          TAG="${INPUT_TAG:-$(gh release view --json tagName -q .tagName)}"
+          read -r CREATED PRERELEASE < <(gh release view "$TAG" --json createdAt,isPrerelease -q '"\(.createdAt) \(.isPrerelease)"')
+          if [ "$PRERELEASE" = "true" ]; then
+            echo "::error::$TAG is a prerelease; only stable releases go to the Chrome Web Store."; exit 1
+          fi
+          if [ "$GITHUB_EVENT_NAME" = "workflow_run" ] && [[ "$CREATED" < "$RUN_STARTED_AT" ]]; then
+            echo "::notice::That Release run cut no release (latest is $TAG, from $CREATED) — nothing for the store."
+            echo "go=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+
+          mkdir -p "$RUNNER_TEMP/zip"
+          gh release download "$TAG" --pattern 'subturtle-v*.zip' --dir "$RUNNER_TEMP/zip"
+          ZIPS=("$RUNNER_TEMP"/zip/*.zip)
+          if [ "${#ZIPS[@]}" -ne 1 ]; then
+            echo "::error::Expected one subturtle-v*.zip in $TAG, found ${#ZIPS[@]}."; exit 1
+          fi
+          echo "Publishing ${ZIPS[0]##*/} from $TAG"
+          echo "zip=${ZIPS[0]}" >> "$GITHUB_OUTPUT"
+          echo "go=true" >> "$GITHUB_OUTPUT"
+
+      - name: Authenticate to Google
+        id: auth
+        if: steps.find.outputs.go == 'true'
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WEBSTORE_WIF_PROVIDER }}
+          service_account: ${{ vars.WEBSTORE_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/chromewebstore
+
+      - name: Upload and submit for review
+        if: steps.find.outputs.go == 'true'
+        env:
+          WEBSTORE_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+          WEBSTORE_PUBLISHER_ID: ${{ vars.WEBSTORE_PUBLISHER_ID }}
+          WEBSTORE_ITEM_ID: ${{ vars.WEBSTORE_ITEM_ID }}
+          WEBSTORE_PUBLISH_TYPE: ${{ vars.WEBSTORE_PUBLISH_TYPE }}
+        run: node scripts/publish-webstore.mjs --zip "${{ steps.find.outputs.zip }}"

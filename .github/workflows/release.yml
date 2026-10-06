@@ -68,6 +68,11 @@ jobs:
       - name: Unit tests (Vitest)
         run: yarn test
 
+      # The store checks manifest name/description limits only at upload — after a release is
+      # already cut. Catch them here instead (see scripts/publish-webstore.mjs).
+      - name: Chrome Web Store publish self-test
+        run: node scripts/publish-webstore.mjs --self-test
+
       # dotenv-webpack is configured with `safe: true`, so the build needs
       # every key in .env.example to exist at build time. We write
       # non-empty placeholders rather than copying the empty .env.example
