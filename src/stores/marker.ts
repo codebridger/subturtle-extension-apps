@@ -25,7 +25,10 @@
  * This store is central to the interactive subtitle marking and translation experience in the extension.
  */
 import { defineStore } from "pinia";
-import { TranslateService } from "../common/services/translate.service";
+import {
+  MissingTargetLanguageError,
+  TranslateService,
+} from "../common/services/translate.service";
 
 const SINGLE_SELECTION_AUTO_CLEAR_MS = 2500;
 const MULTI_SELECTION_AUTO_CLEAR_MS = 5000;
@@ -277,6 +280,15 @@ export const useMarkerStore = defineStore("marker", {
           translatingList.forEach((result, i) => {
             _this.translatedWords[result] = res;
           });
+        })
+        .catch((err) => {
+          // No target language yet: show how to set one in place of the
+          // translation rather than silently showing nothing.
+          if (err instanceof MissingTargetLanguageError) {
+            translatingList.forEach((result) => {
+              _this.translatedWords[result] = err.message;
+            });
+          }
         });
     },
 

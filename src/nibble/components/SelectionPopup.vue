@@ -56,7 +56,7 @@
       </button>
 
       <div class="nibble-card__body">
-        <p class="nibble-error-text">Translation failed.</p>
+        <p class="nibble-error-text">{{ errorText }}</p>
       </div>
 
       <div class="nibble-card__footer">
@@ -70,7 +70,10 @@
 
 <script lang="ts" setup>
 import { computed, nextTick, ref, watch } from "vue";
-import { TranslateService } from "../../common/services/translate.service";
+import {
+  MissingTargetLanguageError,
+  TranslateService,
+} from "../../common/services/translate.service";
 import { emitOpen } from "../../common/services/console-crane-bridge";
 import { findSavedPhrase } from "../../common/services/phrase.service";
 
@@ -88,6 +91,7 @@ type Mode = "icon" | "loading" | "translated" | "error";
 
 const mode = ref<Mode>("icon");
 const translation = ref<string>("");
+const errorText = ref<string>("Translation failed.");
 const cardRef = ref<HTMLElement | null>(null);
 // Whether this exact phrase is already saved by the user (drives Save vs Learn).
 const isAlreadySaved = ref(false);
@@ -228,7 +232,11 @@ async function onIconClick(e: MouseEvent) {
     );
     translation.value = String(result ?? "").trim();
     mode.value = translation.value ? "translated" : "error";
-  } catch {
+  } catch (err) {
+    errorText.value =
+      err instanceof MissingTargetLanguageError
+        ? err.message
+        : "Translation failed.";
     mode.value = "error";
   }
 }

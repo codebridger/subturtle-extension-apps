@@ -8,8 +8,17 @@ import {
   SettingsObject,
   MESSAGE_TYPE,
 } from "./common/types/messaging";
+import { ensureStoredTargetLanguage } from "./common/helper/default-language";
 
 export {};
+
+// Resolve the learner's target language once on install/update so content
+// scripts never start with an empty one (see default-language.ts).
+chrome.runtime.onInstalled.addListener(() => {
+  ensureStoredTargetLanguage().catch((e) =>
+    log("background: failed to resolve default language", e)
+  );
+});
 
 function getOAuthToken() {
   return new Promise((resolve, reject) => {
@@ -112,17 +121,38 @@ chrome.runtime.onMessage.addListener(function (request, _sender, sendResponse) {
   // Handle SYNC_SETTINGS
   else if (SettingsSyncMessage.is(request)) {
     if (request.settings) {
-      // Save settings and broadcast
-      chrome.storage.local.set({ settings: request.settings }).then(() => {
-        if (request.settings) broadcastSettings(request.settings);
-        sendResponse({ status: true });
-      });
+      // Save settings and broadcast. A sender whose store hasn't loaded the
+      // language yet (e.g. a theme change racing the first fetch) posts an
+      // empty one — keep the stored language instead of wiping it.
+      const incoming = request.settings;
+      chrome.storage.local
+        .get("settings")
+        .then((data) => {
+          const stored = data.settings as SettingsObject | undefined;
+          const merged: SettingsObject = {
+            ...incoming,
+            language: incoming.language || stored?.language || "",
+          };
+          return chrome.storage.local
+            .set({ settings: merged })
+            .then(() => merged);
+        })
+        .then((merged) => {
+          broadcastSettings(merged);
+          sendResponse({ status: true });
+        });
     } else {
-      // Return current settings
-      chrome.storage.local.get("settings").then((data) => {
-        const settings = new SettingsSyncMessage(data.settings);
-        sendResponse(settings);
-      });
+      // Return current settings, resolving a default target language first
+      // when none is stored yet (fresh install, or onInstalled raced us).
+      ensureStoredTargetLanguage()
+        .catch(() =>
+          chrome.storage.local
+            .get("settings")
+            .then((data) => data.settings as SettingsObject | undefined)
+        )
+        .then((stored) => {
+          sendResponse(new SettingsSyncMessage(stored));
+        });
     }
   }
 

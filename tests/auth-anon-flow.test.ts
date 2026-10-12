@@ -38,6 +38,11 @@ vi.mock("@modular-rest/client", () => ({
 const profileStore = {
   bootstrap: vi.fn(),
   logout: vi.fn(),
+  adoptBootstrap: vi.fn(),
+  userDetail: undefined as any,
+  isFreemium: false,
+  activeSubscription: null as any,
+  freemiumAllocation: null as any,
 };
 vi.mock("../src/stores/profile", () => ({
   useProfileStore: () => profileStore,
@@ -131,6 +136,10 @@ describe("loginWithLastSession", () => {
     getSendMessageMock().mockReset();
     stubBackgroundLoginStatus(null);
     (globalThis as any).chrome.tabs.sendMessage.mockReset?.();
+
+    // The page-level bootstrap registry lives on globalThis (shared by every
+    // bundle on a page), so it outlives vi.resetModules — clear it per test.
+    delete (globalThis as any).__subturtlePageOnce;
 
     // Re-import the plugin fresh each test so the chrome.runtime.onMessage
     // listener doesn't accumulate.
@@ -312,6 +321,81 @@ describe("loginWithLastSession", () => {
         storeTokenCalls().some(([m]) => (m as any).token === null)
       ).toBe(false);
     });
+  });
+});
+
+describe("loginWithLastSession — once per page across bundles", () => {
+  beforeEach(() => {
+    delete (globalThis as any).__subturtlePageOnce;
+    auth.isLogin = false;
+    auth.user = null;
+    auth.getToken = null;
+    auth.loginWithToken.mockReset();
+    auth.loginWithToken.mockImplementation(async (token: string) => {
+      auth.isLogin = true;
+      auth.user = { id: "user-1", type: "user", email: "x@y.z" };
+      auth.getToken = token;
+      return auth.user;
+    });
+    profileStore.bootstrap.mockReset();
+    profileStore.bootstrap.mockImplementation(async () => {
+      profileStore.isFreemium = false;
+      profileStore.activeSubscription = { tier: "reader" };
+    });
+    profileStore.adoptBootstrap.mockReset();
+    analyticMock.identify.mockReset();
+    analyticMock.register.mockReset();
+    analyticMock.people.set.mockReset();
+    getSendMessageMock().mockReset();
+    stubBackgroundLoginStatus("user-token");
+    vi.spyOn(console, "log").mockImplementation(() => {});
+  });
+
+  // Each content script is its own bundle → its own module instances. Model
+  // that with vi.resetModules + a fresh import per "bundle"; they share only
+  // globalThis, like content scripts in one isolated world.
+  async function loadBundle() {
+    vi.resetModules();
+    return import("../src/plugins/modular-rest");
+  }
+
+  it("verifies the token, loads profile/subscription and identifies once for three bundles", async () => {
+    const [main, nibble, crane] = [
+      await loadBundle(),
+      await loadBundle(),
+      await loadBundle(),
+    ];
+
+    await Promise.all([
+      main.loginWithLastSession(),
+      nibble.loginWithLastSession(),
+      crane.loginWithLastSession(),
+    ]);
+
+    expect(auth.loginWithToken).toHaveBeenCalledTimes(1);
+    expect(profileStore.bootstrap).toHaveBeenCalledTimes(1);
+    expect(analyticMock.identify).toHaveBeenCalledTimes(1);
+    expect(analyticMock.people.set).toHaveBeenCalledTimes(1);
+
+    // The two followers adopt the leader's result without the network…
+    expect(profileStore.adoptBootstrap).toHaveBeenCalledTimes(2);
+    expect(profileStore.adoptBootstrap).toHaveBeenCalledWith(
+      expect.objectContaining({ activeSubscription: { tier: "reader" } })
+    );
+    // …and tag their events with the user silently (no extra $identify).
+    expect(analyticMock.register).toHaveBeenCalledWith({
+      distinct_id: "user-1",
+      $user_id: "user-1",
+    });
+    expect(nibble.isLogin.value).toBe(true);
+    expect(crane.isLogin.value).toBe(true);
+  });
+
+  it("a new token (login in the popup) starts a fresh run", async () => {
+    const bundle = await loadBundle();
+    await bundle.loginWithLastSession();
+    await bundle.loginWithLastSession("new-token");
+    expect(auth.loginWithToken).toHaveBeenCalledTimes(2);
   });
 });
 

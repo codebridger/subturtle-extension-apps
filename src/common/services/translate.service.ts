@@ -22,6 +22,15 @@ interface TranslationCache {
   };
 }
 
+export class MissingTargetLanguageError extends Error {
+  constructor() {
+    super(
+      "Choose your language first: open the Subturtle popup and pick it under \"My language\"."
+    );
+    this.name = "MissingTargetLanguageError";
+  }
+}
+
 export class TranslateService {
   static instance = new TranslateService();
 
@@ -35,6 +44,23 @@ export class TranslateService {
 
   get languageTitle() {
     return LanguageDetector.getLanguageTitle(this.targetLanguage);
+  }
+
+  /**
+   * The target language title to send to the server — never null.
+   *
+   * Content scripts don't always await settings before the first hover (the
+   * subtitle bundle starts `initialize()` without awaiting it), so on a miss
+   * we re-read settings from the background once; it resolves and persists a
+   * first-run default there (default-language.ts). If there's still nothing,
+   * fail loudly with a message the word card can show instead of sending
+   * `targetLanguage: null` and getting an answer in a random language.
+   */
+  async requireLanguageTitle(): Promise<string> {
+    if (this.languageTitle) return this.languageTitle;
+    await useSettingsStore().fetchSettingsFromBackground();
+    if (this.languageTitle) return this.languageTitle;
+    throw new MissingTargetLanguageError();
   }
 
   constructor() {
@@ -82,6 +108,8 @@ export class TranslateService {
     // Clean expired cache entries
     this.cleanExpiredCache();
 
+    const targetLanguage = await this.requireLanguageTitle();
+
     // Generate cache key
     const cacheKey = this.generateCacheKey(text, context, "simple");
 
@@ -99,7 +127,7 @@ export class TranslateService {
           args: {
             translationType: "simple",
             sourceLanguage: "auto",
-            targetLanguage: this.languageTitle,
+            targetLanguage,
             phrase: text,
             context: context || "",
             // For the server-side translation_requested analytics event.
@@ -123,6 +151,8 @@ export class TranslateService {
     // Clean expired cache entries
     this.cleanExpiredCache();
 
+    const targetLanguage = await this.requireLanguageTitle();
+
     // Generate cache key
     const cacheKey = this.generateCacheKey(text, context, "detailed");
 
@@ -140,7 +170,7 @@ export class TranslateService {
           args: {
             translationType: "detailed",
             sourceLanguage: "auto",
-            targetLanguage: this.languageTitle,
+            targetLanguage,
             phrase: text,
             context: context || "",
             // For the server-side translation_requested analytics event.
@@ -176,6 +206,7 @@ export class TranslateService {
     currentChunks?: Chunk[];
     history?: { role: "user" | "assistant"; text: string }[];
   }): Promise<TranslationAdvice> {
+    const targetLanguage = await this.requireLanguageTitle();
     return withAuthRetry(() =>
       functionProvider.run<TranslationAdvice>({
         name: "translationAdvice",
@@ -186,7 +217,7 @@ export class TranslateService {
           currentChunks: params.currentChunks || [],
           history: params.history || [],
           sourceLanguage: "auto",
-          targetLanguage: this.languageTitle,
+          targetLanguage,
         },
       })
     );
