@@ -1,3 +1,24 @@
+# [1.17.0-dev.1](https://github.com/codebridger/subturtle-extension-apps/compare/v1.16.4...v1.17.0-dev.1) (2026-10-12)
+
+
+### Bug Fixes
+
+* **analytics:** restore phrase_hovered, bootstrap the session once per page ([f1941a3](https://github.com/codebridger/subturtle-extension-apps/commit/f1941a378dba77afe3dd30d982af9324c7e5de7f))
+* **settings:** default the target language on first run, never send null ([be762ba](https://github.com/codebridger/subturtle-extension-apps/commit/be762ba875de3df75bc7ac6ee62d44f616e90a32))
+* **word-card:** bidi-safe text, Esc to close/back, whole-word Nibble selections ([154ee7b](https://github.com/codebridger/subturtle-extension-apps/commit/154ee7bf478f61e657dd7afa16fec8863dd44407))
+
+
+### Features
+
+* **practice-now:** offer Text or Voice sized to the user's tier ([1fcfd20](https://github.com/codebridger/subturtle-extension-apps/commit/1fcfd2034759c9e0b871b33e426fb37f87aba15c))
+
+## [1.16.4-dev.1](https://github.com/codebridger/subturtle-extension-apps/compare/v1.16.3...v1.16.4-dev.1) (2026-10-06)
+
+
+### Bug Fixes
+
+* shield the dashboard session on every dashboard host #z8zc9zywfj ([2b8a06e](https://github.com/codebridger/subturtle-extension-apps/commit/2b8a06eefe614a324600b8942001c9acd7ee173b)), closes [#z8zc9zywfj](https://github.com/codebridger/subturtle-extension-apps/issues/z8zc9zywfj)
+
 ## [1.16.3-dev.2](https://github.com/codebridger/subturtle-extension-apps/compare/v1.16.3-dev.1...v1.16.3-dev.2) (2026-10-06)
 
 

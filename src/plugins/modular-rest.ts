@@ -94,6 +94,8 @@ import {
   reauthAnonymously,
   setSessionRecovery,
 } from "../common/helper/auth-recovery";
+import { pageOnce } from "../common/helper/page-once";
+import User from "@modular-rest/client/dist/class/user";
 
 GlobalOptions.set({
   host: process.env.SUBTURTLE_API_URL || "",
@@ -143,12 +145,120 @@ chrome.runtime.onMessage.addListener((request, _sender) => {
     if (request.token === null) {
       logout(false);
     } else {
-      loginWithLastSession();
+      // Key the page-level bootstrap on the token from the message: every
+      // bundle receives it, and the storage write may not have landed yet.
+      loginWithLastSession(request.token);
     }
   }
 });
 
-export async function loginWithLastSession() {
+/**
+ * A plain (JSON-safe) copy of what one bundle's bootstrap established, so the
+ * other bundles on the page can adopt it without repeating the network calls.
+ * Plain data on purpose: each bundle ships its own Vue, so reactive proxies
+ * must not cross bundles.
+ */
+interface SessionSnapshot {
+  token: string | null;
+  user: {
+    email?: string;
+    phone?: string;
+    id: string;
+    permissionGroup: any;
+    type: string;
+  } | null;
+  profile?: ReturnType<typeof useProfileStore>["userDetail"];
+  isFreemium?: boolean;
+  activeSubscription?: ReturnType<typeof useProfileStore>["activeSubscription"];
+  freemiumAllocation?: ReturnType<typeof useProfileStore>["freemiumAllocation"];
+}
+
+function captureSession(): SessionSnapshot {
+  const profileStore = useProfileStore();
+  const u = authentication.user;
+  return JSON.parse(
+    JSON.stringify({
+      token: authentication.getToken ?? null,
+      user: u
+        ? {
+            email: u.email,
+            phone: u.phone,
+            id: u.id,
+            // private on the class, but a plain field at runtime
+            permissionGroup: (u as any).permissionGroup ?? null,
+            type: u.type,
+          }
+        : null,
+      profile: profileStore.userDetail,
+      isFreemium: profileStore.isFreemium,
+      activeSubscription: profileStore.activeSubscription,
+      freemiumAllocation: profileStore.freemiumAllocation,
+    })
+  );
+}
+
+/**
+ * Follower side: take over the session the leader bundle verified — token,
+ * user, profile, subscription — with no network. Analytics identity is set
+ * silently (register, not identify): the leader already sent `$identify` and
+ * `people.set` for this page.
+ */
+function adoptSession(snapshot: SessionSnapshot) {
+  const auth = authentication as any;
+  auth.token = snapshot.token;
+  auth.user = snapshot.user ? new User(snapshot.user) : null;
+  // Tell this bundle's http clients about the token (what loginWithToken does).
+  auth.emitToken?.();
+
+  const registered =
+    authentication.isLogin && snapshot.user?.type?.toLowerCase() === "user";
+  isLogin.value = !!registered;
+
+  if (registered && snapshot.user) {
+    useProfileStore().adoptBootstrap({
+      profile: snapshot.profile,
+      isFreemium: !!snapshot.isFreemium,
+      activeSubscription: snapshot.activeSubscription ?? null,
+      freemiumAllocation: snapshot.freemiumAllocation ?? null,
+    });
+    analytic.register({
+      distinct_id: snapshot.user.id,
+      $user_id: snapshot.user.id,
+    });
+  }
+}
+
+/**
+ * Restore the stored session. ONCE PER PAGE: main.js, nibble.js and
+ * console-crane.js all call this on load, and each used to run the token
+ * check (`verify/token`), the profile find-one, getSubscriptionDetails and
+ * Mixpanel `$identify` + `people.set` — three times per page load. Now the
+ * first bundle leads (runs the flow below) and the others adopt its result;
+ * see page-once.ts for why that coordination lives on the isolated world's
+ * globalThis.
+ *
+ * Keyed by the stored token, so a login / logout (a new token) starts a fresh
+ * page-level run instead of adopting a stale one.
+ */
+export async function loginWithLastSession(tokenHint?: string | null) {
+  let token = tokenHint ?? null;
+  if (!tokenHint) {
+    try {
+      const res = await sendMessage(new GetLoginStatusMessage());
+      if (GetLoginStatusMessage.checkResponse(res)) token = res.token as string;
+    } catch (_e) {
+      // The leader's own lookup below reports this.
+    }
+  }
+
+  const { leader, promise } = pageOnce(`session:${token || "none"}`, () =>
+    restoreSession().then(captureSession)
+  );
+  const snapshot = await promise;
+  if (!leader) adoptSession(snapshot);
+}
+
+async function restoreSession() {
 
   // Check if the user is logged in
   // If the user is logged in, try to login with the token as last session.

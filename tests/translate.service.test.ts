@@ -174,3 +174,49 @@ describe("TranslateService auth recovery (integration)", () => {
     expect(runMock).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("TranslateService target language", () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    (TranslateService.instance as any).translationCache = {};
+    runMock.mockReset();
+    runMock.mockResolvedValue("translated");
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("never sends a null targetLanguage — fails with a helpful error", async () => {
+    useSettingsStore().language = "";
+    // Background has nothing stored either (shim answers `{}`).
+    await expect(
+      TranslateService.instance.fetchSimpleTranslation("hello")
+    ).rejects.toThrow(/Choose your language/);
+    expect(runMock).not.toHaveBeenCalled();
+  });
+
+  it("picks up a language the background resolved after the first miss", async () => {
+    useSettingsStore().language = "";
+    vi.mocked(chrome.runtime.sendMessage).mockImplementationOnce(((
+      _m: any,
+      cb?: (r: any) => void
+    ) => {
+      const res = {
+        type: "SYNC_SETTINGS",
+        settings: { theme: "dark", language: "fa" },
+      };
+      cb?.(res);
+      return Promise.resolve(res);
+    }) as any);
+
+    await TranslateService.instance.fetchSimpleTranslation("hello");
+
+    expect(runMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        args: expect.objectContaining({ targetLanguage: "Persian" }),
+      })
+    );
+  });
+});

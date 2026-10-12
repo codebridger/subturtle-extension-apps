@@ -39,6 +39,21 @@ export const test = base.extend<ExtensionFixtures>({
         `--load-extension=${pathToExtension}`,
       ],
     });
+
+    // Seed a target language. The test Chromium's UI language is English,
+    // which the first-run default never picks (Subturtle teaches English —
+    // see src/common/helper/default-language.ts), and without a language the
+    // translate service refuses to call translateWithContext at all. Real
+    // users get one from their browser language or by choosing it in the
+    // popup. Persian matches the fixtures' Persian translate stubs.
+    let [worker] = context.serviceWorkers();
+    if (!worker) worker = await context.waitForEvent("serviceworker");
+    await worker.evaluate(async () => {
+      await chrome.storage.local.set({
+        settings: { theme: "dark", language: "fa", nibbleDisabledDomains: [] },
+      });
+    });
+
     await use(context);
     await context.close();
   },

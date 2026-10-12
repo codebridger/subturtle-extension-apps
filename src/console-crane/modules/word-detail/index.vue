@@ -64,7 +64,7 @@
                     dir="auto"
                     autofocus
                     class="flex-1 min-w-0 text-sm rounded-md border border-purple-300 dark:border-purple-700 bg-white dark:bg-gray-900 px-2.5 py-1.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-purple-400"
-                    @keyup.esc="cancelEditMessage"
+                    @keydown.esc="cancelEditMessage"
                   />
                   <button type="submit" class="shrink-0 p-1.5 rounded-md text-purple-600 hover:bg-purple-100 dark:hover:bg-purple-900/40" title="Save">
                     <i class="i-mdi-check text-base" />
@@ -84,7 +84,12 @@
                       : 'self-start bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200',
                   ]"
                 >
-                  <span class="min-w-0">{{ msg.text }}</span>
+                  <!-- One bidi paragraph per line: replies mix Persian and
+                       English, and a single direction for the whole bubble
+                       put English fragments and their quotes out of order. -->
+                  <div class="min-w-0">
+                    <p v-for="(para, pi) in toParagraphs(msg.text)" :key="pi" dir="auto" class="bidi-text">{{ para }}</p>
+                  </div>
                   <button
                     v-if="msg.role === 'user' && !adviceLoading"
                     type="button"
@@ -195,11 +200,11 @@
                 {{ entry.label }}
               </span>
               <span v-else />
-              <span v-if="entry.transliteration" class="text-sm italic text-gray-500 dark:text-gray-400" :dir="wordData?.direction?.target">
+              <span v-if="entry.transliteration" class="bidi-text text-sm italic text-gray-500 dark:text-gray-400" dir="auto">
                 {{ entry.transliteration }}
               </span>
             </div>
-            <p v-if="entry.definition" class="text-base text-gray-900 dark:text-gray-100" :dir="wordData?.direction?.target">
+            <p v-if="entry.definition" class="bidi-text text-base text-gray-900 dark:text-gray-100" dir="auto">
               {{ entry.definition }}
             </p>
           </div>
@@ -254,7 +259,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, inject, onMounted } from "vue";
+import { ref, computed, watch, inject, onMounted, onActivated } from "vue";
 import { cleanText, firstUpper } from "../../../common/helper/text";
 import { TranslateService } from "../../../common/services/translate.service";
 import { findSavedPhrase } from "../../../common/services/phrase.service";
@@ -273,6 +278,9 @@ import { OpenLoginWindowMessage } from "../../../common/types/messaging";
 import { analytic } from "../../../plugins/mixpanel";
 import { decodeRouteParams } from "../../route-params";
 
+// Named so console-crane's router-view can <keep-alive> it (see index.vue).
+defineOptions({ name: "WordDetailModule" });
+
 const props = defineProps<{
   word?: string;
   context?: string;
@@ -284,9 +292,55 @@ const emit = defineEmits<{
 
 const route = useRoute();
 
+/**
+ * `word-detail-page_viewed` once per real view. The module is kept alive
+ * while the user is on Practice / Flashcard preview (console-crane's
+ * <keep-alive>, the popup's kept-alive Home), so coming Back re-activates it
+ * instead of re-mounting — that must neither re-send the event nor re-run the
+ * saved-phrase / translation lookups. Re-activation for any other reason (the
+ * modal re-opened on a word) is a new view.
+ */
+let activatedOnce = false;
+let leftForSubPage = false;
+
 onMounted(() => {
   analytic.track("word-detail-page_viewed");
 });
+
+onActivated(() => {
+  // keep-alive fires this on the initial mount too; onMounted covered it.
+  if (!activatedOnce) {
+    activatedOnce = true;
+    leftForSubPage = false;
+    return;
+  }
+  if (leftForSubPage) {
+    leftForSubPage = false;
+    return;
+  }
+  analytic.track("word-detail-page_viewed");
+});
+
+/**
+ * The route data this instance shows. Only follows the router while the
+ * word-detail route is current: when kept alive under a sub-page, the shared
+ * route's `:data` is the sub-page's payload, and following it would reset and
+ * refetch this page in the background.
+ */
+const decodeRouteData = () =>
+  props.word
+    ? undefined // prop-driven (popup): there is no route payload to decode
+    : decodeRouteParams<{ word: string; context?: string }>(
+        route.params.data as string
+      );
+const routeData = ref(decodeRouteData());
+watch(
+  () => [route.name, route.params.data],
+  () => {
+    if (route.name && route.name !== "word-detail") return;
+    routeData.value = decodeRouteData();
+  }
+);
 
 /**
  * Resolve word + context inputs. Prefers explicit props (used by the popup
@@ -297,12 +351,7 @@ function getProps() {
   if (props.word) {
     return { word: props.word, context: props.context ?? "" };
   }
-
-  const data = decodeRouteParams<{ word: string; context?: string }>(
-    route.params.data as string
-  );
-
-  return data;
+  return routeData.value;
 }
 
 // Injected frame size from parent component to control responsive layout
@@ -344,6 +393,7 @@ const openConsolePage = inject<
 >("openConsolePage", null);
 
 function openConsole(page: string, params: Record<string, any>) {
+  leftForSubPage = true;
   if (openConsolePage) openConsolePage(page, params);
   else useConsoleCraneStore().toggleConsoleCrane(page, params, true);
 }
@@ -449,6 +499,12 @@ const selectionSegments = computed<{ text: string; isChunk: boolean }[]>(() => {
   }
   return segments;
 });
+
+/** Split a chat message into its non-empty lines (each its own bidi paragraph). */
+function toParagraphs(text: string): string[] {
+  const lines = (text || "").split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  return lines.length ? lines : [""];
+}
 
 // --- AI advice chat ---
 type AdviceMessage = { role: "user" | "assistant"; text: string };
@@ -568,11 +624,18 @@ const titleSizeClass = computed(() => {
 });
 
 /**
- * Watch for changes to the word in URL parameters
- * Resets the component and fetches new word details
+ * Watch for changes to the word (or its context) in props / URL parameters.
+ * Resets the component and fetches new word details.
+ *
+ * Watches a primitive key, NOT `deep`: a deep watcher fires on every
+ * dependency trigger even when the value is unchanged, so returning from a
+ * sub-page (route data re-decoded, same word) re-ran every lookup.
  */
 watch(
-  () => getProps().word,
+  () => {
+    const p = getProps();
+    return p?.word ? JSON.stringify([p.word, p.context ?? ""]) : "";
+  },
   (value) => {
     key.value = new Date().getTime();
     wordData.value = null;
@@ -582,7 +645,7 @@ watch(
 
     fetchWordDetail();
   },
-  { immediate: true, deep: true }
+  { immediate: true }
 );
 
 /**
@@ -647,6 +710,14 @@ function handleLoginRequest() {
 </script>
 
 <style lang="scss" scoped>
+/* Resolve direction from each paragraph's own text (first strong character)
+   and align it to its start, so mixed Persian/English text keeps fragments
+   and quotes in reading order. Pairs with dir="auto" on the element. */
+.bidi-text {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
 .white-shadow {
   color: white;
   text-shadow: 2px 3px 0px #898999;

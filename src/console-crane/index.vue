@@ -15,6 +15,7 @@ import { getSubturtleDashboardUrlWithToken } from "../common/static/global";
 import { Button, IconButton, App } from "pilotui";
 import { watch, onMounted, onUnmounted, ref } from "vue";
 import { analytic } from "../plugins/mixpanel";
+import { handleConsoleEscape } from "./escape";
 
 const store = useConsoleCraneStore();
 const router = useRouter();
@@ -39,6 +40,30 @@ function openSettings() {
 }
 
 const rootRef = ref<HTMLElement | null>(null);
+
+// Esc: back / close — listening only while the modal is open, in the capture
+// phase so host handlers (e.g. YouTube's) don't get it first. See escape.ts.
+function onKeydown(event: KeyboardEvent) {
+  handleConsoleEscape(
+    event,
+    {
+      isOnMainPage: store.isOnMainPage,
+      canGoBack: store.canGoBack,
+      goBack: store.goBack,
+      close: () => (store.isActive = false),
+    },
+    rootRef.value
+  );
+}
+
+watch(
+  () => store.isActive,
+  (isActive) => {
+    if (isActive) window.addEventListener("keydown", onKeydown, true);
+    else window.removeEventListener("keydown", onKeydown, true);
+  },
+  { immediate: true }
+);
 let cleanupThemeListener: (() => void) | undefined;
 
 onMounted(() => {
@@ -48,6 +73,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  window.removeEventListener("keydown", onKeydown, true);
   if (cleanupThemeListener) cleanupThemeListener();
 });
 </script>
@@ -78,7 +104,14 @@ onUnmounted(() => {
 
           <!-- Body: scrollable -->
           <div class="flex-1 overflow-y-auto w-full">
-            <router-view class="w-full flex-1" />
+            <!-- Keep the word card alive under Practice / Flashcard preview so
+                 Back restores it as-is: no second word-detail-page_viewed and
+                 no repeated saved-phrase / translation lookups. -->
+            <router-view v-slot="{ Component }">
+              <keep-alive include="WordDetailModule">
+                <component :is="Component" class="w-full flex-1" />
+              </keep-alive>
+            </router-view>
           </div>
         </div>
       </modal>

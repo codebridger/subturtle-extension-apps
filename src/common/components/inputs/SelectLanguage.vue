@@ -12,6 +12,10 @@
         @change="commit"
         class="bg-gray-800 border border-gray-700 text-gray-200 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 w-full p-2 shadow-sm appearance-none"
       >
+        <!-- Shown until a language is stored. Never pre-select one: the old
+             hard-coded "en" made the popup claim "English" while nothing was
+             saved and translations went out with no target language. -->
+        <option value="" disabled>Choose your language</option>
         <option v-for="(lang, i) of list" :key="i" :value="lang.code">
           {{ lang.title }}
         </option>
@@ -60,8 +64,8 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>();
 
-// Reactive data
-const lang = ref<string>("en");
+// Reactive data — mirrors the stored value; "" renders the placeholder.
+const lang = ref<string>(props.modelValue || "");
 
 // Computed properties
 const list = computed<Language[]>(() => SUPPORTED_LANGUES);
@@ -70,14 +74,14 @@ const list = computed<Language[]>(() => SUPPORTED_LANGUES);
 watch(
   () => props.modelValue,
   (value) => {
-    if (!value) return;
-    lang.value = value;
+    lang.value = value || "";
   },
   { immediate: true }
 );
 
 // Methods
 const commit = (): void => {
+  if (!lang.value) return;
   emit("update:modelValue", lang.value);
 };
 </script>
