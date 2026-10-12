@@ -64,7 +64,7 @@
                     dir="auto"
                     autofocus
                     class="flex-1 min-w-0 text-sm rounded-md border border-purple-300 dark:border-purple-700 bg-white dark:bg-gray-900 px-2.5 py-1.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-purple-400"
-                    @keyup.esc="cancelEditMessage"
+                    @keydown.esc="cancelEditMessage"
                   />
                   <button type="submit" class="shrink-0 p-1.5 rounded-md text-purple-600 hover:bg-purple-100 dark:hover:bg-purple-900/40" title="Save">
                     <i class="i-mdi-check text-base" />
@@ -84,7 +84,12 @@
                       : 'self-start bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200',
                   ]"
                 >
-                  <span class="min-w-0">{{ msg.text }}</span>
+                  <!-- One bidi paragraph per line: replies mix Persian and
+                       English, and a single direction for the whole bubble
+                       put English fragments and their quotes out of order. -->
+                  <div class="min-w-0">
+                    <p v-for="(para, pi) in toParagraphs(msg.text)" :key="pi" dir="auto" class="bidi-text">{{ para }}</p>
+                  </div>
                   <button
                     v-if="msg.role === 'user' && !adviceLoading"
                     type="button"
@@ -195,11 +200,11 @@
                 {{ entry.label }}
               </span>
               <span v-else />
-              <span v-if="entry.transliteration" class="text-sm italic text-gray-500 dark:text-gray-400" :dir="wordData?.direction?.target">
+              <span v-if="entry.transliteration" class="bidi-text text-sm italic text-gray-500 dark:text-gray-400" dir="auto">
                 {{ entry.transliteration }}
               </span>
             </div>
-            <p v-if="entry.definition" class="text-base text-gray-900 dark:text-gray-100" :dir="wordData?.direction?.target">
+            <p v-if="entry.definition" class="bidi-text text-base text-gray-900 dark:text-gray-100" dir="auto">
               {{ entry.definition }}
             </p>
           </div>
@@ -495,6 +500,12 @@ const selectionSegments = computed<{ text: string; isChunk: boolean }[]>(() => {
   return segments;
 });
 
+/** Split a chat message into its non-empty lines (each its own bidi paragraph). */
+function toParagraphs(text: string): string[] {
+  const lines = (text || "").split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  return lines.length ? lines : [""];
+}
+
 // --- AI advice chat ---
 type AdviceMessage = { role: "user" | "assistant"; text: string };
 
@@ -699,6 +710,14 @@ function handleLoginRequest() {
 </script>
 
 <style lang="scss" scoped>
+/* Resolve direction from each paragraph's own text (first strong character)
+   and align it to its start, so mixed Persian/English text keeps fragments
+   and quotes in reading order. Pairs with dir="auto" on the element. */
+.bidi-text {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
 .white-shadow {
   color: white;
   text-shadow: 2px 3px 0px #898999;

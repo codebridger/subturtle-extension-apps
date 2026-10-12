@@ -1,4 +1,5 @@
 import { ref, onMounted, onBeforeUnmount } from "vue";
+import { snapRangeToWords } from "./snap-selection";
 
 const MIN_TEXT_LENGTH = 1;
 const MAX_TEXT_LENGTH = 200;
@@ -90,7 +91,9 @@ export function useTextSelection() {
       return;
     }
 
-    const selected = selection.toString().trim();
+    // Translate / save whole words even when the drag stopped mid-word.
+    const range = snapRangeToWords(selection.getRangeAt(0));
+    const selected = range.toString().trim();
     if (
       selected.length < MIN_TEXT_LENGTH ||
       selected.length > MAX_TEXT_LENGTH
@@ -104,7 +107,6 @@ export function useTextSelection() {
       return;
     }
 
-    const range = selection.getRangeAt(0);
     const boundingRect = range.getBoundingClientRect();
     if (boundingRect.width === 0 && boundingRect.height === 0) {
       isVisible.value = false;

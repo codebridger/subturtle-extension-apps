@@ -194,4 +194,37 @@ describe("WordDetail page", () => {
     );
     wrapper.unmount();
   });
+
+  it("renders the definition with per-paragraph direction (dir=auto)", async () => {
+    const { wrapper } = mountWordDetail({ word: "Kinsta Plan" });
+    await flushPromises();
+    const p = wrapper
+      .findAll("p.bidi-text")
+      .find((el) => el.text().includes("A service package"))!;
+    expect(p.attributes("dir")).toBe("auto");
+    wrapper.unmount();
+  });
+
+  it("renders each line of a mixed Persian/English Ask-AI reply as its own dir=auto paragraph", async () => {
+    vi.mocked(TranslateService.instance.fetchTranslationAdvice).mockResolvedValue({
+      reply: '«had to» یعنی «مجبور بودن».\n"had to" is the past of "have to".',
+    } as any);
+    const { wrapper } = mountWordDetail({ word: "Kinsta Plan" });
+    await flushPromises();
+
+    await wrapper.find('button[title^="Chat with AI"]').trigger("click");
+    await wrapper.find('input[placeholder="Type a message…"]').setValue("meaning?");
+    await wrapper.find("form").trigger("submit");
+    await flushPromises();
+
+    const paras = wrapper.findAll("p.bidi-text").filter((p) =>
+      p.text().includes("had to")
+    );
+    expect(paras.map((p) => p.text())).toEqual([
+      "«had to» یعنی «مجبور بودن».",
+      '"had to" is the past of "have to".',
+    ]);
+    paras.forEach((p) => expect(p.attributes("dir")).toBe("auto"));
+    wrapper.unmount();
+  });
 });
