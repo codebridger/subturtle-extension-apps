@@ -78,7 +78,14 @@ onUnmounted(() => {
 
           <!-- Body: scrollable -->
           <div class="flex-1 overflow-y-auto w-full">
-            <router-view class="w-full flex-1" />
+            <!-- Keep the word card alive under Practice / Flashcard preview so
+                 Back restores it as-is: no second word-detail-page_viewed and
+                 no repeated saved-phrase / translation lookups. -->
+            <router-view v-slot="{ Component }">
+              <keep-alive include="WordDetailModule">
+                <component :is="Component" class="w-full flex-1" />
+              </keep-alive>
+            </router-view>
           </div>
         </div>
       </modal>

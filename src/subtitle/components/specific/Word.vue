@@ -17,6 +17,11 @@ import { emitOpen } from "../../../common/services/console-crane-bridge";
 import { useMarkerStore } from "../../../stores/marker";
 import { ref, getCurrentInstance, onMounted, onUnmounted } from "vue";
 import { analytic } from "../../../plugins/mixpanel";
+import {
+  cancelPhraseHover,
+  endPhraseHover,
+  trackPhraseHoverStart,
+} from "../../helpers/hover-analytics";
 
 const markerStore = useMarkerStore();
 const props = defineProps<{
@@ -67,9 +72,14 @@ function onMouseEnter() {
     markerStore.clear();
     markerStore.markWord(props.id, props.modelValue?.trim(), boundingRect);
   }
+
+  trackPhraseHoverStart(props.modelValue);
 }
 
 function onMouseLeave(e: MouseEvent) {
+  // Leaving before the dwell elapses is a sweep, not a hover.
+  cancelPhraseHover();
+
   // Add a small delay to prevent flickering when moving to anchors
   if (mouseLeaveTimeout.value) {
     clearTimeout(mouseLeaveTimeout.value);
@@ -90,6 +100,7 @@ function onMouseLeave(e: MouseEvent) {
       markerStore.hoveredWordId === props.id
     ) {
       markerStore.setHoveredWordId(null);
+      endPhraseHover();
     }
     mouseLeaveTimeout.value = null;
   }, 150);

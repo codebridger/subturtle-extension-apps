@@ -95,6 +95,23 @@ export const useProfileStore = defineStore("profile", () => {
     ]);
   }
 
+  /**
+   * Take over a bootstrap another bundle on the page already ran (see
+   * loginWithLastSession in plugins/modular-rest.ts) instead of fetching again.
+   */
+  function adoptBootstrap(snapshot: {
+    profile?: ProfileType;
+    isFreemium: boolean;
+    activeSubscription: SubscriptionType | null;
+    freemiumAllocation: FreemiumAllocationType | null;
+  }) {
+    userDetail.value = snapshot.profile;
+    isFreemium.value = snapshot.isFreemium;
+    activeSubscription.value = snapshot.activeSubscription;
+    freemiumAllocation.value = snapshot.freemiumAllocation;
+    isSubscriptionFetching.value = false;
+  }
+
   function loginWithLastSession() {
     return authentication
       .loginWithLastSession()
@@ -121,5 +138,6 @@ export const useProfileStore = defineStore("profile", () => {
     getProfileInfo,
     loginWithLastSession,
     bootstrap,
+    adoptBootstrap,
   };
 });
