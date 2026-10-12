@@ -33,7 +33,7 @@ export const SUPPORTED_LANGUES = [
   { title: "Haitian Creole", code: "ht" },
   { title: "Hausa", code: "ha" },
   { title: "Hawaiian", code: "haw" },
-  { title: "Hebrew", code: "he or iw" },
+  { title: "Hebrew", code: "he" },
   { title: "Hindi", code: "hi" },
   { title: "Hmong", code: "hmn" },
   { title: "Hungarian", code: "hu" },
