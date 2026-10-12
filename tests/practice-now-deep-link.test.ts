@@ -27,6 +27,12 @@ describe("buildPracticeNowPath", () => {
     expect(req.returnTo).toBe("/board");
   });
 
+  it("routes text sessions straight to the text page", () => {
+    const path = buildPracticeNowPath({ phraseId: "abc123", mode: "text" });
+    expect(path.startsWith("/practice/live-session-text?session=")).toBe(true);
+    expect(decodeSession(path).mode).toBe("text");
+  });
+
   it("defaults the voice to Kore when none is chosen", () => {
     const req = decodeSession(buildPracticeNowPath({ phraseId: "x" }));
     expect(req.aiCharacter).toBe("Kore");

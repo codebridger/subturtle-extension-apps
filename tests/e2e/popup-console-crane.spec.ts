@@ -106,10 +106,11 @@ test.describe("Popup: ConsoleCrane phrase actions (router pages, no modal)", () 
       .click();
 
     // Popup router navigated to the console page — full popup page, no modal.
-    await expect(page.locator("#subturtle-popup")).toContainText(
-      "Choose a coach voice",
-      { timeout: 15_000 }
-    );
+    // The Text / Voice mode choice is always rendered (voice picker only in
+    // voice mode, which depends on the tier's allowance).
+    await expect(
+      page.locator('#subturtle-popup [role="radiogroup"][aria-label="Practice mode"]')
+    ).toBeVisible({ timeout: 15_000 });
     expect(page.url()).toContain("#/practice-config/");
     await expect(page.locator("#subturtle-console-crane-root")).toHaveCount(0);
 

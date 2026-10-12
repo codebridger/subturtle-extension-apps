@@ -19,6 +19,7 @@ const {
     profileHolder: {
       isFreemium: false,
       freemiumAllocation: null as any,
+      activeSubscription: null as any,
       fetchSubscription: () => Promise.resolve(),
     },
     openHolder: { calls: [] as string[] },
@@ -96,6 +97,7 @@ beforeEach(() => {
   savedHolder.value = null;
   profileHolder.isFreemium = false;
   profileHolder.freemiumAllocation = null;
+  profileHolder.activeSubscription = null;
   openHolder.calls = [];
   sendHolder.calls = [];
   // Default to logged in; the logged-out test flips this before mounting.
@@ -106,47 +108,73 @@ beforeEach(() => {
   });
 });
 
-describe("PracticeConfig page (voice-only)", () => {
+// Reader: paid tier with 0 included voice minutes and a monthly text-chat cap
+// (the 2026-10-12 report). Learner: voice minutes + unlimited text.
+const READER = {
+  tier: "reader",
+  is_freemium: false,
+  voice_minutes_total: 0,
+  voice_minutes_used: 0,
+  allowed_text_chats: 20,
+  allowed_text_chats_used: 3,
+  active_top_ups: [],
+};
+const LEARNER = {
+  tier: "learner",
+  is_freemium: false,
+  voice_minutes_total: 90,
+  voice_minutes_used: 30,
+  allowed_text_chats: null,
+  active_top_ups: [],
+};
+
+function decodeOpened(url: string) {
+  const [path, query] = url.replace(/^OPEN:/, "").split("?");
+  return {
+    path,
+    req: JSON.parse(atob(new URLSearchParams(query).get("session") as string)),
+  };
+}
+
+function startButton(w: ReturnType<typeof mount>) {
+  return w
+    .findAll("button.pilot-btn")
+    .find((b) => b.text().startsWith("Start"))!;
+}
+
+describe("PracticeConfig page", () => {
   it("prompts to save first and reveals the save widget on demand", async () => {
     const w = mountWith({ phrase: "had to" });
     await flushPromises();
-    // The voice picker is always shown; the not-saved footer adds the prompt.
-    expect(w.text()).toContain("Choose a coach voice");
-    expect(w.find(".voice-picker-stub").exists()).toBe(true);
-    // Step 1: a prompt + "Let's save it" — no save widget yet.
+    expect(w.findAll(".mode-option")).toHaveLength(2);
     expect(w.text()).toContain("Let's save it");
     expect(w.find(".save-stub").exists()).toBe(false);
-    // Step 2: clicking it reveals the real save widget; the picker stays put.
     await w.find("button.pilot-btn").trigger("click");
     expect(w.find(".save-stub").exists()).toBe(true);
-    expect(w.find(".voice-picker-stub").exists()).toBe(true);
+    // The save widget brings its own button; the sticky footer steps aside.
+    expect(w.find(".practice-footer").exists()).toBe(false);
     w.unmount();
   });
 
-  it("reveals the voice config card after an inline save", async () => {
+  it("reveals Start after an inline save", async () => {
+    profileHolder.activeSubscription = LEARNER;
     const w = mountWith({ phrase: "had to" });
     await flushPromises();
     await w.find("button.pilot-btn").trigger("click"); // Let's save it
     await w.find(".save-stub").trigger("click"); // save → emits saved
     await flushPromises();
-    expect(w.text()).toContain("Choose a coach voice");
-    expect(w.find(".voice-picker-stub").exists()).toBe(true);
-    expect(w.text()).toContain("Start");
+    expect(startButton(w)).toBeTruthy();
     expect(w.find(".save-stub").exists()).toBe(false);
     w.unmount();
   });
 
-  it("shows the voice picker and a login prompt when logged out", async () => {
+  it("shows a login prompt when logged out (no counts, no Start)", async () => {
     loginHolder.ref!.value = false;
     const w = mountWith({ phrase: "had to" });
     await flushPromises();
-    // Voice picker is previewable without auth, plus an inline login CTA that
-    // sets expectations that saving follows login before practice can start.
-    expect(w.text()).toContain("Choose a coach voice");
-    expect(w.find(".voice-picker-stub").exists()).toBe(true);
+    expect(w.findAll(".mode-option")).toHaveLength(2);
     expect(w.text()).toContain("Log in & save first");
     expect(w.text()).toContain("needs a saved phrase");
-    // Not the save-first flow, and no Start until they log in.
     expect(w.text()).not.toContain("Let's save it");
     expect(w.text()).not.toContain("Start");
     w.unmount();
@@ -156,8 +184,6 @@ describe("PracticeConfig page (voice-only)", () => {
     loginHolder.ref!.value = false;
     const w = mountWith({ phrase: "had to" });
     await flushPromises();
-
-    // The only button in the logged-out footer is the login CTA.
     await w.find("button.pilot-btn").trigger("click");
     expect(sendHolder.calls).toHaveLength(1);
     expect(sendHolder.calls[0]).toBeInstanceOf(OpenLoginWindowMessage);
@@ -169,97 +195,137 @@ describe("PracticeConfig page (voice-only)", () => {
     const w = mountWith({ phrase: "had to" });
     await flushPromises();
     expect(w.text()).toContain("Log in & save first");
-
-    // Simulate a completed login: the isLogin watch re-checks the saved state.
-    // Still unsaved here, so the page lands on the save-first flow.
     loginHolder.ref!.value = true;
     await flushPromises();
-
     expect(w.text()).not.toContain("Log in & save first");
     expect(w.text()).toContain("Let's save it");
-    // The voice picker persists across the transition (never unmounted).
-    expect(w.find(".voice-picker-stub").exists()).toBe(true);
     w.unmount();
   });
 
-  it("shows the voice config card immediately when the phrase is already saved", async () => {
+  it("keeps the primary CTA in a sticky footer", async () => {
     savedHolder.value = { _id: "PID123" };
+    profileHolder.activeSubscription = LEARNER;
     const w = mountWith({ phrase: "had to" });
     await flushPromises();
-    expect(w.text()).toContain("Choose a coach voice");
-    expect(w.find(".save-stub").exists()).toBe(false);
+    const footer = w.find(".practice-footer");
+    expect(footer.classes()).toContain("sticky");
+    expect(footer.classes()).toContain("bottom-0");
+    expect(footer.text()).toContain("Start");
     w.unmount();
   });
 
-  it("Start (premium) opens a dashboard tab for the saved phrase with the chosen voice", async () => {
+  it("Reader (0 voice minutes): defaults to Text, disables Voice, opens the text session", async () => {
     savedHolder.value = { _id: "PID123" };
+    profileHolder.activeSubscription = READER;
     const w = mountWith({ phrase: "had to" });
     await flushPromises();
 
-    await w.find("button.pilot-btn").trigger("click");
+    const voice = w.find('.mode-option[data-mode="voice"]');
+    expect(voice.attributes("disabled")).toBeDefined();
+    expect(voice.text()).toContain("No voice minutes left");
+    expect(
+      w.find('.mode-option[data-mode="text"]').attributes("aria-checked")
+    ).toBe("true");
+    expect(w.text()).toContain("17 of 20 text chats left this month");
+    expect(w.find(".voice-picker-stub").exists()).toBe(false);
+    expect(w.text()).not.toContain("monthly credits");
 
+    await startButton(w).trigger("click");
     expect(openHolder.calls).toHaveLength(1);
-    // The link carries a base64 LiveSessionRequest with a single-phrase source.
-    const session = new URLSearchParams(
-      openHolder.calls[0].split("?")[1]
-    ).get("session") as string;
-    const req = JSON.parse(atob(session));
+    const { path, req } = decodeOpened(openHolder.calls[0]);
+    expect(path).toBe("/practice/live-session-text");
+    expect(req.mode).toBe("text");
     expect(req.source).toEqual({ kind: "phrases", phraseIds: ["PID123"] });
+    w.unmount();
+  });
+
+  it("Learner: defaults to Voice with real minutes left and the chosen voice", async () => {
+    savedHolder.value = { _id: "PID123" };
+    profileHolder.activeSubscription = LEARNER;
+    const w = mountWith({ phrase: "had to" });
+    await flushPromises();
+
+    expect(w.find(".voice-picker-stub").exists()).toBe(true);
+    expect(w.text()).toContain("60 voice minutes left");
+    expect(w.find('.mode-option[data-mode="text"]').text()).toContain(
+      "Unlimited chats"
+    );
+
+    await startButton(w).trigger("click");
+    const { path, req } = decodeOpened(openHolder.calls[0]);
+    expect(path).toBe("/practice/live-session");
+    expect(req.mode).toBe("voice");
     expect(req.aiCharacter).toBe("Kore");
     w.unmount();
   });
 
-  it("free users with remaining allocation can start (shows sessions left)", async () => {
+  it("lets the user switch Voice → Text", async () => {
     savedHolder.value = { _id: "PID123" };
-    profileHolder.isFreemium = true;
-    profileHolder.freemiumAllocation = {
-      allowed_lived_sessions: 3,
-      allowed_lived_sessions_used: 1,
-    };
+    profileHolder.activeSubscription = LEARNER;
     const w = mountWith({ phrase: "had to" });
     await flushPromises();
-
-    expect(w.text()).toContain("2 of 3 free AI sessions left");
-    expect(w.text()).not.toContain("Upgrade");
-
-    await w.find("button.pilot-btn").trigger("click");
-    expect(openHolder.calls).toHaveLength(1);
-    const session = new URLSearchParams(
-      openHolder.calls[0].split("?")[1]
-    ).get("session") as string;
-    expect(JSON.parse(atob(session)).source.phraseIds).toEqual(["PID123"]);
+    await w.find('.mode-option[data-mode="text"]').trigger("click");
+    expect(w.find(".voice-picker-stub").exists()).toBe(false);
+    await startButton(w).trigger("click");
+    expect(decodeOpened(openHolder.calls[0]).path).toBe(
+      "/practice/live-session-text"
+    );
     w.unmount();
   });
 
-  it("free users at their session limit see Upgrade (no session launch)", async () => {
+  it("counts voice top-ups as available minutes", async () => {
+    savedHolder.value = { _id: "PID123" };
+    profileHolder.activeSubscription = {
+      ...READER,
+      active_top_ups: [{ minutes_remaining: 15 }],
+    };
+    const w = mountWith({ phrase: "had to" });
+    await flushPromises();
+    expect(
+      w.find('.mode-option[data-mode="voice"]').attributes("disabled")
+    ).toBeUndefined();
+    expect(w.text()).toContain("15 voice minutes left");
+    w.unmount();
+  });
+
+  it("free users out of both text chats and voice see Upgrade", async () => {
     savedHolder.value = { _id: "PID123" };
     profileHolder.isFreemium = true;
     profileHolder.freemiumAllocation = {
       allowed_lived_sessions: 3,
       allowed_lived_sessions_used: 3,
+      voice_minutes_total: 5,
+      voice_minutes_used: 5,
+      allowed_text_chats: 5,
+      allowed_text_chats_used: 5,
     };
     const w = mountWith({ phrase: "had to" });
     await flushPromises();
 
-    expect(w.text()).toContain("Upgrade to Premium");
-    expect(w.text()).toContain("used all 3 free AI sessions");
-
-    await w.find("button.pilot-btn").trigger("click");
-    // Upgrade opens the dashboard subscription settings, not a practice session.
+    expect(w.text()).toContain("Upgrade");
+    expect(w.text()).not.toContain("Start");
+    await w.find(".practice-footer button.pilot-btn").trigger("click");
     expect(openHolder.calls).toHaveLength(1);
     expect(openHolder.calls[0]).toContain("/settings/subscription");
     expect(openHolder.calls[0]).not.toContain("session=");
     w.unmount();
   });
 
-  it("premium users just see Start (no allocation note, no upgrade)", async () => {
+  it("free users with text chats left but no voice can still start a text chat", async () => {
     savedHolder.value = { _id: "PID123" };
-    profileHolder.isFreemium = false;
+    profileHolder.isFreemium = true;
+    profileHolder.freemiumAllocation = {
+      allowed_lived_sessions: 3,
+      allowed_lived_sessions_used: 3,
+      voice_minutes_total: 5,
+      voice_minutes_used: 0,
+      allowed_text_chats: 5,
+      allowed_text_chats_used: 1,
+    };
     const w = mountWith({ phrase: "had to" });
     await flushPromises();
-    expect(w.text()).toContain("Start");
-    expect(w.text()).not.toContain("Premium");
-    expect(w.text()).not.toContain("free AI sessions");
+    expect(w.text()).not.toContain("Upgrade");
+    expect(w.text()).toContain("4 of 5 text chats left this month");
     w.unmount();
   });
 });
