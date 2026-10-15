@@ -90,12 +90,18 @@ import { COLLECTIONS, DATABASE } from "../../common/static/global";
 import { PhraseBundleType } from "../../common/types/phrase.type";
 import { analytic } from "../../plugins/mixpanel";
 import { log } from "../../common/helper/log";
+import { languageFilter } from "../../common/language/state";
 
 const props = defineProps<{
   selectedBundles: string[];
   excludedBundleIds?: string[];
   /** AI-suggested bundle name shown in-field when no bundle is selected yet. */
   suggestedName?: string;
+  /**
+   * Round 1 (E-07): list and create bundles of this learning language only.
+   * Unset on a server without language profiles: every bundle, as before.
+   */
+  language?: string | null;
 }>();
 
 const emit = defineEmits({
@@ -234,6 +240,7 @@ function createNewBundle() {
       doc: {
         title,
         refId: authentication.user?.id,
+        ...(props.language ? { language: props.language } : {}),
       },
     })
     .then(() => {
@@ -246,13 +253,19 @@ function createNewBundle() {
     });
 }
 
-function fetchOptions() {
-  if (isFetching.value) return;
+// Latest request wins: a language change starts a new fetch while an older
+// one (other language) may still be on its way.
+let fetchSeq = 0;
+
+function fetchOptions(force = false) {
+  if (isFetching.value && !force) return;
   isFetching.value = true;
+  const seq = ++fetchSeq;
 
   const title = searchedBundleName.value.trim();
   const query: any = { refId: authentication.user?.id };
   if (title) query["title"] = { $regex: title, $options: "i" };
+  if (props.language) query["language"] = languageFilter(props.language);
 
   return dataProvider
     .find<PhraseBundleType>({
@@ -262,11 +275,24 @@ function fetchOptions() {
       options: { sort: "-_id" },
     })
     .then((data) => {
-      options.value = data;
+      if (seq === fetchSeq) options.value = data;
     })
     .finally(() => {
-      isFetching.value = false;
+      if (seq === fetchSeq) isFetching.value = false;
     });
+}
+
+// Another language for this phrase (Change, or a new detection): its bundles.
+watch(
+  () => props.language,
+  () => {
+    fetchOptions(true);
+  }
+);
+
+/** Title of a loaded bundle, for "Saved to <bundle> · German". */
+function titleFor(id: string): string {
+  return options.value.find((o) => o._id === id)?.title || "";
 }
 
 // Watch searchedBundleName with debounce to prevent focus loss
@@ -408,6 +434,7 @@ onBeforeUnmount(() => {
 
 defineExpose({
   closeDropdown,
+  titleFor,
 });
 </script>
 

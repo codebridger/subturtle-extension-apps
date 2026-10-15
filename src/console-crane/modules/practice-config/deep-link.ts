@@ -8,7 +8,7 @@
  * voice path. Both carry a base64-encoded LiveSessionRequest with a `phrases`
  * source — the same descriptor the dashboard's bundle review builds.
  * The phrase is always saved first, so it's referenced by id; all values are
- * ASCII, so plain base64 is enough.
+ * ASCII (the language is an ISO code), so plain base64 is enough.
  */
 
 /** The eight Gemini voices, mirroring the dashboard's voice list. */
@@ -32,6 +32,12 @@ export interface PracticeNowOptions {
   voiceName?: string;
   /** Conversation transport; defaults to voice. */
   mode?: "voice" | "text";
+  /**
+   * Round 1 (E-08, D-16): the phrase's learning language, so the session runs
+   * in it. Omitted on servers without language profiles; the dashboard then
+   * uses the active language.
+   */
+  language?: string | null;
 }
 
 /**
@@ -42,16 +48,21 @@ export function buildPracticeNowPath({
   phraseId,
   voiceName,
   mode = "voice",
+  language,
 }: PracticeNowOptions): string {
-  const request = {
+  const request: Record<string, unknown> = {
     aiCharacter: voiceName || DEFAULT_PRACTICE_VOICE,
     mode,
     source: { kind: "phrases", phraseIds: [phraseId] },
     returnTo: "/board",
   };
+  if (language) request.language = language;
   const session = btoa(JSON.stringify(request));
   const params = new URLSearchParams();
   params.set("session", session);
+  // Also as a plain parameter, so the page knows the language before it
+  // decodes the session.
+  if (language) params.set("language", language);
   const page = mode === "text" ? "live-session-text" : "live-session";
   return `/practice/${page}?${params.toString()}`;
 }
