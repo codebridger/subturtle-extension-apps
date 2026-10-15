@@ -1,3 +1,10 @@
+# [1.17.0-dev.5](https://github.com/codebridger/subturtle-extension-apps/compare/v1.17.0-dev.4...v1.17.0-dev.5) (2026-10-15)
+
+
+### Features
+
+* **languages:** send the learning language to analytics and show the own language in page settings (E-13, E-03) ([58f5845](https://github.com/codebridger/subturtle-extension-apps/commit/58f5845cedee5371e53a2c869047e728672f86d9))
+
 # [1.17.0-dev.4](https://github.com/codebridger/subturtle-extension-apps/compare/v1.17.0-dev.3...v1.17.0-dev.4) (2026-10-15)
 
 
