@@ -11,24 +11,37 @@ import type { BundleSuggestion } from "../../console-crane/modules/word-detail/t
 export class BundleSuggestionService {
   static instance = new BundleSuggestionService();
 
-  // Cache of in-flight / resolved suggestions keyed by normalised URL.
+  // Cache of in-flight / resolved suggestions keyed by normalised URL (and
+  // the language, round 1: a German page bundle is no suggestion for English).
   private cache = new Map<string, Promise<BundleSuggestion>>();
 
   /** Clear the cache (e.g. after a save creates a new bundle for this page). */
   clear(url?: string) {
-    if (url) this.cache.delete(normaliseSourceUrl(url));
-    else this.cache.clear();
+    if (!url) {
+      this.cache.clear();
+      return;
+    }
+    const key = normaliseSourceUrl(url);
+    for (const k of Array.from(this.cache.keys())) {
+      if (k === key || k.startsWith(key + "|")) this.cache.delete(k);
+    }
   }
 
-  async getForCurrentPage(): Promise<BundleSuggestion> {
+  /**
+   * @param language the learning language the phrase is saved to (E-07). The
+   *   server filters bundles by it (B-09). Omitted on servers without
+   *   language profiles, so the request is the same as before.
+   */
+  async getForCurrentPage(language?: string | null): Promise<BundleSuggestion> {
     const empty: BundleSuggestion = { matchedBundle: null, suggestedName: null };
 
     // Logged-in only; anonymous users get nothing to suggest.
     if (!authentication.user?.id) return empty;
     if (typeof location === "undefined") return empty;
 
-    const key = normaliseSourceUrl(location.href);
-    if (!key) return empty;
+    const pageKey = normaliseSourceUrl(location.href);
+    if (!pageKey) return empty;
+    const key = language ? `${pageKey}|${language}` : pageKey;
 
     const cached = this.cache.get(key);
     if (cached) return cached;
@@ -41,6 +54,7 @@ export class BundleSuggestionService {
           refId: authentication.user?.id,
           pageTitle,
           pageUrl: location.href,
+          ...(language ? { language } : {}),
         },
       })
       .catch((error) => {

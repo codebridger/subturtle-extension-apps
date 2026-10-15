@@ -53,6 +53,16 @@ export type LanguageLearningData = {
   linguistic_data: LinguisticData;
   /** Reusable patterns found inside the selection (cap 2; empty for short/cross-language). */
   chunks: Chunk[];
+  /**
+   * Round 1 (B-14): the language the server detected, the language it would
+   * save to, and whether that language is in the learner's profile. Missing on
+   * servers without language profiles.
+   */
+  detectedLanguage?: string | null;
+  resolvedLanguage?: string | null;
+  inProfile?: boolean;
+  /** Set when the view is built from a saved phrase: its language. */
+  language?: string;
 };
 
 /** Result of the per-page bundle suggestion call. */

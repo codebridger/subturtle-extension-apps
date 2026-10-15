@@ -77,6 +77,7 @@
             :language_info="data.language_info"
             :linguistic_data="data.linguistic_data"
             :chunks="data.chunks || []"
+            :detected_language="data.language"
             @saved="onSaved"
           />
         </template>
@@ -156,6 +157,8 @@ interface PracticeConfigData {
   direction?: { source: "ltr" | "rtl"; target: "ltr" | "rtl" };
   language_info?: { source: string; target: string };
   linguistic_data?: any;
+  /** Round 1 (E-08): the phrase's learning language, when known. */
+  language?: string;
 }
 
 const route = useRoute();
@@ -252,6 +255,9 @@ const checkingSaved = ref(isLogin.value);
 const isSaved = ref(false);
 const showSaveWidget = ref(false);
 const phraseId = ref<string | null>(null);
+// The phrase's learning language (E-08): from the page params, the saved
+// phrase, or the inline save. Undefined without language profiles.
+const phraseLanguage = ref<string | undefined>(data.value.language);
 const starting = ref(false);
 
 /**
@@ -271,10 +277,11 @@ async function checkSaved() {
   }
   checkingSaved.value = true;
   try {
-    const saved = await findSavedPhrase(phrase);
+    const saved = await findSavedPhrase(phrase, data.value.language);
     if (saved?._id) {
       isSaved.value = true;
       phraseId.value = saved._id;
+      if (saved.language) phraseLanguage.value = saved.language;
     }
   } finally {
     checkingSaved.value = false;
@@ -303,6 +310,7 @@ function onSaved(saved: PhraseType) {
   if (!saved?._id) return;
   phraseId.value = saved._id;
   isSaved.value = true;
+  if (saved.language) phraseLanguage.value = saved.language;
   analytic.track("practice-now_saved-inline");
 }
 
@@ -327,12 +335,14 @@ function start() {
   analytic.track("practice-now_started", {
     voiceName: voiceName.value,
     freemium: isFreemium.value,
+    ...(phraseLanguage.value ? { language: phraseLanguage.value } : {}),
   });
 
   const path = buildPracticeNowPath({
     phraseId: phraseId.value,
     voiceName: voiceName.value,
     mode: mode.value,
+    language: phraseLanguage.value,
   });
   window.open(getSubturtleDashboardUrlWithToken(path), "_blank");
 

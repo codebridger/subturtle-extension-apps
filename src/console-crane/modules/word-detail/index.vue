@@ -242,7 +242,10 @@
       <SaveWordSectionV2 v-if="isLogin && wordData?.translation?.phrase" :phrase="cleanText(getProps().word!)"
         :translation="cleanText(wordData?.translation?.phrase || '')" :context="wordData?.context"
         :direction="wordData?.direction" :language_info="wordData?.language_info"
-        :linguistic_data="wordData?.linguistic_data" :chunks="wordData?.chunks || []" />
+        :linguistic_data="wordData?.linguistic_data" :chunks="wordData?.chunks || []"
+        :detected_language="phraseLanguage" offer-practice :can-go-back-to-video="!openConsolePage"
+        @practice="(p) => startPracticeWithAI(p.language)" @back="backToVideo"
+        @saved="(doc) => (lastSavedLanguage = doc?.language || null)" />
 
       <!-- Login prompt: only when there's a translation worth saving -->
       <button
@@ -277,6 +280,8 @@ import { sendMessage } from "../../../common/helper/massage";
 import { OpenLoginWindowMessage } from "../../../common/types/messaging";
 import { analytic } from "../../../plugins/mixpanel";
 import { decodeRouteParams } from "../../route-params";
+import { useLanguageStore } from "../../../stores/language";
+import { resolveSaveRow } from "../../../common/language/state";
 
 // Named so console-crane's router-view can <keep-alive> it (see index.vue).
 defineOptions({ name: "WordDetailModule" });
@@ -398,10 +403,50 @@ function openConsole(page: string, params: Record<string, any>) {
   else useConsoleCraneStore().toggleConsoleCrane(page, params, true);
 }
 
-/** Open the AI practice config page for this phrase. */
-function startPracticeWithAI() {
+/**
+ * The phrase's language (E-05, E-07): the stored language for a saved phrase,
+ * else what the server detected. Falls back to the old `language_info.source`
+ * while a server sends no `detectedLanguage`. Only used with language profiles.
+ */
+const phraseLanguage = computed<string | null>(() => {
+  const d = wordData.value;
+  if (!d) return null;
+  return d.language || d.detectedLanguage || d.language_info?.source || null;
+});
+
+/** The language the last save on this page went to (Change may differ). */
+const lastSavedLanguage = ref<string | null>(null);
+
+/**
+ * The language to practise in (E-08): the last save's language, else where the
+ * save row would save this phrase. Undefined without language profiles.
+ */
+function savedLanguageFor(): string | undefined {
+  const languages = useLanguageStore();
+  if (!languages.isMultilingual || !languages.state) return undefined;
+  if (lastSavedLanguage.value) return lastSavedLanguage.value;
+  return (
+    resolveSaveRow({
+      state: languages.state,
+      caps: languages.caps,
+      detected: phraseLanguage.value,
+    }).target || undefined
+  );
+}
+
+/** "Back to my video": close the modal (content scripts only). */
+function backToVideo() {
+  useConsoleCraneStore().isActive = false;
+}
+
+/**
+ * Open the AI practice config page for this phrase.
+ * @param language the language the phrase was saved to, when known (E-08).
+ */
+function startPracticeWithAI(language?: string) {
   analytic.track("practice-now_opened");
   openConsole("practice-config", {
+    language: language || savedLanguageFor(),
     phrase: cleanText(getProps().word || ""),
     translation: cleanText(wordData.value?.translation?.phrase || ""),
     context: context.value,
@@ -640,6 +685,7 @@ watch(
     key.value = new Date().getTime();
     wordData.value = null;
     error.value = null;
+    lastSavedLanguage.value = null;
 
     if (!value) return;
 
@@ -664,7 +710,13 @@ async function fetchWordDetail() {
   try {
     // If the phrase is already saved, build the view from the stored document
     // (translation + linguistic data + chunks) instead of spending an AI call.
-    const saved = (await findSavedPhrase(cleaned)) as any;
+    // With language profiles, only a phrase saved in the active language
+    // counts here (E-07): "Gift" saved in English is not saved in German.
+    const languages = useLanguageStore();
+    const lookupLanguage = languages.isMultilingual
+      ? languages.state?.learningLanguage || null
+      : null;
+    const saved = (await findSavedPhrase(cleaned, lookupLanguage)) as any;
     if (saved && saved.linguistic_data) {
       wordData.value = {
         phrase: saved.phrase,
@@ -674,6 +726,7 @@ async function fetchWordDetail() {
         language_info: saved.language_info,
         linguistic_data: saved.linguistic_data,
         chunks: saved.chunks || [],
+        language: saved.language || lookupLanguage || undefined,
       } as LanguageLearningData;
       return;
     }

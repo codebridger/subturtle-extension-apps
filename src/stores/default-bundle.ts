@@ -85,12 +85,22 @@ export const useDefaultBundleStore = defineStore("default-bundle", () => {
     return migrateHostCopy(await readStorage());
   }
 
-  async function getDefaultBundles(): Promise<string[]> {
-    return (await load())[window.location.href] || [];
+  /**
+   * Bundles are per language (E-07), so the last-used bundles are too. English
+   * (and a server without language profiles) keeps the plain page URL as the
+   * key, so the bundles older builds remembered still preselect.
+   */
+  function pageKey(language?: string | null): string {
+    const url = window.location.href;
+    return language && language !== "en" ? `${language}|${url}` : url;
   }
 
-  async function setDefaultBundles(ids: string[]) {
-    await writeStorage(withPage(await load(), window.location.href, ids));
+  async function getDefaultBundles(language?: string | null): Promise<string[]> {
+    return (await load())[pageKey(language)] || [];
+  }
+
+  async function setDefaultBundles(ids: string[], language?: string | null) {
+    await writeStorage(withPage(await load(), pageKey(language), ids));
   }
 
   return {
