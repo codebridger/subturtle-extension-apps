@@ -1,3 +1,22 @@
+# [1.17.0-dev.3](https://github.com/codebridger/subturtle-extension-apps/compare/v1.17.0-dev.2...v1.17.0-dev.3) (2026-10-15)
+
+
+### Features
+
+* **popup:** add the language pill, list, due line and plan limit (E-03, E-04, E-11, E-14) ([8294301](https://github.com/codebridger/subturtle-extension-apps/commit/8294301ab0df4fd1104cbeb004ab2da9a68fb060))
+
+# [1.17.0-dev.2](https://github.com/codebridger/subturtle-extension-apps/compare/v1.17.0-dev.1...v1.17.0-dev.2) (2026-10-15)
+
+
+### Bug Fixes
+
+* **languages:** keep the language state in its own store so unit tests run in CI (E-01) ([8928f6c](https://github.com/codebridger/subturtle-extension-apps/commit/8928f6cf84bc7ba147cff54f02a699688572af2a))
+
+
+### Features
+
+* **languages:** read languages and own language from the server profile (E-01, E-02, E-09, E-10, E-12) ([63f79d1](https://github.com/codebridger/subturtle-extension-apps/commit/63f79d1845574774688880d01b565a9635e06293))
+
 # [1.17.0-dev.1](https://github.com/codebridger/subturtle-extension-apps/compare/v1.16.4...v1.17.0-dev.1) (2026-10-12)
 
 
