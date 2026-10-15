@@ -91,6 +91,7 @@ import { isLanguageState } from "../common/language/api";
 import { BundleSuggestionService } from "../common/services/bundle-suggestion.service";
 import { ref } from "vue";
 import { useProfileStore } from "../stores/profile";
+import { useLanguageStore } from "../stores/language";
 import { analytic, resetAnalyticsIdentity } from "./mixpanel";
 import { debug, error, log } from "../common/helper/log";
 import {
@@ -156,7 +157,7 @@ chrome.runtime.onMessage.addListener((request, _sender) => {
 
   // The popup switched language: take the new state (E-03).
   if (LanguageStateChangedMessage.is(request) && isLanguageState(request.state)) {
-    useProfileStore().setLanguageState(request.state);
+    useLanguageStore().setState(request.state);
     // Bundle suggestions are per language; the cached one may be for the old one.
     BundleSuggestionService.instance.clear();
   }
@@ -181,8 +182,8 @@ interface SessionSnapshot {
   isFreemium?: boolean;
   activeSubscription?: ReturnType<typeof useProfileStore>["activeSubscription"];
   freemiumAllocation?: ReturnType<typeof useProfileStore>["freemiumAllocation"];
-  languageState?: ReturnType<typeof useProfileStore>["languageState"];
-  languageCaps?: ReturnType<typeof useProfileStore>["languageCaps"];
+  languageState?: ReturnType<typeof useLanguageStore>["state"];
+  languageCaps?: ReturnType<typeof useLanguageStore>["caps"];
 }
 
 function captureSession(): SessionSnapshot {
@@ -205,8 +206,8 @@ function captureSession(): SessionSnapshot {
       isFreemium: profileStore.isFreemium,
       activeSubscription: profileStore.activeSubscription,
       freemiumAllocation: profileStore.freemiumAllocation,
-      languageState: profileStore.languageState,
-      languageCaps: profileStore.languageCaps,
+      languageState: useLanguageStore().state,
+      languageCaps: useLanguageStore().caps,
     })
   );
 }

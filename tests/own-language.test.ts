@@ -23,7 +23,7 @@ vi.mock("@modular-rest/client", () => ({
 import { functionProvider } from "@modular-rest/client";
 import { TranslateService } from "../src/common/services/translate.service";
 import { useSettingsStore } from "../src/common/store/settings";
-import { useProfileStore } from "../src/stores/profile";
+import { useLanguageStore } from "../src/stores/language";
 import { fetchLanguageState } from "../src/common/language/api";
 import type { LanguageState } from "../src/common/language/types";
 
@@ -72,7 +72,7 @@ describe("TranslateService own language", () => {
   });
 
   it("uses the server profile's own language when it has one", async () => {
-    useProfileStore().setLanguageState(STATE);
+    useLanguageStore().setState(STATE);
     await TranslateService.instance.fetchSimpleTranslation("hello");
     const args = argsOfLastCall("translateWithContext");
     expect(args.targetLanguage).toBe("Persian");
@@ -80,7 +80,7 @@ describe("TranslateService own language", () => {
   });
 
   it("accepts English from the server", async () => {
-    useProfileStore().setLanguageState({ ...STATE, translationLanguage: "en" });
+    useLanguageStore().setState({ ...STATE, translationLanguage: "en" });
     await TranslateService.instance.fetchSimpleTranslation("Hallo");
     const args = argsOfLastCall("translateWithContext");
     expect(args.targetLanguage).toBe("English");
@@ -88,15 +88,15 @@ describe("TranslateService own language", () => {
   });
 
   it("goes back to the local setting after logout", async () => {
-    const profile = useProfileStore();
-    profile.setLanguageState(STATE);
-    profile.logout();
+    const languages = useLanguageStore();
+    languages.setState(STATE);
+    languages.clear(); // what the profile store's logout calls
     await TranslateService.instance.fetchSimpleTranslation("hello");
     expect(argsOfLastCall("translateWithContext").targetLanguage).toBe("Arabic");
   });
 });
 
-describe("profile store languages", () => {
+describe("language store", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     run.mockReset();
@@ -108,29 +108,19 @@ describe("profile store languages", () => {
       if (name === "get-language-capabilities") return { learning: [], own: [] };
       throw new Error("unexpected " + name);
     });
-    const profile = useProfileStore();
-    await profile.fetchLanguages();
-    expect(profile.languageState).toEqual(STATE);
-    expect(profile.languageCaps).toEqual({ learning: [], own: [] });
-    expect(profile.isMultilingual).toBe(true);
+    const languages = useLanguageStore();
+    await languages.fetchLanguages();
+    expect(languages.state).toEqual(STATE);
+    expect(languages.caps).toEqual({ learning: [], own: [] });
+    expect(languages.isMultilingual).toBe(true);
   });
 
   it("stays English-only when the server has no language functions (E-12)", async () => {
     run.mockRejectedValue("Function not found");
-    const profile = useProfileStore();
-    await expect(profile.fetchLanguages()).resolves.toBeNull();
-    expect(profile.languageState).toBeNull();
-    expect(profile.isMultilingual).toBe(false);
-  });
-
-  it("bootstrap does not fail when the language functions are missing", async () => {
-    run.mockImplementation(async ({ name }: any) => {
-      if (name === "getSubscriptionDetails") return { is_freemium: true };
-      throw new Error("Function not found");
-    });
-    const profile = useProfileStore();
-    await expect(profile.bootstrap()).resolves.toBeTruthy();
-    expect(profile.isMultilingual).toBe(false);
+    const languages = useLanguageStore();
+    await expect(languages.fetchLanguages()).resolves.toBeNull();
+    expect(languages.state).toBeNull();
+    expect(languages.isMultilingual).toBe(false);
   });
 
   it("ignores a reply without the contract's fields", async () => {
@@ -138,15 +128,11 @@ describe("profile store languages", () => {
     expect(await fetchLanguageState()).toBeNull();
   });
 
-  it("other bundles adopt the language state with the session", () => {
-    const profile = useProfileStore();
-    profile.adoptBootstrap({
-      isFreemium: false,
-      activeSubscription: null,
-      freemiumAllocation: null,
-      languageState: STATE,
-      languageCaps: null,
-    });
-    expect(profile.isMultilingual).toBe(true);
+  it("fetches the public register once", async () => {
+    run.mockResolvedValue({ learning: [], own: [] });
+    const languages = useLanguageStore();
+    await languages.fetchCaps();
+    await languages.fetchCaps();
+    expect(run).toHaveBeenCalledTimes(1);
   });
 });

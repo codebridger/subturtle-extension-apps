@@ -7,7 +7,7 @@ import {
 import { LanguageDetector } from "../helper/language-detection";
 import { useSettingsStore } from "../store/settings";
 import { withAuthRetry } from "../helper/auth-recovery";
-import { useProfileStore } from "../../stores/profile";
+import { useLanguageStore } from "../../stores/language";
 import { resolveTranslationLanguage } from "../language/state";
 import { languageName } from "../language/catalog";
 import type { LanguageState } from "../language/types";
@@ -45,7 +45,7 @@ export class TranslateService {
   get targetLanguage(): string {
     let state: LanguageState | null = null;
     try {
-      state = useProfileStore().languageState;
+      state = useLanguageStore().state;
     } catch (_e) {
       // No active Pinia (a bare unit test): use the local setting.
     }
@@ -59,7 +59,7 @@ export class TranslateService {
   /** True when the own language came from the server profile. */
   private get targetFromServer(): boolean {
     try {
-      return !!useProfileStore().languageState?.translationLanguage;
+      return !!useLanguageStore().state?.translationLanguage;
     } catch (_e) {
       return false;
     }
