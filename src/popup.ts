@@ -9,6 +9,7 @@ import { getAsset } from "./popup/helper/assets";
 import { router } from "./popup/router";
 import { useSettingsStore } from "./common/store/settings";
 import { installPilotUI } from "./plugins/pilotui";
+import { ensureRtlFont } from "./common/helper/rtl-font";
 
 // Set uninstall url
 chrome.runtime.setUninstallURL(process.env.UNINSTALL_FORM_URL || "");
@@ -37,5 +38,8 @@ vueApp.config.globalProperties = {
   ...vueApp.config.globalProperties,
   $getAsset: getAsset,
 };
+
+// Vazirmatn for right-to-left text (E-09).
+ensureRtlFont();
 
 vueApp.mount("#subturtle-popup");

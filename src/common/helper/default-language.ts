@@ -2,22 +2,23 @@ import { SUPPORTED_LANGUES } from "../static/langueges.static";
 import { SettingsObject } from "../types/messaging";
 
 /**
- * First-run target-language resolution.
+ * First-run guess of the learner's own language (the language translations
+ * are written in), for signed-out learners only.
  *
- * Until the user picks a language in the popup, `settings.language` used to be
- * absent, so `TranslateService.languageTitle` was null and translateWithContext
- * went out with `targetLanguage: null` — the server then answered in whatever
- * language it guessed (Spanish, in the 2026-10-12 report) while the popup's
- * select showed "English" because that was its hard-coded initial value.
+ * Round 1 (E-01, E-02): a signed-in learner's own language comes from the
+ * server profile (`get-language-state` → `translationLanguage`), and
+ * TranslateService prefers it over this local value. The local value is only
+ * the signed-out fallback, and the value an old server (no language profile
+ * yet) keeps using.
  *
- * Subturtle teaches English, so English is never a sensible *target*: an
- * English UI language tells us nothing about the learner's own language and is
- * skipped. If nothing non-English is found the language stays unset, the popup
- * shows a placeholder and the translate service refuses to send a request
- * (see TranslateService.requireLanguageTitle) instead of sending null.
- *
- * The account profile has no language field yet (dashboard `profile` module);
- * when it gets one, pass it as the first candidate.
+ * English is a valid own language: a learner can pick it, and a server profile
+ * that says "en" is used as is (a German learner whose own language is
+ * English). Only the *guess* skips an English browser UI, because an English
+ * UI says nothing about the learner's own language: most learners of English
+ * run Chrome in English. If nothing non-English is found the language stays
+ * unset, the popup shows a placeholder and the translate service refuses to
+ * send a request (see TranslateService.requireLanguageTitle) instead of
+ * sending null.
  */
 
 /** Map a BCP-47 tag (`pt-BR`, `zh-TW`, `iw`) to a code in SUPPORTED_LANGUES. */

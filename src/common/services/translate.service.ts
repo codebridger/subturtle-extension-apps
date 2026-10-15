@@ -1,9 +1,3 @@
-import {
-  DefinitionStore,
-  WordFromDictionaryApi,
-} from "../types/dictionaryapi.type";
-
-import proxy from "./proxy.service";
 import { functionProvider, authentication } from "@modular-rest/client";
 import {
   Chunk,
@@ -13,6 +7,11 @@ import {
 import { LanguageDetector } from "../helper/language-detection";
 import { useSettingsStore } from "../store/settings";
 import { withAuthRetry } from "../helper/auth-recovery";
+import { useLanguageStore } from "../../stores/language";
+import { resolveTranslationLanguage } from "../language/state";
+import { languageName } from "../language/catalog";
+import type { LanguageState } from "../language/types";
+import { toSupportedLanguageCode } from "../helper/default-language";
 
 // Cache interface for translation results
 interface TranslationCache {
@@ -38,12 +37,54 @@ export class TranslateService {
   private translationCache: TranslationCache = {};
   private readonly CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
-  get targetLanguage() {
-    return useSettingsStore().language;
+  /**
+   * The learner's own language code, the one translations are written in.
+   * Signed in on a server with language profiles, it is the profile's
+   * `translationLanguage` (E-01); otherwise the local setting (E-02).
+   */
+  get targetLanguage(): string {
+    let state: LanguageState | null = null;
+    try {
+      state = useLanguageStore().state;
+    } catch (_e) {
+      // No active Pinia (a bare unit test): use the local setting.
+    }
+    return resolveTranslationLanguage({
+      signedIn: !!state,
+      state,
+      localLanguage: useSettingsStore().language,
+    });
+  }
+
+  /** True when the own language came from the server profile. */
+  private get targetFromServer(): boolean {
+    try {
+      return !!useLanguageStore().state?.translationLanguage;
+    } catch (_e) {
+      return false;
+    }
   }
 
   get languageTitle() {
-    return LanguageDetector.getLanguageTitle(this.targetLanguage);
+    const code = this.targetLanguage;
+    if (!code) return null;
+    const title =
+      LanguageDetector.getLanguageTitle(code) ||
+      LanguageDetector.getLanguageTitle(toSupportedLanguageCode(code) || "");
+    if (title) return title;
+    // A server code the translate list does not have: use the register name.
+    return this.targetFromServer ? languageName(code) : null;
+  }
+
+  /**
+   * Round-1 argument for translateWithContext (B-14, B-17): the own language
+   * as a code. Sent only when it came from the server, so an old server sees
+   * exactly today's request.
+   */
+  private translationLanguageArg(): { translationLanguage?: string } {
+    return this.targetFromServer
+      ? { translationLanguage: this.targetLanguage }
+      : {};
   }
 
   /**
@@ -128,6 +169,7 @@ export class TranslateService {
             translationType: "simple",
             sourceLanguage: "auto",
             targetLanguage,
+            ...this.translationLanguageArg(),
             phrase: text,
             context: context || "",
             // For the server-side translation_requested analytics event.
@@ -171,6 +213,7 @@ export class TranslateService {
             translationType: "detailed",
             sourceLanguage: "auto",
             targetLanguage,
+            ...this.translationLanguageArg(),
             phrase: text,
             context: context || "",
             // For the server-side translation_requested analytics event.
@@ -218,26 +261,9 @@ export class TranslateService {
           history: params.history || [],
           sourceLanguage: "auto",
           targetLanguage,
+          ...this.translationLanguageArg(),
         },
       })
     );
-  }
-
-  async translateByDictionaryapi(word: string) {
-    let url = {
-      url: "https://api.dictionaryapi.dev/api/v2/entries/en/" + encodeURI(word),
-      proxyUrl: null,
-    };
-
-    return proxy
-      .get(url)
-      .then((body) => {
-        if (body.title) throw body;
-        else return body as WordFromDictionaryApi[];
-      })
-      .then((list) => {
-        let store = new DefinitionStore(list);
-        return store;
-      });
   }
 }

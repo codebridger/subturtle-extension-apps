@@ -15,8 +15,7 @@
 	],
 	"host_permissions": [
 		"<all_urls>",
-		"https://api-js.mixpanel.com/",
-		"https://ipapi.co/json/"
+		"https://api-js.mixpanel.com/"
 	],
 	"oauth2": {
 		"client_id": "245138511605-cg62vajjtrivc6deski1reb6hns4dqfa.apps.googleusercontent.com",
