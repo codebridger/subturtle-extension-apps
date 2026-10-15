@@ -14,6 +14,16 @@ import {
   type SubscriptionType,
 } from "../../../dashboard-app/frontend/types/database.type";
 import { log } from "../common/helper/log";
+import {
+  fetchLanguageCapabilities,
+  fetchLanguageState,
+} from "../common/language/api";
+import { isMultilingualState } from "../common/language/state";
+import type {
+  LanguageCapabilities,
+  LanguageState,
+} from "../common/language/types";
+import { registerLanguageAnalytics } from "../plugins/mixpanel";
 
 export const useProfileStore = defineStore("profile", () => {
   const authUser = computed(() => authentication.user);
@@ -60,9 +70,40 @@ export const useProfileStore = defineStore("profile", () => {
       });
   }
 
+  // languages (multilingual round 1, E-01). Null until the server answers
+  // `get-language-state`; it stays null on servers without the function, which
+  // keeps the English-only behaviour (E-12).
+  const languageState = ref<LanguageState | null>(null);
+  const languageCaps = ref<LanguageCapabilities | null>(null);
+  const isMultilingual = computed(() => isMultilingualState(languageState.value));
+
+  function setLanguageState(state: LanguageState | null) {
+    languageState.value = state;
+    if (state) registerLanguageAnalytics(state);
+  }
+
+  /**
+   * Read the learner's languages, active language, start levels and own
+   * language from the server. Never rejects: a missing function means "not
+   * yet", not an error, so bootstrap must not fail on it.
+   */
+  async function fetchLanguages() {
+    const [state, caps] = await Promise.all([
+      fetchLanguageState(),
+      languageCaps.value
+        ? Promise.resolve(languageCaps.value)
+        : fetchLanguageCapabilities(),
+    ]);
+    languageCaps.value = caps;
+    setLanguageState(state);
+    log("fetchLanguages, state", JSON.stringify(state));
+    return state;
+  }
+
   function logout() {
     authentication.logout();
     userDetail.value = undefined;
+    languageState.value = null;
   }
 
   function getProfileInfo() {
@@ -92,6 +133,8 @@ export const useProfileStore = defineStore("profile", () => {
       getProfileInfo(),
       // Fetch subscription details
       fetchSubscription(),
+      // Languages (never rejects)
+      fetchLanguages(),
     ]);
   }
 
@@ -104,12 +147,16 @@ export const useProfileStore = defineStore("profile", () => {
     isFreemium: boolean;
     activeSubscription: SubscriptionType | null;
     freemiumAllocation: FreemiumAllocationType | null;
+    languageState?: LanguageState | null;
+    languageCaps?: LanguageCapabilities | null;
   }) {
     userDetail.value = snapshot.profile;
     isFreemium.value = snapshot.isFreemium;
     activeSubscription.value = snapshot.activeSubscription;
     freemiumAllocation.value = snapshot.freemiumAllocation;
     isSubscriptionFetching.value = false;
+    languageCaps.value = snapshot.languageCaps ?? null;
+    setLanguageState(snapshot.languageState ?? null);
   }
 
   function loginWithLastSession() {
@@ -133,6 +180,12 @@ export const useProfileStore = defineStore("profile", () => {
     isFreemium,
     freemiumAllocation,
     fetchSubscription,
+
+    languageState,
+    languageCaps,
+    isMultilingual,
+    setLanguageState,
+    fetchLanguages,
 
     logout,
     getProfileInfo,

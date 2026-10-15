@@ -1,4 +1,5 @@
 import { TranslateService } from "../services/translate.service";
+import { RTL_LANGUAGES, isRtlLanguage } from "../language/catalog";
 
 export function firstUpper(word: string) {
   let parts = word.trim().split("");
@@ -43,26 +44,13 @@ export function cleanText(text: string) {
   return text.trim();
 }
 
-export const rtls = [
-  "ar",
-  "arc",
-  "dv",
-  "fa",
-  "ha",
-  "he",
-  "khw",
-  "ks",
-  "ku",
-  "ps",
-  "ur",
-  "yi",
-];
+/**
+ * Right-to-left language codes. Re-exported from the one list in
+ * common/language/catalog.ts (E-09) so the subtitle surfaces keep their import.
+ */
+export const rtls = RTL_LANGUAGES;
 
+/** Direction of the learner's own language (the translation side). */
 export function getDir() {
-  let dir =
-    rtls.indexOf(TranslateService.instance.targetLanguage) != -1
-      ? "rtl"
-      : "ltr";
-
-  return dir;
+  return isRtlLanguage(TranslateService.instance.targetLanguage) ? "rtl" : "ltr";
 }

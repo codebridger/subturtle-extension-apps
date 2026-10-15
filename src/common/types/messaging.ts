@@ -4,6 +4,7 @@ export const MESSAGE_TYPE = {
   OPEN_LOGIN_WINDOW: "OPEN_LOGIN_WINDOW",
   STORE_USER_TOKEN: "STORE_USER_TOKEN",
   SYNC_SETTINGS: "SYNC_SETTINGS",
+  LANGUAGE_STATE_CHANGED: "LANGUAGE_STATE_CHANGED",
 };
 
 export type LoginStatusResponse = {
@@ -96,5 +97,25 @@ export class SettingsSyncMessage {
 
   static is(message: any): message is SettingsSyncMessage {
     return message.type === MESSAGE_TYPE.SYNC_SETTINGS;
+  }
+}
+
+/**
+ * The popup switched the active language (E-03). Sent to every open tab so each
+ * content script's profile store takes the new state without a page reload;
+ * the next save and translation in that tab follow the new language.
+ */
+export class LanguageStateChangedMessage {
+  type: string;
+  // The server's LanguageState (common/language/types.ts), as plain JSON.
+  state: any;
+
+  constructor(state: any) {
+    this.type = MESSAGE_TYPE.LANGUAGE_STATE_CHANGED;
+    this.state = state;
+  }
+
+  static is(message: any): message is LanguageStateChangedMessage {
+    return message?.type === MESSAGE_TYPE.LANGUAGE_STATE_CHANGED;
   }
 }

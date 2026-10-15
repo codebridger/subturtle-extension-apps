@@ -55,3 +55,14 @@
 .subturtle-scope label {
   flex: 0 1 auto;
 }
+
+/* Right-to-left text uses the bundled Vazirmatn (E-09). The @font-face is
+   added by src/common/helper/rtl-font.ts with the extension URL; its
+   unicode-range keeps Latin letters in the usual font. The explicit
+   `.subturtle-scope` keeps the prefixer from adding a second one. */
+.subturtle-scope [dir="rtl"],
+.subturtle-scope.subturtle-rtl,
+.subturtle-scope .subturtle-rtl {
+  font-family: "Subturtle Vazirmatn", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}

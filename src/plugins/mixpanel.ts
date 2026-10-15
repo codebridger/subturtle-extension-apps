@@ -94,3 +94,40 @@ export function resetAnalyticsIdentity() {
   }
   useAnonymousId(id);
 }
+
+/**
+ * Language super properties (E-13). `target_language` (the learner's own
+ * language, the old name) now comes from the server profile, which fills it for
+ * the users the local guess never set; `learning_language` is the active
+ * language the learner studies.
+ */
+let targetLanguageFromServer = false;
+
+export function registerLanguageAnalytics(state: {
+  learningLanguage: string | null;
+  translationLanguage: string | null;
+}) {
+  const props: Record<string, string> = {};
+  if (state.learningLanguage) props.learning_language = state.learningLanguage;
+  if (state.translationLanguage) {
+    props.target_language = state.translationLanguage;
+    targetLanguageFromServer = true;
+  }
+  if (Object.keys(props).length) mixpanel.register(props);
+}
+
+/**
+ * The settings store's super properties. Once the server profile has named the
+ * own language, the local value (a guess, or a stale pick) no longer
+ * overwrites it.
+ */
+export function registerSettingsAnalytics(props: {
+  target_language: string;
+  theme: string;
+}) {
+  if (targetLanguageFromServer) {
+    mixpanel.register({ theme: props.theme });
+  } else {
+    mixpanel.register(props);
+  }
+}

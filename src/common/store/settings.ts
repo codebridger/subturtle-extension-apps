@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
-import { analytic } from "../../plugins/mixpanel";
+import { analytic, registerSettingsAnalytics } from "../../plugins/mixpanel";
 import { log } from "../helper/log";
 import { sendMessage } from "../helper/massage";
 import {
@@ -54,19 +54,6 @@ export const useSettingsStore = defineStore("settings", () => {
     else if (!disabled && idx !== -1) list.splice(idx, 1);
     nibbleDisabledDomains.value = list;
     syncSettingsToBackground();
-  }
-
-  function broadcastLanguageChange(lang: string) {
-    log("begin broadcastLanguageChange", lang);
-    if (typeof chrome !== "undefined" && chrome.tabs) {
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        let tabId = tabs[0]?.id;
-        if (tabId) {
-          chrome.tabs.sendMessage(tabId, { target: lang });
-          log("broadcastLanguageChange", lang);
-        }
-      });
-    }
   }
 
   let scopeObserver: MutationObserver | null = null;
@@ -167,7 +154,7 @@ export const useSettingsStore = defineStore("settings", () => {
       nibbleDisabledDomains: nibbleDisabledDomains.value,
     };
 
-    analytic.register({ target_language: language.value, theme: theme.value });
+    registerSettingsAnalytics({ target_language: language.value, theme: theme.value });
 
     try {
       await sendMessage(new SettingsSyncMessage(settings));
@@ -196,7 +183,7 @@ export const useSettingsStore = defineStore("settings", () => {
           nibbleDisabledDomains.value = settings.nibbleDisabledDomains;
         }
 
-        analytic.register({
+        registerSettingsAnalytics({
           target_language: language.value,
           theme: theme.value,
         });
@@ -258,7 +245,6 @@ export const useSettingsStore = defineStore("settings", () => {
     setLanguage,
     initialize,
     initializeTheme,
-    broadcastLanguageChange,
     syncSettingsToBackground,
     fetchSettingsFromBackground,
     isNibbleDisabledForHost,
