@@ -175,6 +175,17 @@ When extending `SettingsObject`, you must update **four** sync points (search th
 
 And the `SettingsObject` type in [src/common/types/messaging.ts](src/common/types/messaging.ts).
 
+### Languages (multilingual round 1)
+
+The learner's languages come from the server's `language` module, built to the API contract in the docs repo (`subturtle-doc/docs/tech/multilingual-api.md`; work list rows E-01 to E-14).
+
+- [src/common/language/api.ts](src/common/language/api.ts) is the only place that calls `get-language-state`, `get-language-capabilities`, `set-active-language` and `keep-phrase-pending`. The readers never throw: a missing function answers `null`.
+- [src/stores/language.ts](src/stores/language.ts) holds the state. It is its own store on purpose: the profile store imports the sibling dashboard repo's types, and the translate service and the save window must not pull that chain in (Vitest in CI would read the dashboard's Nuxt tsconfig and fail). The profile bootstrap loads it, `captureSession` / `adoptSession` share it across bundles, and `LanguageStateChangedMessage` updates open tabs after the popup switches language.
+- [src/common/language/state.ts](src/common/language/state.ts) has the pure rules (dark-launch gate, own-language resolution, save-row states, plan limit, dashboard paths). Test new rules there.
+- **Dark launch (E-12):** with no state, or no active language, everything new is hidden and every request is the same as before (`language` and `translationLanguage` are sent only with a state). Keep it that way until the round ships.
+- **One RTL list:** `RTL_LANGUAGES` in [catalog.ts](src/common/language/catalog.ts). Right-to-left text uses the bundled Vazirmatn (`static/assets/fonts`, added by [rtl-font.ts](src/common/helper/rtl-font.ts)).
+- **Data without `language` is English.** Query English with `languageFilter("en")` (`{ $in: ["en", null] }`).
+
 ### Marker store (subtitle surfaces only)
 
 [src/stores/marker.ts](src/stores/marker.ts) — central authority for word marking, hover, anchors, auto-clear timers. Used by `<Word>` / `<WordSelectionRectangle>` / `<SelectionAnchor>` / `<TranslatedPhrase>` in [src/subtitle/components/specific/](src/subtitle/components/specific/). **Nibble does not use the marker store** — it reads `text` + `context` from `window.getSelection()` and forwards them through the ConsoleCrane bridge.
@@ -435,6 +446,13 @@ tests/
   translate-card.test.ts            # popup translate input flow
   login-password.test.ts            # popup password form (ENABLE_PASSWORD_AUTH=true)
   login-password-disabled.test.ts   # popup password form hidden when flag is unset
+  language-state.test.ts            # round-1 rules: dark gate, own language, save row, plan limit, deep link
+  language-catalog.test.ts          # one RTL list, picker names, bundled Vazirmatn
+  own-language.test.ts              # translate request with / without a server profile; language store
+  popup-languages.test.ts           # popup pill, language list, switch, plan limit, due line
+  save-language.test.ts             # save window language row, Keep / Save to, Undo, dark phase
+  language-lookups.test.ts          # saved-phrase lookup, bundle suggestion, last-used bundles per language
+  language-analytics.test.ts        # learning_language and target_language super properties
   e2e/
     extension-fixture.ts            # chromium.launchPersistentContext + extension load
     server.mjs                      # static fixtures HTTP server
@@ -450,7 +468,7 @@ tests/
 
 ### Test totals
 
-138 unit / component tests across 19 files; 16 E2E specs across 6 files. Full suite runs in ~20s once Playwright's Chromium is warm.
+348 unit / component tests across 38 files; 16 E2E specs across 6 files. Full suite runs in ~20s once Playwright's Chromium is warm.
 
 ## Cloud agent workflow (Claude Code on the Web)
 
