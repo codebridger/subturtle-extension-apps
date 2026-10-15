@@ -1,3 +1,10 @@
+# [1.17.0-dev.3](https://github.com/codebridger/subturtle-extension-apps/compare/v1.17.0-dev.2...v1.17.0-dev.3) (2026-10-15)
+
+
+### Features
+
+* **popup:** add the language pill, list, due line and plan limit (E-03, E-04, E-11, E-14) ([8294301](https://github.com/codebridger/subturtle-extension-apps/commit/8294301ab0df4fd1104cbeb004ab2da9a68fb060))
+
 # [1.17.0-dev.2](https://github.com/codebridger/subturtle-extension-apps/compare/v1.17.0-dev.1...v1.17.0-dev.2) (2026-10-15)
 
 
