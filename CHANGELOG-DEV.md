@@ -1,3 +1,10 @@
+# [1.17.0-dev.4](https://github.com/codebridger/subturtle-extension-apps/compare/v1.17.0-dev.3...v1.17.0-dev.4) (2026-10-15)
+
+
+### Features
+
+* **save:** add the save window language row, keep for later and per-language saves (E-05, E-06, E-07, E-08) ([8068363](https://github.com/codebridger/subturtle-extension-apps/commit/8068363b45fe7d2c711ceb1356cc724d95b460c7))
+
 # [1.17.0-dev.3](https://github.com/codebridger/subturtle-extension-apps/compare/v1.17.0-dev.2...v1.17.0-dev.3) (2026-10-15)
 
 
