@@ -5,8 +5,48 @@
     >
       <!-- Main Content -->
       <div class="p-6 space-y-6">
+        <!-- Language pill (E-03, design X1). Shown only once the server has
+             language profiles (E-12); signed out, it says "Sign in" (E-02). -->
+        <div v-if="multilingual && activeLanguage" class="flex items-center">
+          <LanguagePill
+            :code="activeLanguage.code"
+            :name="languageName(activeLanguage.code, languages.caps)"
+            :level="activeLanguage.startLevel"
+            caption="Saves go here"
+            :expanded="switcherOpen"
+            @open="switcherOpen = true"
+          />
+        </div>
+        <div v-else-if="!isLogin && signedOutPill" class="flex items-center">
+          <LanguagePill name="Sign in" @open="router.push('/intro')" />
+        </div>
+
+        <LanguageSwitcher
+          v-if="switcherOpen && multilingual && languages.state"
+          :state="languages.state"
+          :caps="languages.caps"
+          @close="switcherOpen = false"
+        />
+
         <!-- Translate any text -->
         <TranslateCard />
+
+        <!-- Due line (E-04): follows the active language, opens the dashboard. -->
+        <button
+          v-if="multilingual && activeLanguage"
+          type="button"
+          data-testid="due-line"
+          class="w-full bg-gray-50 dark:bg-white/[0.03] rounded-xl px-4 py-3 border border-gray-200 dark:border-white/[0.08] flex items-center gap-3 text-left hover:border-gray-300 dark:hover:border-white/[0.12] transition-colors"
+          :aria-label="`${dueText}. Opens your dashboard in a new tab`"
+          @click="openDashboardAt(DASHBOARD_PATHS.board, 'due-line_clicked')"
+        >
+          <i class="i-solar-layers-minimalistic-bold-duotone text-2xl text-amber-600 dark:text-amber-400 shrink-0" />
+          <span class="flex-1 flex flex-col">
+            <span class="text-sm font-extrabold text-gray-900 dark:text-white">{{ dueText }}</span>
+            <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">Opens your dashboard</span>
+          </span>
+          <i class="i-solar-arrow-right-up-linear text-lg text-gray-500 dark:text-gray-400" />
+        </button>
 
         <!-- Section divider between the translation surface and the rest of
              the popup so the result detail doesn't visually bleed into the
@@ -20,8 +60,35 @@
           class="bg-gray-50 dark:bg-white/[0.03] backdrop-blur-xl rounded-xl p-4 border border-gray-200 dark:border-white/[0.08] shadow-xl hover:border-gray-300 dark:hover:border-white/[0.12] transition-all duration-300"
         >
           <div class="flex items-stretch gap-8">
-            <!-- Language Selection -->
-            <div class="flex-1 relative group">
+            <!-- Own language, from the server profile (E-01). The old "My
+                 language" select set the own language with a wrong tooltip;
+                 with language profiles it is changed on the dashboard. -->
+            <div v-if="multilingual" class="flex-1" data-testid="own-language">
+              <h3 class="text-lg font-medium mb-4 text-gray-900 dark:text-white">
+                Your own language
+              </h3>
+              <div class="flex flex-col space-y-4 items-start justify-between">
+                <span v-if="ownLanguageName" class="text-gray-600 dark:text-gray-400 text-sm">
+                  Translations and explanations are in
+                  <span class="font-semibold text-gray-800 dark:text-gray-200" dir="auto">{{ ownLanguageName }}</span>.
+                </span>
+                <span v-else class="text-gray-600 dark:text-gray-400 text-sm">
+                  Choose the language translations are written in.
+                </span>
+                <button
+                  v-if="isLogin"
+                  type="button"
+                  class="text-sm font-medium text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 underline decoration-dotted underline-offset-4"
+                  @click="openDashboardAt(DASHBOARD_PATHS.profile, 'own-language_change_clicked')"
+                >
+                  Change it on your dashboard
+                </button>
+              </div>
+            </div>
+
+            <!-- Language Selection (signed out, or a server without language
+                 profiles yet: unchanged, E-02 / E-12) -->
+            <div v-else class="flex-1 relative group">
               <h3
                 class="text-lg font-medium mb-4 text-gray-900 dark:text-white flex items-center gap-2"
               >
@@ -32,7 +99,7 @@
                     >(?)</span
                   >
                   <div class="tooltip">
-                    Select the language you want to learn from videos
+                    The language translations are written in
                   </div>
                 </div>
               </h3>
@@ -40,7 +107,7 @@
                 <span
                   class="text-gray-600 dark:text-gray-400 text-sm whitespace-nowrap group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors"
                 >
-                  Choose your language, so we can help you learn better.
+                  Translations are written in this language.
                 </span>
                 <div class="flex-1 w-full">
                   <select-target label="Select" class="w-full" />
@@ -327,6 +394,16 @@ import {
 } from "../../common/static/global";
 import { useSettingsStore } from "../../common/store/settings";
 import TranslateCard from "../components/TranslateCard.vue";
+import LanguagePill from "../components/LanguagePill.vue";
+import LanguageSwitcher from "../components/LanguageSwitcher.vue";
+import { useLanguageStore } from "../../stores/language";
+import { languageName, pickerLabel } from "../../common/language/catalog";
+import {
+  DASHBOARD_PATHS,
+  activeSummary,
+  dueLine,
+} from "../../common/language/state";
+import { analytic } from "../../plugins/mixpanel";
 
 // Named so App.vue's <keep-alive include="HomeView"> can cache this view —
 // returning from a console page (Back) then restores the existing translation.
@@ -339,6 +416,30 @@ const appVersion = getExtensionVersion();
 
 const settings = useSettingsStore();
 const currentHost = ref<string>("");
+
+// Languages (round 1). Everything below stays hidden until the server has
+// language profiles (E-12).
+const languages = useLanguageStore();
+const switcherOpen = ref(false);
+const multilingual = computed(() => isLogin.value && languages.isMultilingual);
+const activeLanguage = computed(() => activeSummary(languages.state));
+const dueText = computed(() => dueLine(activeLanguage.value, languages.caps));
+const ownLanguageName = computed(() =>
+  pickerLabel(languages.state?.translationLanguage, languages.caps)
+);
+
+// Signed out: the "Sign in" pill shows only when the server has the language
+// register, so a learner on today's server sees today's popup.
+const signedOutPill = ref(false);
+onMounted(async () => {
+  if (isLogin.value) return;
+  signedOutPill.value = !!(await languages.fetchCaps());
+});
+
+function openDashboardAt(path: string, event: string) {
+  analytic.track(event, { surface: "popup" });
+  window.open(getSubturtleDashboardUrlWithToken(path), "_blank");
+}
 
 const HIDDEN_PROTOCOLS = /^(chrome|chrome-extension|edge|about|file):/;
 
