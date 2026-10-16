@@ -5,6 +5,9 @@
     >
       <!-- Main Content -->
       <div class="p-6 space-y-6">
+        <!-- Phrases saved before sign-in (save-first E-05) -->
+        <PendingSavesBanner />
+
         <!-- Translate any text -->
         <TranslateCard />
 
@@ -327,6 +330,7 @@ import {
 } from "../../common/static/global";
 import { useSettingsStore } from "../../common/store/settings";
 import TranslateCard from "../components/TranslateCard.vue";
+import PendingSavesBanner from "../components/PendingSavesBanner.vue";
 
 // Named so App.vue's <keep-alive include="HomeView"> can cache this view —
 // returning from a console page (Back) then restores the existing translation.

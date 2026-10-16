@@ -24,7 +24,7 @@ import TranslateCard from "../src/popup/components/TranslateCard.vue";
 //  - submitting renders the detailed result inline
 //  - re-translating a different word resets the result
 //  - the button shows a spinner while pending
-//  - logged-out users see "Login to save this phrase" / logged-in get the
+//  - logged-out users get the local Save (save-first) / logged-in get the
 //    bundle picker — that's WordDetailModule's responsibility, not this
 //    component's, so we cover it elsewhere.
 describe("TranslateCard (popup translate input)", () => {

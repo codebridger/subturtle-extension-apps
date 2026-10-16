@@ -40,7 +40,7 @@
             <path d="M12 7v14" />
             <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />
           </svg>
-          <span>{{ isAlreadySaved ? "Learn" : "Save and Learn" }}</span>
+          <span>{{ isAlreadySaved ? "Learn" : "Learn more or Save" }}</span>
         </button>
       </div>
     </div>
@@ -76,6 +76,7 @@ import {
 } from "../../common/services/translate.service";
 import { emitOpen } from "../../common/services/console-crane-bridge";
 import { findSavedPhrase } from "../../common/services/phrase.service";
+import { findPendingSave } from "../../common/services/pending-saves";
 
 const props = defineProps<{
   text: string;
@@ -216,7 +217,9 @@ async function onIconClick(e: MouseEvent) {
 
   // If the phrase is already saved, reuse the stored translation instead of
   // spending an AI call — and surface it as "Learn" rather than "Save".
-  const saved = await findSavedPhrase(props.text);
+  // A logged-out learner's local save counts too (save-first E-01, E-02).
+  const saved =
+    (await findSavedPhrase(props.text)) || (await findPendingSave(props.text));
   isAlreadySaved.value = !!saved;
   const savedTranslation = saved?.translation?.trim();
   if (savedTranslation) {

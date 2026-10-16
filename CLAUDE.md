@@ -175,6 +175,12 @@ When extending `SettingsObject`, you must update **four** sync points (search th
 
 And the `SettingsObject` type in [src/common/types/messaging.ts](src/common/types/messaging.ts).
 
+### Save first, sign in later (pending saves)
+
+A logged-out learner can save on the word card. [LocalSaveSection](src/console-crane/components/LocalSaveSection.vue) keeps the phrase in `chrome.storage.local` (`pendingSaves`, a list; see [pending-saves.ts](src/common/services/pending-saves.ts)) with everything `createPhrase` needs plus the page URL and title. From the 3rd local phrase a soft sign-in card shows; at 50, sign-in replaces Save.
+
+[pending-saves-sync.ts](src/common/services/pending-saves-sync.ts) sends the list to the account after sign-in. It runs from `LoginView` after a login, from the popup ([PendingSavesBanner](src/popup/components/PendingSavesBanner.vue)), and from `console-crane.ts` when `isLogin` turns true, so a cut-off run carries on at the next start. A lock in `chrome.storage.local` keeps tabs from running together. The bundle comes from `getBundleSuggestionForPage` for the saved page (it needs a signed-in user, so it can't run at save time). It does **not** use `withAuthRetry`: that falls back to the shared anonymous account, and a user's phrases must never go there.
+
 ### Marker store (subtitle surfaces only)
 
 [src/stores/marker.ts](src/stores/marker.ts) — central authority for word marking, hover, anchors, auto-clear timers. Used by `<Word>` / `<WordSelectionRectangle>` / `<SelectionAnchor>` / `<TranslatedPhrase>` in [src/subtitle/components/specific/](src/subtitle/components/specific/). **Nibble does not use the marker store** — it reads `text` + `context` from `window.getSelection()` and forwards them through the ConsoleCrane bridge.
@@ -438,7 +444,12 @@ tests/
   login-password.test.ts            # popup password form (ENABLE_PASSWORD_AUTH=true)
   login-password-disabled.test.ts   # popup password form hidden when flag is unset
   login-analytics.test.ts           # user_logged-in source, login_failed source + reason (E-03)
-  save-login-prompt.test.ts         # "Login to save" prompt viewed once per word view, clicked (E-03)
+  local-save.test.ts                # save-first: logged-out Save on the word card, sign-in card at 3, required at 50
+  pending-saves.test.ts             # save-first: local list (one copy per phrase, cap, remove, change listener)
+  pending-saves-sync.test.ts        # save-first: send after sign-in (bundle, deviceId, lock, limit, failures)
+  pending-saves-banner.test.ts      # save-first: popup "N phrases waiting" line
+  selection-popup-label.test.ts     # save-first: "Learn more or Save" / "Learn" (also for local saves)
+  memory-chrome-storage.ts          # helper (not a test): in-memory chrome.storage.local with promises
   install-tracking.test.ts          # onInstalled: extension_installed / extension_updated + welcome page (E-02)
   e2e/
     extension-fixture.ts            # chromium.launchPersistentContext + extension load
