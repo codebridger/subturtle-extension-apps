@@ -1,3 +1,11 @@
+# [1.17.0-dev.7](https://github.com/codebridger/subturtle-extension-apps/compare/v1.17.0-dev.6...v1.17.0-dev.7) (2026-10-16)
+
+
+### Bug Fixes
+
+* **popup:** ignore tabs without our content scripts when telling tabs (E-03) ([9f68e9d](https://github.com/codebridger/subturtle-extension-apps/commit/9f68e9d8a50580449e1c33d6c5df6cee2e560d74))
+* **save:** keep the save window open and show the saved state (E-05, E-06) ([fc3c98b](https://github.com/codebridger/subturtle-extension-apps/commit/fc3c98bfd770a5f7b591f148dc2805329071efc3))
+
 # [1.17.0-dev.6](https://github.com/codebridger/subturtle-extension-apps/compare/v1.17.0-dev.5...v1.17.0-dev.6) (2026-10-16)
 
 
