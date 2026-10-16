@@ -1,3 +1,11 @@
+# [1.17.0-dev.9](https://github.com/codebridger/subturtle-extension-apps/compare/v1.17.0-dev.8...v1.17.0-dev.9) (2026-10-16)
+
+
+### Features
+
+* **save:** save-first E-01 to E-05 let logged-out learners save and sign in later (dev port) ([99f57e6](https://github.com/codebridger/subturtle-extension-apps/commit/99f57e6d11299eeda79d34bd5dea4c07efc49015))
+* **save:** save-first E-02 show "Save without login" and "Login to save" together ([6337290](https://github.com/codebridger/subturtle-extension-apps/commit/63372906e7963bf9487d1f5b0e585c002596bd3f))
+
 # [1.17.0-dev.8](https://github.com/codebridger/subturtle-extension-apps/compare/v1.17.0-dev.7...v1.17.0-dev.8) (2026-10-16)
 
 
