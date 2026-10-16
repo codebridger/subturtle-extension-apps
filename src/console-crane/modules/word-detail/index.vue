@@ -249,7 +249,7 @@
 
       <!-- Login prompt: only when there's a translation worth saving -->
       <button
-        v-else-if="!isLogin && wordData?.translation?.phrase"
+        v-else-if="showLoginPrompt"
         type="button"
         class="self-center inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-white text-sm font-semibold shadow-sm hover:from-pink-600 hover:to-purple-700 transition"
         @click="handleLoginRequest"
@@ -324,6 +324,10 @@ onActivated(() => {
     return;
   }
   analytic.track("word-detail-page_viewed");
+  // A new view of the same word: the prompt may already be on screen, so the
+  // watch below would not fire again.
+  loginPromptTracked = false;
+  trackLoginPromptView();
 });
 
 /**
@@ -364,6 +368,24 @@ const frameSize = inject<{ width: number; height: number }>("frameSize");
 
 // Main state variables
 const wordData = ref<LanguageLearningData | null>(null); // Stores detailed linguistic data
+
+/**
+ * "Login to save this phrase" (E-03). `save-login-prompt_viewed` fires once
+ * per word view, when the button first shows: a new word or a new view resets
+ * it, a sign-in state flip or a re-render does not.
+ */
+const showLoginPrompt = computed(
+  () => !isLogin.value && !!wordData.value?.translation?.phrase
+);
+let loginPromptTracked = false;
+
+function trackLoginPromptView() {
+  if (loginPromptTracked || !showLoginPrompt.value) return;
+  loginPromptTracked = true;
+  analytic.track("save-login-prompt_viewed");
+}
+
+watch(showLoginPrompt, trackLoginPromptView);
 
 const pending = ref(false); // Loading state
 const error = ref<string | null>(null); // Translation error message, null when ok
@@ -684,6 +706,7 @@ watch(
   (value) => {
     key.value = new Date().getTime();
     wordData.value = null;
+    loginPromptTracked = false;
     error.value = null;
     lastSavedLanguage.value = null;
 
@@ -758,7 +781,8 @@ function retryFetch() {
  * Opens login window via messaging system
  */
 function handleLoginRequest() {
-  sendMessage(new OpenLoginWindowMessage());
+  analytic.track("save-login-prompt_clicked");
+  sendMessage(new OpenLoginWindowMessage("save_prompt"));
 }
 </script>
 
