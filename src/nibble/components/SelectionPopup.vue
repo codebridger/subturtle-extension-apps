@@ -228,7 +228,8 @@ async function onIconClick(e: MouseEvent) {
   try {
     const result = await TranslateService.instance.fetchSimpleTranslation(
       props.text,
-      props.context
+      props.context,
+      "selection"
     );
     translation.value = String(result ?? "").trim();
     mode.value = translation.value ? "translated" : "error";

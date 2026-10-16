@@ -273,7 +273,7 @@ export const useMarkerStore = defineStore("marker", {
       const _this = this;
 
       TranslateService.instance
-        .fetchSimpleTranslation(translatingList, this.context)
+        .fetchSimpleTranslation(translatingList, this.context, "word")
         .then((res: string) => {
           _this.sourceLanguage = "auto";
 

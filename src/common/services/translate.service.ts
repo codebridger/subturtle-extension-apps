@@ -13,6 +13,18 @@ import {
 import { LanguageDetector } from "../helper/language-detection";
 import { useSettingsStore } from "../store/settings";
 import { withAuthRetry } from "../helper/auth-recovery";
+import { getInstallId } from "../helper/install-id";
+
+/**
+ * What asked for a translation (E-05). Sent as `trigger` so the server's
+ * `translation_requested` event can split requests by source (B-03).
+ */
+export type TranslationTrigger =
+  | "caption"
+  | "word"
+  | "selection"
+  | "definition"
+  | "detail";
 
 // Cache interface for translation results
 interface TranslationCache {
@@ -128,7 +140,26 @@ export class TranslateService {
     });
   }
 
-  async fetchSimpleTranslation(text: string | string[], context: string = "") {
+  /**
+   * Analytics args for calls that fire a server event (E-01, E-05). `userId`
+   * stays for old servers; `deviceId` is the install's analytics id, read
+   * from storage on each call so it is never empty while the id loads and
+   * follows the new id after logout.
+   */
+  private async analyticsArgs(trigger?: TranslationTrigger) {
+    const deviceId = await getInstallId();
+    return {
+      userId: authentication.user?.id,
+      ...(deviceId ? { deviceId } : {}),
+      ...(trigger ? { trigger } : {}),
+    };
+  }
+
+  async fetchSimpleTranslation(
+    text: string | string[],
+    context: string = "",
+    trigger?: TranslationTrigger
+  ) {
     // Clean expired cache entries
     this.cleanExpiredCache();
 
@@ -150,6 +181,7 @@ export class TranslateService {
 
     // If not cached, fetch from API
     try {
+      const analytics = await this.analyticsArgs(trigger);
       const result = await withAuthRetry(() =>
         functionProvider.run<string>({
           name: "translateWithContext",
@@ -160,7 +192,7 @@ export class TranslateService {
             phrase: text,
             context: context || "",
             // For the server-side translation_requested analytics event.
-            userId: authentication.user?.id,
+            ...analytics,
           },
         })
       );
@@ -178,7 +210,11 @@ export class TranslateService {
     }
   }
 
-  async fetchDetailedTranslation(text: string, context: string = "") {
+  async fetchDetailedTranslation(
+    text: string,
+    context: string = "",
+    trigger: TranslationTrigger = "detail"
+  ) {
     // Clean expired cache entries
     this.cleanExpiredCache();
 
@@ -200,6 +236,7 @@ export class TranslateService {
 
     // If not cached, fetch from API
     try {
+      const analytics = await this.analyticsArgs(trigger);
       const data = await withAuthRetry(() =>
         functionProvider.run<LanguageLearningData>({
           name: "translateWithContext",
@@ -210,7 +247,7 @@ export class TranslateService {
             phrase: text,
             context: context || "",
             // For the server-side translation_requested analytics event.
-            userId: authentication.user?.id,
+            ...analytics,
           },
         })
       );
@@ -245,6 +282,7 @@ export class TranslateService {
     history?: { role: "user" | "assistant"; text: string }[];
   }): Promise<TranslationAdvice> {
     const targetLanguage = await this.requireLanguageTitle();
+    const { deviceId } = await this.analyticsArgs();
     return withAuthRetry(() =>
       functionProvider.run<TranslationAdvice>({
         name: "translationAdvice",
@@ -256,6 +294,7 @@ export class TranslateService {
           history: params.history || [],
           sourceLanguage: "auto",
           targetLanguage,
+          ...(deviceId ? { deviceId } : {}),
         },
       })
     );
