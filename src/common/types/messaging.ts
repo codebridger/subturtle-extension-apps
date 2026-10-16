@@ -73,11 +73,21 @@ export class StoreUserTokenMessage implements BaseMessage {
   }
 }
 
+/**
+ * Where a login started (E-03). The background puts it on the login window's
+ * URL (`popup.html#/login?source=…`) so LoginView can send it with
+ * `user_logged-in` and `login_failed`. A login opened from the toolbar popup
+ * itself has no source on the URL and counts as "popup".
+ */
+export type LoginSource = "save_prompt" | "practice" | "popup";
+
 export class OpenLoginWindowMessage implements BaseMessage {
   type: string;
+  source?: LoginSource;
 
-  constructor() {
+  constructor(source?: LoginSource) {
     this.type = MESSAGE_TYPE.OPEN_LOGIN_WINDOW;
+    if (source) this.source = source;
   }
 
   static is(message: any): message is OpenLoginWindowMessage {

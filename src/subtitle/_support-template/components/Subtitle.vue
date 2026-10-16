@@ -69,10 +69,14 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType, StyleValue } from "vue";
+import { defineComponent, markRaw, PropType, StyleValue } from "vue";
 import { clamp } from "../../../common/helper/math";
 import { getDir, rtls } from "../../../common/helper/text";
 import { TranslateService } from "../../../common/services/translate.service";
+import {
+  createCaptionTranslationGate,
+  type CaptionTranslationGate,
+} from "../../helpers/caption-translation-gate";
 import { Dictionary } from "../../../common/types/general.type";
 import { analytic } from "../../../plugins/mixpanel";
 
@@ -84,6 +88,7 @@ interface DataModel {
   sourceLanguage: string;
   showTranslatedSentence: boolean;
   showWordDetail: boolean;
+  captionGate: CaptionTranslationGate | null;
 }
 
 export default defineComponent({
@@ -102,7 +107,19 @@ export default defineComponent({
       sourceLanguage: "en",
       showTranslatedSentence: false,
       showWordDetail: false,
+      captionGate: null,
     };
+  },
+
+  created() {
+    // Not reactive state: the gate only holds a timer and the last caption.
+    this.captionGate = markRaw(
+      createCaptionTranslationGate((text) => this.translateWholeCaption(text))
+    );
+  },
+
+  beforeUnmount() {
+    this.captionGate?.cancel();
   },
 
   computed: {
@@ -174,13 +191,17 @@ export default defineComponent({
 
         if (!this.showTranslatedSentence || !value || !value.length) return;
 
-        this.translateWholeCaption();
+        // Wait for the caption to settle and send it once (E-06).
+        if (this.captionGate!.request(value.join("\n"))) {
+          this.translatedLines = [];
+        }
       },
     },
 
     showTranslatedSentence(value) {
-      if (!value || this.translatedLines.length) return;
-      this.translateWholeCaption();
+      if (!value) return this.captionGate!.cancel();
+      if (this.translatedLines.length || !this.textList?.length) return;
+      this.captionGate!.sendNow(this.textList.join("\n"));
     },
 
     hoveredWord(value) {
@@ -204,29 +225,29 @@ export default defineComponent({
       return list;
     },
 
-    translateWholeCaption() {
-      // let words = this.getWordList();
-      let lines = this.textList as unknown as Array<string>;
-      let translatingList = [lines.join("\n")];
+    /** Called by the caption gate with the settled caption (E-06). */
+    translateWholeCaption(caption: string) {
+      let translatingList = [caption];
 
       this.translatedLines = [];
 
       TranslateService.instance
-        .fetchSimpleTranslation(translatingList)
+        .fetchSimpleTranslation(translatingList, "", "caption")
         .then((translatedText) => {
           this.sourceLanguage = "auto";
 
           translatingList.forEach((result, i) => {
             this.translatedLines.push(translatedText);
           });
-        });
+        })
+        .catch(() => this.captionGate?.forget(caption));
     },
 
     translateWord(word) {
       let translatingList = [word];
 
       TranslateService.instance
-        .fetchSimpleTranslation(translatingList)
+        .fetchSimpleTranslation(translatingList, "", "word")
         .then((translatedText) => {
           this.sourceLanguage = "auto";
 

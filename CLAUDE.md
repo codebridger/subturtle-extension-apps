@@ -428,13 +428,18 @@ tests/
   console-crane-bridge.test.ts      # window CustomEvent emit/listen contracts
   console-crane-store.test.ts       # toggleConsoleCrane / goBack / canGoBack / isOnMainPage
   translate.service.test.ts         # cache hit/miss + 24h TTL eviction (vi.useFakeTimers)
+  translate-analytics-args.test.ts  # install id (deviceId) and trigger sent with translation calls (E-01, E-05)
   settings-host.test.ts             # nibbleDisabledDomains normalize / toggle
   language-detection.test.ts        # RTL detection, title lookup, supported codes
   selection-popup.test.ts           # @mousedown.prevent.stop regression
+  caption-translation-gate.test.ts  # whole-caption translation: settle ~150 ms, skip the caption already sent (E-06); in-flight sharing is in translate.service.test.ts (E-04)
   nibble-surface.test.ts            # bridge-driven hide/show
   translate-card.test.ts            # popup translate input flow
   login-password.test.ts            # popup password form (ENABLE_PASSWORD_AUTH=true)
   login-password-disabled.test.ts   # popup password form hidden when flag is unset
+  login-analytics.test.ts           # user_logged-in source, login_failed source + reason (E-03)
+  save-login-prompt.test.ts         # "Login to save" prompt viewed once per word view, clicked (E-03)
+  install-tracking.test.ts          # onInstalled: extension_installed / extension_updated + welcome page (E-02)
   e2e/
     extension-fixture.ts            # chromium.launchPersistentContext + extension load
     server.mjs                      # static fixtures HTTP server

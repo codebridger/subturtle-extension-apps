@@ -45,6 +45,7 @@ import {
   getSubturtleDashboardUrlWithToken,
 } from "../../common/static/global";
 import { TranslateService } from "../../common/services/translate.service";
+import { getInstallId } from "../../common/helper/install-id";
 import { PhraseType, PhraseBundleType } from "../../common/types/phrase.type";
 import { useDefaultBundleStore } from "../../stores/default-bundle";
 import { useProfileStore } from "../../stores/profile";
@@ -319,6 +320,8 @@ async function savePhrase() {
       return;
     }
 
+    // The install's analytics id, for the server's first-save event (E-01).
+    const deviceId = await getInstallId();
     existedPhrase.value = await functionProvider
       .run<PhraseType>({
         name: "createPhrase",
@@ -326,6 +329,7 @@ async function savePhrase() {
           phrase: props.phrase.trim(),
           translation: props.translation.trim(),
           translation_language: TranslateService.instance.targetLanguage.trim(),
+          ...(deviceId ? { deviceId } : {}),
           bundleIds: toAdd,
           refId: authentication.user?.id,
           type: "linguistic",
