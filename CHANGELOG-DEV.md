@@ -1,3 +1,10 @@
+# [1.17.0-dev.6](https://github.com/codebridger/subturtle-extension-apps/compare/v1.17.0-dev.5...v1.17.0-dev.6) (2026-10-16)
+
+
+### Bug Fixes
+
+* **languages:** send the user's id with the language calls so the pill and save row work (E-03, E-05) ([9b1d2d4](https://github.com/codebridger/subturtle-extension-apps/commit/9b1d2d430d9d2bbc329f6486f1f7bacf7cca67d4))
+
 # [1.17.0-dev.5](https://github.com/codebridger/subturtle-extension-apps/compare/v1.17.0-dev.4...v1.17.0-dev.5) (2026-10-15)
 
 
