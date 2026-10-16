@@ -41,6 +41,7 @@ describe("TranslateService cache", () => {
     // The singleton is shared across imports; reset the private cache so
     // tests don't leak state into each other.
     (TranslateService.instance as any).translationCache = {};
+    (TranslateService.instance as any).inFlight = new Map();
     svc = TranslateService.instance;
 
     runMock.mockReset();
@@ -115,6 +116,74 @@ describe("TranslateService cache", () => {
     const result = await svc.fetchSimpleTranslation("hello", "ctx");
     expect(result).toBe("ok");
     expect(runMock).toHaveBeenCalledTimes(2);
+  });
+
+  // E-04: identical calls made while the first one is on its way share it.
+  describe("in-flight sharing", () => {
+    function deferred<T>() {
+      let resolve!: (v: T) => void;
+      let reject!: (e: unknown) => void;
+      const promise = new Promise<T>((res, rej) => {
+        resolve = res;
+        reject = rej;
+      });
+      return { promise, resolve, reject };
+    }
+
+    it("sends one request for two identical calls in flight", async () => {
+      const d = deferred<string>();
+      runMock.mockReturnValueOnce(d.promise);
+
+      const a = svc.fetchSimpleTranslation("hello", "ctx");
+      const b = svc.fetchSimpleTranslation("hello", "ctx");
+      await vi.waitFor(() => expect(runMock).toHaveBeenCalledTimes(1));
+      d.resolve("shared");
+
+      expect(await a).toBe("shared");
+      expect(await b).toBe("shared");
+      expect(runMock).toHaveBeenCalledTimes(1);
+      expect((svc as any).inFlight.size).toBe(0);
+    });
+
+    it("shares detailed requests too", async () => {
+      const d = deferred<any>();
+      runMock.mockReturnValueOnce(d.promise);
+
+      const a = svc.fetchDetailedTranslation("hello", "ctx");
+      const b = svc.fetchDetailedTranslation("hello", "ctx");
+      await vi.waitFor(() => expect(runMock).toHaveBeenCalledTimes(1));
+      d.resolve({ translation: { phrase: "x" } });
+
+      expect(await b).toBe(await a);
+      expect(runMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not share different keys", async () => {
+      await Promise.all([
+        svc.fetchSimpleTranslation("hello", "ctxA"),
+        svc.fetchSimpleTranslation("hello", "ctxB"),
+      ]);
+      expect(runMock).toHaveBeenCalledTimes(2);
+    });
+
+    it("a failure reaches every waiting caller and is not kept", async () => {
+      const d = deferred<string>();
+      runMock.mockReturnValueOnce(d.promise);
+
+      const a = svc.fetchSimpleTranslation("hello", "ctx");
+      const b = svc.fetchSimpleTranslation("hello", "ctx");
+      await vi.waitFor(() => expect(runMock).toHaveBeenCalledTimes(1));
+      d.reject(new Error("network"));
+
+      await expect(a).rejects.toThrow("network");
+      await expect(b).rejects.toThrow("network");
+      expect((svc as any).inFlight.size).toBe(0);
+
+      // The next call sends a new request.
+      runMock.mockResolvedValue("ok");
+      expect(await svc.fetchSimpleTranslation("hello", "ctx")).toBe("ok");
+      expect(runMock).toHaveBeenCalledTimes(2);
+    });
   });
 });
 

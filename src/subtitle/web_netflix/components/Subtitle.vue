@@ -71,7 +71,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType, StyleValue } from "vue";
+import { defineComponent, markRaw, PropType, StyleValue } from "vue";
 import { mapState, mapActions } from "pinia";
 import { useMarkerStore } from "../../../stores/marker";
 import { clamp } from "../../../common/helper/math";
@@ -79,6 +79,10 @@ import { getDir, rtls, cleanText } from "../../../common/helper/text";
 import { TranslateService } from "../../../common/services/translate.service";
 import { log } from "../../../common/helper/log";
 import { LOADING_ICON } from "../../../common/icons/icons";
+import {
+  createCaptionTranslationGate,
+  type CaptionTranslationGate,
+} from "../../helpers/caption-translation-gate";
 
 interface DataModel {
   translatedLines: String[];
@@ -86,6 +90,7 @@ interface DataModel {
   showTranslatedSentence: boolean;
   showWordDetail: boolean;
   isTranslatingWholeCaption: boolean;
+  captionGate: CaptionTranslationGate | null;
 }
 
 export default defineComponent({
@@ -101,7 +106,19 @@ export default defineComponent({
       showTranslatedSentence: false,
       showWordDetail: false,
       isTranslatingWholeCaption: false,
+      captionGate: null,
     };
+  },
+
+  created() {
+    // Not reactive state: the gate only holds a timer and the last caption.
+    this.captionGate = markRaw(
+      createCaptionTranslationGate((text) => this.translateWholeCaption(text))
+    );
+  },
+
+  beforeUnmount() {
+    this.captionGate?.cancel();
   },
 
   computed: {
@@ -210,7 +227,10 @@ export default defineComponent({
 
         if (!this.showTranslatedSentence || !value || !value.length) return;
 
-        this.translateWholeCaption();
+        // Wait for the caption to settle and send it once (E-06).
+        if (this.captionGate!.request(value.join("\n"))) {
+          this.translatedLines = [];
+        }
       },
     },
 
@@ -218,8 +238,11 @@ export default defineComponent({
       log("showTranslatedSentence", value);
 
       if (value == true) {
-        this.translateWholeCaption();
+        if (this.textList?.length) {
+          this.captionGate!.sendNow(this.textList.join("\n"));
+        }
       } else {
+        this.captionGate!.cancel();
         this.translatedLines = [];
         this.clear();
       }
@@ -241,22 +264,22 @@ export default defineComponent({
       return list;
     },
 
-    translateWholeCaption() {
-      // let words = this.getWordList();
-      let lines = this.textList as unknown as Array<string>;
-      let translatingList = [lines.join("\n")];
+    /** Called by the caption gate with the settled caption (E-06). */
+    translateWholeCaption(caption: string) {
+      let translatingList = [caption];
 
       this.translatedLines = [];
 
       this.isTranslatingWholeCaption = true;
 
       TranslateService.instance
-        .fetchSimpleTranslation(translatingList)
+        .fetchSimpleTranslation(translatingList, "", "caption")
         .then((translationResult) => {
           translatingList.forEach((result, i) => {
             this.translatedLines.push(translationResult);
           });
         })
+        .catch(() => this.captionGate?.forget(caption))
         .finally(() => {
           this.isTranslatingWholeCaption = false;
         });

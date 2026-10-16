@@ -12,6 +12,18 @@ import { resolveTranslationLanguage } from "../language/state";
 import { languageName } from "../language/catalog";
 import type { LanguageState } from "../language/types";
 import { toSupportedLanguageCode } from "../helper/default-language";
+import { getInstallId } from "../helper/install-id";
+
+/**
+ * What asked for a translation (E-05). Sent as `trigger` so the server's
+ * `translation_requested` event can split requests by source (B-03).
+ */
+export type TranslationTrigger =
+  | "caption"
+  | "word"
+  | "selection"
+  | "definition"
+  | "detail";
 
 // Cache interface for translation results
 interface TranslationCache {
@@ -36,6 +48,8 @@ export class TranslateService {
   // Cache for translation results
   private translationCache: TranslationCache = {};
   private readonly CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+  // Requests on their way, by cache key (E-04).
+  private inFlight = new Map<string, Promise<any>>();
 
   /**
    * The learner's own language code, the one translations are written in.
@@ -135,6 +149,28 @@ export class TranslateService {
     };
   }
 
+  /**
+   * E-04: register a request as in flight, so an identical call made before
+   * it answers waits for it instead of sending a second request. The entry is
+   * removed when the request settles, so a failure is never reused or cached.
+   */
+  private startInFlight(cacheKey: string) {
+    let resolve!: (value: any) => void;
+    let reject!: (reason: unknown) => void;
+    const promise = new Promise<any>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    // Nobody may be waiting on it: a failure here must not be "unhandled".
+    promise.catch(() => {});
+    this.inFlight.set(cacheKey, promise);
+    const settle = () => this.inFlight.delete(cacheKey);
+    return {
+      resolve: (value: any) => (settle(), resolve(value)),
+      reject: (reason: unknown) => (settle(), reject(reason)),
+    };
+  }
+
   // Clean expired cache entries
   private cleanExpiredCache(): void {
     const now = Date.now();
@@ -145,7 +181,26 @@ export class TranslateService {
     });
   }
 
-  async fetchSimpleTranslation(text: string | string[], context: string = "") {
+  /**
+   * Analytics args for calls that fire a server event (E-01, E-05). `userId`
+   * stays for old servers; `deviceId` is the install's analytics id, read
+   * from storage on each call so it is never empty while the id loads and
+   * follows the new id after logout.
+   */
+  private async analyticsArgs(trigger?: TranslationTrigger) {
+    const deviceId = await getInstallId();
+    return {
+      userId: authentication.user?.id,
+      ...(deviceId ? { deviceId } : {}),
+      ...(trigger ? { trigger } : {}),
+    };
+  }
+
+  async fetchSimpleTranslation(
+    text: string | string[],
+    context: string = "",
+    trigger?: TranslationTrigger
+  ) {
     // Clean expired cache entries
     this.cleanExpiredCache();
 
@@ -160,8 +215,14 @@ export class TranslateService {
       return cachedResult;
     }
 
+    // The same request is already on its way: share it (E-04).
+    const pending = this.inFlight.get(cacheKey);
+    if (pending) return pending;
+    const inFlight = this.startInFlight(cacheKey);
+
     // If not cached, fetch from API
     try {
+      const analytics = await this.analyticsArgs(trigger);
       const result = await withAuthRetry(() =>
         functionProvider.run<string>({
           name: "translateWithContext",
@@ -173,23 +234,29 @@ export class TranslateService {
             phrase: text,
             context: context || "",
             // For the server-side translation_requested analytics event.
-            userId: authentication.user?.id,
+            ...analytics,
           },
         })
       );
 
       // Cache the result
       this.cacheResult(cacheKey, result);
+      inFlight.resolve(result);
 
       return result;
     } catch (error) {
       // Log error but don't cache failed requests
       console.error("Translation error:", error);
+      inFlight.reject(error);
       throw error;
     }
   }
 
-  async fetchDetailedTranslation(text: string, context: string = "") {
+  async fetchDetailedTranslation(
+    text: string,
+    context: string = "",
+    trigger: TranslationTrigger = "detail"
+  ) {
     // Clean expired cache entries
     this.cleanExpiredCache();
 
@@ -204,8 +271,14 @@ export class TranslateService {
       return cachedResult;
     }
 
+    // The same request is already on its way: share it (E-04).
+    const pending = this.inFlight.get(cacheKey);
+    if (pending) return pending;
+    const inFlight = this.startInFlight(cacheKey);
+
     // If not cached, fetch from API
     try {
+      const analytics = await this.analyticsArgs(trigger);
       const data = await withAuthRetry(() =>
         functionProvider.run<LanguageLearningData>({
           name: "translateWithContext",
@@ -217,7 +290,7 @@ export class TranslateService {
             phrase: text,
             context: context || "",
             // For the server-side translation_requested analytics event.
-            userId: authentication.user?.id,
+            ...analytics,
           },
         })
       );
@@ -229,11 +302,13 @@ export class TranslateService {
 
       // Cache the result
       this.cacheResult(cacheKey, data);
+      inFlight.resolve(data);
 
       return data;
     } catch (error) {
       // Log error but don't cache failed requests
       console.error("Detailed translation error:", error);
+      inFlight.reject(error);
       throw error;
     }
   }
@@ -250,6 +325,7 @@ export class TranslateService {
     history?: { role: "user" | "assistant"; text: string }[];
   }): Promise<TranslationAdvice> {
     const targetLanguage = await this.requireLanguageTitle();
+    const { deviceId } = await this.analyticsArgs();
     return withAuthRetry(() =>
       functionProvider.run<TranslationAdvice>({
         name: "translationAdvice",
@@ -262,6 +338,7 @@ export class TranslateService {
           sourceLanguage: "auto",
           targetLanguage,
           ...this.translationLanguageArg(),
+          ...(deviceId ? { deviceId } : {}),
         },
       })
     );

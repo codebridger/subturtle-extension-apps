@@ -134,7 +134,7 @@ describe("word card ↔ flashcard preview (Back)", () => {
 
     expect(viewedCount()).toBe(2);
     expect(fetchDetailed).toHaveBeenCalledTimes(2);
-    expect(fetchDetailed).toHaveBeenLastCalledWith("give up", "");
+    expect(fetchDetailed).toHaveBeenLastCalledWith("give up", "", "detail");
     w.unmount();
   });
 });

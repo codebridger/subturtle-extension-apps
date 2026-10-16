@@ -9,6 +9,7 @@ import {
   MESSAGE_TYPE,
 } from "./common/types/messaging";
 import { ensureStoredTargetLanguage } from "./common/helper/default-language";
+import { handleInstalled } from "./common/helper/install-tracking";
 
 export {};
 
@@ -17,6 +18,14 @@ export {};
 chrome.runtime.onInstalled.addListener(() => {
   ensureStoredTargetLanguage().catch((e) =>
     log("background: failed to resolve default language", e)
+  );
+});
+
+// Track installs and updates on the install's analytics id, and open the
+// welcome page on a first install (E-02, see install-tracking.ts).
+chrome.runtime.onInstalled.addListener((details) => {
+  handleInstalled(details).catch((e) =>
+    log("background: install tracking failed", e)
   );
 });
 
@@ -106,8 +115,13 @@ chrome.runtime.onMessage.addListener(function (request, _sender, sendResponse) {
       const left = screen.width / 2 - width / 2;
       const top = screen.height / 2 - height / 2;
 
+      // The login source rides on the hash route's query (E-03).
+      const query = request.source
+        ? `?source=${encodeURIComponent(request.source)}`
+        : "";
+
       chrome.windows.create({
-        url: chrome.runtime.getURL("popup.html") + "#/login",
+        url: chrome.runtime.getURL("popup.html") + "#/login" + query,
         type: "popup",
         width: width,
         height: height,
