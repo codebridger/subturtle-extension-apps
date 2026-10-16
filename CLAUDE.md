@@ -443,6 +443,7 @@ tests/
   settings-host.test.ts             # nibbleDisabledDomains normalize / toggle
   language-detection.test.ts        # RTL detection, title lookup, supported codes
   selection-popup.test.ts           # @mousedown.prevent.stop regression
+  caption-translation-gate.test.ts  # whole-caption translation: settle ~150 ms, skip the caption already sent (E-06); in-flight sharing is in translate.service.test.ts (E-04)
   nibble-surface.test.ts            # bridge-driven hide/show
   translate-card.test.ts            # popup translate input flow
   login-password.test.ts            # popup password form (ENABLE_PASSWORD_AUTH=true)
