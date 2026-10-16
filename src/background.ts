@@ -9,6 +9,7 @@ import {
   MESSAGE_TYPE,
 } from "./common/types/messaging";
 import { ensureStoredTargetLanguage } from "./common/helper/default-language";
+import { handleInstalled } from "./common/helper/install-tracking";
 
 export {};
 
@@ -17,6 +18,14 @@ export {};
 chrome.runtime.onInstalled.addListener(() => {
   ensureStoredTargetLanguage().catch((e) =>
     log("background: failed to resolve default language", e)
+  );
+});
+
+// Track installs and updates on the install's analytics id, and open the
+// welcome page on a first install (E-02, see install-tracking.ts).
+chrome.runtime.onInstalled.addListener((details) => {
+  handleInstalled(details).catch((e) =>
+    log("background: install tracking failed", e)
   );
 });
 
