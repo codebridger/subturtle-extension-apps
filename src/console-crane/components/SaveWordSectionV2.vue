@@ -565,6 +565,7 @@ async function savePhrase(kind?: "saved" | "savedInstead") {
         analytic.track("phrase_saved", {
           freemium: profileStore.isFreemium,
           ...(language ? { language, language_row: row.value?.kind } : {}),
+          logged_in: true,
         });
         return result;
       });

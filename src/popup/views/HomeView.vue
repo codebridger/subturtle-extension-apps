@@ -28,6 +28,9 @@
           @close="switcherOpen = false"
         />
 
+        <!-- Phrases saved before sign-in (save-first E-05) -->
+        <PendingSavesBanner />
+
         <!-- Translate any text -->
         <TranslateCard />
 
@@ -404,6 +407,7 @@ import {
   dueLine,
 } from "../../common/language/state";
 import { analytic } from "../../plugins/mixpanel";
+import PendingSavesBanner from "../components/PendingSavesBanner.vue";
 
 // Named so App.vue's <keep-alive include="HomeView"> can cache this view —
 // returning from a console page (Back) then restores the existing translation.

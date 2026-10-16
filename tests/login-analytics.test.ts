@@ -5,13 +5,14 @@ import { createTestingPinia } from "@pinia/testing";
 // E-03: user_logged-in carries `source`, and a failed login sends
 // login_failed with `source` and `reason`.
 
-const { loginMock, tokenRef, getMock, route } = vi.hoisted(() => {
+const { loginMock, tokenRef, getMock, route, loginState } = vi.hoisted(() => {
   process.env.ENABLE_PASSWORD_AUTH = "true";
   return {
     loginMock: vi.fn(),
     tokenRef: { current: null as string | null },
     getMock: vi.fn(),
     route: { current: { query: {} as Record<string, unknown> } },
+    loginState: { ref: null as any },
   };
 });
 
@@ -25,11 +26,26 @@ vi.mock("../src/plugins/modular-rest", async () => {
         return tokenRef.current;
       },
     },
-    loginWithLastSession: vi.fn().mockResolvedValue(undefined),
-    isLogin: ref(false),
+    // A completed login flips isLogin, so the success view (and the
+    // save-first sync message in it) renders.
+    loginWithLastSession: vi.fn(async () => {
+      loginState.ref.value = true;
+    }),
+    isLogin: (loginState.ref = ref(false)),
   };
 });
 vi.mock("../src/popup/helper/http", () => ({ get: getMock, post: vi.fn() }));
+// save-first E-04: the login window sends local phrases after login.
+const { syncMock, countMock } = vi.hoisted(() => ({
+  syncMock: vi.fn(),
+  countMock: vi.fn(),
+}));
+vi.mock("../src/common/services/pending-saves-sync", () => ({
+  syncPendingSaves: syncMock,
+}));
+vi.mock("../src/common/services/pending-saves", () => ({
+  countPendingSaves: countMock,
+}));
 
 import LoginView from "../src/popup/views/LoginView.vue";
 import {
@@ -68,6 +84,8 @@ describe("LoginView login events", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    loginState.ref.value = false;
+    countMock.mockResolvedValue(0);
     tokenRef.current = null;
     route.current = { query: { source: "save_prompt" } };
     (chrome as any).identity = {
@@ -102,6 +120,44 @@ describe("LoginView login events", () => {
     await w.find('[data-testid="password-form"]').trigger("submit");
     await flushPromises();
   }
+
+  it("after login, sends phrases saved before sign-in and says so (save-first E-04)", async () => {
+    getMock.mockResolvedValue({ status: "success", token: "jwt" });
+    countMock.mockResolvedValue(2);
+    syncMock.mockResolvedValue({ sent: 2, failed: 0, left: 0, limitReached: false, skipped: false });
+    const w = await mountView();
+    await googleButton(w).trigger("click");
+    await flushPromises();
+
+    expect(syncMock).toHaveBeenCalledTimes(1);
+    expect(w.find('[data-testid="pending-saves-status"]').text()).toBe(
+      "Your 2 saved phrases are in your account. You can close this window."
+    );
+  });
+
+  it("after login at the save limit, says the rest stay on this browser", async () => {
+    getMock.mockResolvedValue({ status: "success", token: "jwt" });
+    countMock.mockResolvedValue(3);
+    syncMock.mockResolvedValue({ sent: 1, failed: 0, left: 2, limitReached: true, skipped: false });
+    const w = await mountView();
+    await googleButton(w).trigger("click");
+    await flushPromises();
+
+    expect(w.find('[data-testid="pending-saves-status"]').text()).toContain(
+      "save limit is reached. 2 phrases stay on this browser"
+    );
+  });
+
+  it("after login with nothing waiting, no sync and the usual text", async () => {
+    getMock.mockResolvedValue({ status: "success", token: "jwt" });
+    countMock.mockResolvedValue(0);
+    const w = await mountView();
+    await googleButton(w).trigger("click");
+    await flushPromises();
+
+    expect(syncMock).not.toHaveBeenCalled();
+    expect(w.find('[data-testid="pending-saves-status"]').exists()).toBe(false);
+  });
 
   it("user_logged-in carries the source from the route", async () => {
     getMock.mockResolvedValue({ status: "success", token: "jwt" });
