@@ -115,6 +115,7 @@ import {
   getSubturtleDashboardUrlWithToken,
 } from "../../common/static/global";
 import { TranslateService } from "../../common/services/translate.service";
+import { getInstallId } from "../../common/helper/install-id";
 import { PhraseType, PhraseBundleType } from "../../common/types/phrase.type";
 import { useDefaultBundleStore } from "../../stores/default-bundle";
 import { useProfileStore } from "../../stores/profile";
@@ -546,11 +547,14 @@ async function savePhrase(kind?: "saved" | "savedInstead") {
       return;
     }
 
+    // The install's analytics id, for the server's first-save event (E-01).
+    const deviceId = await getInstallId();
     const result = await functionProvider
       .run<PhraseType>({
         name: "createPhrase",
         args: {
           ...phraseArgs(),
+          ...(deviceId ? { deviceId } : {}),
           bundleIds: toAdd,
           // Round 1 (E-07): the language it is saved to. Only with language
           // profiles; an old server resolves it itself (B-25).

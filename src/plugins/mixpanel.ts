@@ -1,4 +1,5 @@
 import mixpanel, { Config } from "mixpanel-browser";
+import { ANON_ID_KEY, newAnonymousId } from "../common/helper/install-id";
 
 /**
  * NO STORAGE ON THE HOST PAGE. This module runs inside content scripts, where
@@ -29,16 +30,7 @@ mixpanel.register({
 });
 export const analytic = mixpanel;
 
-export const ANON_ID_KEY = "analyticsAnonymousId";
-
-/** crypto.randomUUID is missing on plain-http pages; getRandomValues is not. */
-function newAnonymousId(): string {
-  const b = crypto.getRandomValues(new Uint8Array(16));
-  b[6] = (b[6] & 0x0f) | 0x40;
-  b[8] = (b[8] & 0x3f) | 0x80;
-  const h = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
-  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
-}
+export { ANON_ID_KEY };
 
 function useAnonymousId(id: string) {
   // identify() may already have run (a logged-in user whose profile loaded
@@ -48,10 +40,11 @@ function useAnonymousId(id: string) {
 }
 
 /**
- * Load (or create) the per-install anonymous id. Events tracked in the few
- * milliseconds before the storage read answers carry mixpanel's random
- * per-page id. Two scripts creating the id at once on the first page ever
- * can disagree once; the last write wins from then on.
+ * Load (or create) the per-install anonymous id. The key and format live in
+ * helper/install-id.ts, which server calls use to send it as `deviceId`.
+ * Events tracked in the few milliseconds before the storage read answers
+ * carry mixpanel's random per-page id. Two scripts creating the id at once on
+ * the first page ever can disagree once; the last write wins from then on.
  */
 function applyStoredAnonymousId() {
   try {

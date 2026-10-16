@@ -439,6 +439,7 @@ tests/
   console-crane-bridge.test.ts      # window CustomEvent emit/listen contracts
   console-crane-store.test.ts       # toggleConsoleCrane / goBack / canGoBack / isOnMainPage
   translate.service.test.ts         # cache hit/miss + 24h TTL eviction (vi.useFakeTimers)
+  translate-analytics-args.test.ts  # install id (deviceId) and trigger sent with translation calls (E-01, E-05)
   settings-host.test.ts             # nibbleDisabledDomains normalize / toggle
   language-detection.test.ts        # RTL detection, title lookup, supported codes
   selection-popup.test.ts           # @mousedown.prevent.stop regression

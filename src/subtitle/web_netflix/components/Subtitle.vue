@@ -251,7 +251,7 @@ export default defineComponent({
       this.isTranslatingWholeCaption = true;
 
       TranslateService.instance
-        .fetchSimpleTranslation(translatingList)
+        .fetchSimpleTranslation(translatingList, "", "caption")
         .then((translationResult) => {
           translatingList.forEach((result, i) => {
             this.translatedLines.push(translationResult);

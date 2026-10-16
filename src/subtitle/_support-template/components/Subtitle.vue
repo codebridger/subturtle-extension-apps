@@ -212,7 +212,7 @@ export default defineComponent({
       this.translatedLines = [];
 
       TranslateService.instance
-        .fetchSimpleTranslation(translatingList)
+        .fetchSimpleTranslation(translatingList, "", "caption")
         .then((translatedText) => {
           this.sourceLanguage = "auto";
 
@@ -226,7 +226,7 @@ export default defineComponent({
       let translatingList = [word];
 
       TranslateService.instance
-        .fetchSimpleTranslation(translatingList)
+        .fetchSimpleTranslation(translatingList, "", "word")
         .then((translatedText) => {
           this.sourceLanguage = "auto";
 
