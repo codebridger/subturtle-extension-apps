@@ -91,6 +91,7 @@ import { PhraseBundleType } from "../../common/types/phrase.type";
 import { analytic } from "../../plugins/mixpanel";
 import { log } from "../../common/helper/log";
 import { languageFilter } from "../../common/language/state";
+import { dispatchInternalEscape } from "../escape";
 
 const props = defineProps<{
   selectedBundles: string[];
@@ -325,9 +326,9 @@ function closeDropdown() {
   const trigger = rootRef.value?.querySelector<HTMLButtonElement>(
     'button[aria-haspopup="true"]'
   );
-  trigger?.dispatchEvent(
-    new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
-  );
+  // Marked as ours, so the ConsoleCrane window's Esc handler does not read it
+  // as "close the window" (see escape.ts).
+  if (trigger) dispatchInternalEscape(trigger);
 }
 
 /**

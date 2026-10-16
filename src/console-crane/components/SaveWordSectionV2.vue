@@ -1,7 +1,8 @@
 <template>
   <div class="my-2 bg-white dark:bg-gray-900 rounded-xl">
-    <!-- Result of the two choices for a language not added yet (design X7,
-         X8): in place, with Undo, and the learner stays on the video. -->
+    <!-- Result of a save (design X6), or of the two choices for a language
+         not added yet (X7, X8, with Undo): in place, and the learner stays on
+         the video. -->
     <div
       v-if="outcomeBox"
       role="status"
@@ -30,7 +31,7 @@
         <button v-else-if="offerPractice && outcomeBox.phraseId" type="button" data-testid="practise-now"
           class="px-4 py-2 rounded-full bg-white dark:bg-white/[0.08] border border-gray-200 dark:border-white/[0.12] text-gray-900 dark:text-white text-sm font-bold"
           @click="$emit('practice', { phraseId: outcomeBox.phraseId, language: outcomeBox.language })">Practise it now</button>
-        <button type="button" data-testid="undo"
+        <button v-if="outcomeCopy.canUndo" type="button" data-testid="undo"
           class="px-3 py-2 rounded-full text-gray-600 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-white/[0.06] text-sm font-bold disabled:opacity-50"
           :disabled="isUndoing" @click="undo">Undo</button>
       </span>
@@ -58,10 +59,6 @@
         :busy="isSaving || isKeeping" @change="pickerOpen = true" @save-active="saveToActive" @keep="keepForDetected"
         @add="openAddLanguage(row.detected)" />
 
-      <p v-if="savedLine" role="status" data-testid="saved-line"
-        class="mt-0 mb-3 text-sm font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
-        <i class="i-solar-check-circle-bold" />{{ savedLine }}
-      </p>
       <p v-if="actionError" role="alert" class="mt-0 mb-3 text-sm font-semibold text-red-600 dark:text-red-400">
         {{ actionError }}
       </p>
@@ -70,7 +67,7 @@
            between the two buttons of a language not added (E-06). -->
       <template v-if="!row || row.kind !== 'missing'">
       <FreemiumLimitCounter v-if="showFreemiumCounter" :used="usedCount" :total="totalCount" :isAtLimit="!!isAtLimit"
-        :isDisabled="!!(isSaving || isAtLimit)" @action="savePhrase" @upgrade="handleUpgrade" class="mb-4">
+        :isDisabled="!!(isSaving || isAtLimit)" @action="savePhrase()" @upgrade="handleUpgrade" class="mb-4">
         <InputGroup>
           <SelectPhraseBundleV2 class="flex-1" ref="selectBundleRef" v-model:selected-bundles="selectedBundles" :language="targetLanguage"
             :suggested-name="useSuggested ? suggestedName : ''" @update:suggested-name="suggestedName = $event" />
@@ -88,7 +85,7 @@
         <div class="flex w-full">
           <SelectPhraseBundleV2 ref="selectBundleRef" v-model:selected-bundles="selectedBundles" :language="targetLanguage"
             :suggested-name="useSuggested ? suggestedName : ''" @update:suggested-name="suggestedName = $event" />
-          <Button :label="saveLabel" size="lg" @click="savePhrase" :disabled="!canSave || isSaving" :is-loading="isSaving"
+          <Button :label="saveLabel" size="lg" @click="savePhrase()" :disabled="!canSave || isSaving" :is-loading="isSaving"
             :class="plainSaveActive ? ACTIVE_SAVE_CLASS : DISABLED_SAVE_CLASS">
             <template #icon>
               <i class="mr-4 i-ep-collection" />
@@ -197,10 +194,15 @@ const languages = useLanguageStore();
 const override = ref<string | null>(null);
 const pickerOpen = ref(false);
 const outcome = ref<SaveOutcome | null>(null);
-const savedLine = ref("");
 const actionError = ref("");
 const isKeeping = ref(false);
 const isUndoing = ref(false);
+/**
+ * The learner chose "Save to <active>" for a language not added yet, and no
+ * bundle was ready, so the picker shows: the Save that follows is still that
+ * choice (X8, with Undo back to the two choices).
+ */
+const choseInstead = ref(false);
 
 const row = computed(() =>
   languages.isMultilingual && languages.state
@@ -215,9 +217,7 @@ const row = computed(() =>
 /** Where Save writes; null in the dark phase, and while the learner must choose. */
 const targetLanguage = computed<string | null>(() => row.value?.target ?? null);
 const canChange = computed(() => activeLanguages(languages.state).length > 1);
-const outcomeBox = computed(() =>
-  outcome.value && outcome.value.kind !== "saved" ? outcome.value : null
-);
+const outcomeBox = computed(() => outcome.value);
 const outcomeCopy = computed(() =>
   outcomeBox.value
     ? saveOutcomeCopy(outcomeBox.value, props.phrase, languages.caps)
@@ -321,9 +321,9 @@ watch(
   () => {
     override.value = null;
     outcome.value = null;
-    savedLine.value = "";
     actionError.value = "";
     pickerOpen.value = false;
+    choseInstead.value = false;
   },
   { immediate: true }
 );
@@ -519,10 +519,15 @@ function bundleTitles(ids: string[], suggested: string): string[] {
 
 /**
  * @param kind "savedInstead" when the learner chose "Save to <active>" for a
- *   language not added yet: the result shows in place with Undo (X8).
+ *   language not added yet: the result shows in place with Undo (X8). By
+ *   default it is that choice when the learner made it and then picked a
+ *   bundle, else a normal save (X6).
  */
-async function savePhrase(kind: "saved" | "savedInstead" = "saved") {
+async function savePhrase(kind?: "saved" | "savedInstead") {
   if (!canSave.value || isSaving.value) return;
+  if (kind !== "saved" && kind !== "savedInstead") {
+    kind = choseInstead.value ? "savedInstead" : "saved";
+  }
   isSaving.value = true;
   actionError.value = "";
 
@@ -577,7 +582,9 @@ async function savePhrase(kind: "saved" | "savedInstead" = "saved") {
     await loadExistingBundles();
     await profileStore.fetchSubscription();
 
-    // "Saved to Dark S1 · German" (E-05, design X6 / X8).
+    // "Saved to Dark S1 · German" with Back to my video and Practise it now
+    // (E-05, design X6 / X8). Without language profiles the window stays as
+    // before: the bundle picker with the saved bundles.
     const savedLanguage = (result as any)?.language || language;
     if (savedLanguage) {
       const titles = bundleTitles(toAdd, suggestedTitle);
@@ -588,12 +595,14 @@ async function savePhrase(kind: "saved" | "savedInstead" = "saved") {
         bundleIds: toAdd,
         phraseId: result?._id,
       };
-      if (kind === "savedInstead") outcome.value = done;
-      else savedLine.value = saveOutcomeCopy(done, props.phrase, languages.caps).title;
+      outcome.value = done;
     }
 
-    if (existedPhrase.value) {
-      emit("saved", existedPhrase.value);
+    // The re-synced document, else what createPhrase returned (a lookup that
+    // has not caught up yet must not hide the save from the page).
+    const savedDoc = existedPhrase.value ?? result;
+    if (savedDoc) {
+      emit("saved", savedDoc);
     }
 
     if (selectBundleRef.value?.closeDropdown) {
@@ -612,7 +621,7 @@ async function savePhrase(kind: "saved" | "savedInstead" = "saved") {
 /** Change: this phrase goes to another of the learner's languages (X5). */
 function pickLanguage(code: string) {
   pickerOpen.value = false;
-  savedLine.value = "";
+  choseInstead.value = false;
   override.value = code;
   analytic.track("save_language_changed", {
     detected: row.value?.detected,
@@ -629,6 +638,7 @@ async function saveToActive() {
   if (!row.value) return;
   const active = row.value.active;
   override.value = active;
+  choseInstead.value = true;
   analytic.track("save_language_missing_choice", {
     choice: "save_to_active",
     detected: row.value.detected,
@@ -690,8 +700,8 @@ async function undo() {
     }
     analytic.track("save_language_undo", { kind: done.kind, language: done.language });
     outcome.value = null;
-    savedLine.value = "";
     override.value = null;
+    choseInstead.value = false;
   } catch (error) {
     console.error("Error undoing:", error);
     actionError.value = "We could not undo that. Please try again.";
