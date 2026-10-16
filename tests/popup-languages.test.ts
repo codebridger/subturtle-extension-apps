@@ -131,7 +131,7 @@ describe("LanguageSwitcher (popup list)", () => {
     await w.find("[data-testid='language-row-en']").trigger("click");
     await flushPromises();
 
-    expect(run).toHaveBeenCalledWith({ name: "set-active-language", args: { language: "en" } });
+    expect(run).toHaveBeenCalledWith({ name: "set-active-language", args: { userId: "u1", language: "en" } });
     expect(useLanguageStore().state?.learningLanguage).toBe("en");
     const sent = (globalThis as any).chrome.tabs.sendMessage.mock.calls;
     expect(sent).toHaveLength(2);
