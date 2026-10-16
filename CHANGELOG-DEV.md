@@ -1,3 +1,21 @@
+# [1.17.0-dev.8](https://github.com/codebridger/subturtle-extension-apps/compare/v1.17.0-dev.7...v1.17.0-dev.8) (2026-10-16)
+
+
+### Bug Fixes
+
+* **analytics:** E-01 E-05 send the install id and trigger with translation calls ([1466a8f](https://github.com/codebridger/subturtle-extension-apps/commit/1466a8f09f405f4271fb1ce217796745ad08e7ae))
+
+
+### Features
+
+* **analytics:** E-02 track installs and updates and open the welcome page ([b7ddfd6](https://github.com/codebridger/subturtle-extension-apps/commit/b7ddfd6d79fddc89a9d116244c7c4dca5634633a)), closes [codebridger/subturtle-dashboard-app#144](https://github.com/codebridger/subturtle-dashboard-app/issues/144)
+* **analytics:** E-03 track the save-login prompt and login results ([efec688](https://github.com/codebridger/subturtle-extension-apps/commit/efec6881407b7f51629c5ea530357c453b2c3ad1))
+
+
+### Performance Improvements
+
+* **translation:** E-04 E-06 share in-flight translations and translate each caption once ([7c0a3b2](https://github.com/codebridger/subturtle-extension-apps/commit/7c0a3b27403286fe22480d973f0fb9616cd7ae7a))
+
 # [1.17.0-dev.7](https://github.com/codebridger/subturtle-extension-apps/compare/v1.17.0-dev.6...v1.17.0-dev.7) (2026-10-16)
 
 
