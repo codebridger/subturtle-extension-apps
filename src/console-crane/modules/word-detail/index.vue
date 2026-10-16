@@ -756,7 +756,8 @@ async function fetchWordDetail() {
 
     wordData.value = await TranslateService.instance.fetchDetailedTranslation(
       cleaned,
-      context
+      context,
+      "detail"
     );
   } catch (err: any) {
     console.error("Failed to fetch translation:", err);
