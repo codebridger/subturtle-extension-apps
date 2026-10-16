@@ -115,8 +115,13 @@ chrome.runtime.onMessage.addListener(function (request, _sender, sendResponse) {
       const left = screen.width / 2 - width / 2;
       const top = screen.height / 2 - height / 2;
 
+      // The login source rides on the hash route's query (E-03).
+      const query = request.source
+        ? `?source=${encodeURIComponent(request.source)}`
+        : "";
+
       chrome.windows.create({
-        url: chrome.runtime.getURL("popup.html") + "#/login",
+        url: chrome.runtime.getURL("popup.html") + "#/login" + query,
         type: "popup",
         width: width,
         height: height,

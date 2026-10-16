@@ -64,7 +64,7 @@ import { useRouter } from "vue-router";
 const router = useRouter();
 
 function openLogin() {
-  chrome.runtime.sendMessage(new OpenLoginWindowMessage());
+  chrome.runtime.sendMessage(new OpenLoginWindowMessage("popup"));
 }
 
 const slides = [

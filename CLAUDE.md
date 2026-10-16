@@ -448,6 +448,8 @@ tests/
   translate-card.test.ts            # popup translate input flow
   login-password.test.ts            # popup password form (ENABLE_PASSWORD_AUTH=true)
   login-password-disabled.test.ts   # popup password form hidden when flag is unset
+  login-analytics.test.ts           # user_logged-in source, login_failed source + reason (E-03)
+  save-login-prompt.test.ts         # "Login to save" prompt viewed once per word view, clicked (E-03)
   language-state.test.ts            # round-1 rules: dark gate, own language, save row, plan limit, deep link
   language-catalog.test.ts          # one RTL list, picker names, bundled Vazirmatn
   own-language.test.ts              # translate request with / without a server profile; language store
