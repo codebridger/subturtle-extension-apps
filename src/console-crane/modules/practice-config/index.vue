@@ -316,7 +316,7 @@ function upgrade() {
 /** Logged out — open the login window; the isLogin watch advances the page. */
 function handleLoginRequest() {
   analytic.track("practice-now_login-clicked");
-  sendMessage(new OpenLoginWindowMessage());
+  sendMessage(new OpenLoginWindowMessage("practice"));
 }
 
 function start() {

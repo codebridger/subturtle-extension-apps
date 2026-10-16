@@ -131,6 +131,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { useRoute } from "vue-router";
 import {
   GetCurrentChromeUserToken,
   LoginStatusResponse,
@@ -145,8 +146,23 @@ import {
   loginWithLastSession,
   isLogin,
 } from "../../plugins/modular-rest";
+import {
+  googleFailReason,
+  loginSourceFrom,
+  type LoginFailReason,
+} from "../helper/login-analytics";
 
 const pending = ref(false);
+
+// Where this login started (E-03): the background opens the login window as
+// `#/login?source=save_prompt|practice|popup`. No router (unit tests) or no
+// query means the toolbar popup.
+const route = useRoute();
+const loginSource = loginSourceFrom(route?.query?.source);
+
+function trackLoginFailed(reason: LoginFailReason) {
+  analytic.track("login_failed", { source: loginSource, reason });
+}
 
 const chromeUserRes = ref<LoginStatusResponse | null>();
 
@@ -197,7 +213,14 @@ async function loginWithChrome() {
 
     if (status == "success") {
       await handleTokenLogin(token);
+    } else {
+      trackLoginFailed("server_error");
     }
+  } else {
+    // getAuthToken gave no token: the Chrome profile has no Google account,
+    // or the user dismissed Chrome's consent prompt. Chrome does not tell
+    // these apart here.
+    trackLoginFailed("google_error");
   }
 
   pending.value = false;
@@ -205,18 +228,26 @@ async function loginWithChrome() {
 
 async function loginWithGoogle() {
   pending.value = true;
+  // Which step failed decides the login_failed reason.
+  let step: "google" | "server" = "google";
 
   await authorizeFromGoogleOAuthThroughAuthFlowAPI()
     .then((accessToken) => {
+      step = "server";
       return get(
         joinToBaseUrl(
           `/auth/google/access-token-login?access_token=${accessToken}`
         )
       );
     })
-    .then(({ token }) => handleTokenLogin(token))
+    .then(({ token }) => {
+      // Never store an empty token as a login.
+      if (!token) throw new Error("No token in the login response");
+      return handleTokenLogin(token);
+    })
     .catch((err) => {
       console.log("err", err);
+      trackLoginFailed(step === "google" ? googleFailReason(err) : "server_error");
     })
     .finally(() => {
       pending.value = false;
@@ -252,7 +283,7 @@ async function handleTokenLogin(token: string) {
   await loginWithLastSession();
   // Fired only on an explicit login from this view — session restores on
   // startup do not pass through here.
-  analytic.track("user_logged-in");
+  analytic.track("user_logged-in", { source: loginSource });
 }
 
 function launchWebAuthFlow(authURL) {
@@ -305,11 +336,13 @@ async function loginWithPassword() {
     const token = authentication.getToken;
     if (!token) {
       loginError.value = "Invalid email or password.";
+      trackLoginFailed("server_error");
       return;
     }
     await handleTokenLogin(token);
     passwordValue.value = "";
   } catch (err: any) {
+    trackLoginFailed("server_error");
     // modular-rest rejects with the server response or a network error. We
     // surface a generic message for the credential-mismatch case so we don't
     // leak whether the email exists, and a network-specific message when the

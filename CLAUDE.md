@@ -437,6 +437,8 @@ tests/
   translate-card.test.ts            # popup translate input flow
   login-password.test.ts            # popup password form (ENABLE_PASSWORD_AUTH=true)
   login-password-disabled.test.ts   # popup password form hidden when flag is unset
+  login-analytics.test.ts           # user_logged-in source, login_failed source + reason (E-03)
+  save-login-prompt.test.ts         # "Login to save" prompt viewed once per word view, clicked (E-03)
   e2e/
     extension-fixture.ts            # chromium.launchPersistentContext + extension load
     server.mjs                      # static fixtures HTTP server
