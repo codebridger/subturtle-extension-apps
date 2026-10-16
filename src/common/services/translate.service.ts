@@ -37,6 +37,8 @@ export class TranslateService {
   // Cache for translation results
   private translationCache: TranslationCache = {};
   private readonly CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+  // Requests on their way, by cache key (E-04).
+  private inFlight = new Map<string, Promise<any>>();
 
   get targetLanguage() {
     return useSettingsStore().language;
@@ -94,6 +96,28 @@ export class TranslateService {
     };
   }
 
+  /**
+   * E-04: register a request as in flight, so an identical call made before
+   * it answers waits for it instead of sending a second request. The entry is
+   * removed when the request settles, so a failure is never reused or cached.
+   */
+  private startInFlight(cacheKey: string) {
+    let resolve!: (value: any) => void;
+    let reject!: (reason: unknown) => void;
+    const promise = new Promise<any>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    // Nobody may be waiting on it: a failure here must not be "unhandled".
+    promise.catch(() => {});
+    this.inFlight.set(cacheKey, promise);
+    const settle = () => this.inFlight.delete(cacheKey);
+    return {
+      resolve: (value: any) => (settle(), resolve(value)),
+      reject: (reason: unknown) => (settle(), reject(reason)),
+    };
+  }
+
   // Clean expired cache entries
   private cleanExpiredCache(): void {
     const now = Date.now();
@@ -119,6 +143,11 @@ export class TranslateService {
       return cachedResult;
     }
 
+    // The same request is already on its way: share it (E-04).
+    const pending = this.inFlight.get(cacheKey);
+    if (pending) return pending;
+    const inFlight = this.startInFlight(cacheKey);
+
     // If not cached, fetch from API
     try {
       const result = await withAuthRetry(() =>
@@ -138,11 +167,13 @@ export class TranslateService {
 
       // Cache the result
       this.cacheResult(cacheKey, result);
+      inFlight.resolve(result);
 
       return result;
     } catch (error) {
       // Log error but don't cache failed requests
       console.error("Translation error:", error);
+      inFlight.reject(error);
       throw error;
     }
   }
@@ -161,6 +192,11 @@ export class TranslateService {
     if (cachedResult) {
       return cachedResult;
     }
+
+    // The same request is already on its way: share it (E-04).
+    const pending = this.inFlight.get(cacheKey);
+    if (pending) return pending;
+    const inFlight = this.startInFlight(cacheKey);
 
     // If not cached, fetch from API
     try {
@@ -186,11 +222,13 @@ export class TranslateService {
 
       // Cache the result
       this.cacheResult(cacheKey, data);
+      inFlight.resolve(data);
 
       return data;
     } catch (error) {
       // Log error but don't cache failed requests
       console.error("Detailed translation error:", error);
+      inFlight.reject(error);
       throw error;
     }
   }
