@@ -19,5 +19,8 @@ export default defineConfig({
     // tests/e2e/ directory keeps the two suites cleanly separated.
     exclude: ["node_modules/**", "tests/e2e/**", "**/*.spec.ts"],
     globals: false,
+    // Locally, half the cores so a full run does not fill the machine's
+    // memory. CI keeps Vitest's default.
+    ...(process.env.CI ? {} : { maxWorkers: "50%", minWorkers: 1 }),
   },
 });
