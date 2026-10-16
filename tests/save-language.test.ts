@@ -156,6 +156,9 @@ describe("dark phase (E-12)", () => {
     const [args] = callsOf("createPhrase");
     expect(args).not.toHaveProperty("language");
     expect(args.bundleIds).toEqual(["b1"]);
+    // As before: no result box, the bundle picker stays.
+    expect(w.find("[data-testid='save-outcome']").exists()).toBe(false);
+    expect(w.find(".bundle-stub").exists()).toBe(true);
     w.unmount();
   });
 });
@@ -175,7 +178,22 @@ describe("language row (E-05)", () => {
     await w.find(".pilot-save").trigger("click");
     await flushPromises();
     expect(callsOf("createPhrase")[0]).toMatchObject({ language: "de", bundleIds: ["b1"] });
-    expect(w.find("[data-testid='saved-line']").text()).toContain("Saved to Dark S1 · German");
+    // The saved state (design X6): in place of the form, no Undo.
+    const box = w.find("[data-testid='save-outcome']");
+    expect(box.attributes("data-kind")).toBe("saved");
+    expect(box.text()).toContain("Saved to Dark S1 · German");
+    expect(box.text()).toContain("is in your German review");
+    expect(box.find("[data-testid='back-to-video']").exists()).toBe(true);
+    expect(box.find("[data-testid='practise-now']").exists()).toBe(true);
+    expect(box.find("[data-testid='undo']").exists()).toBe(false);
+    expect(w.find(".pilot-save").exists()).toBe(false);
+    expect(w.emitted("saved")?.[0]?.[0]).toMatchObject({ _id: "p1", language: "de" });
+    // Saving does not ask the window to close; only the learner's buttons do.
+    expect(w.emitted("back")).toBeFalsy();
+    await box.find("[data-testid='practise-now']").trigger("click");
+    expect(w.emitted("practice")?.[0]).toEqual([{ phraseId: "p1", language: "de" }]);
+    await box.find("[data-testid='back-to-video']").trigger("click");
+    expect(w.emitted("back")).toHaveLength(1);
     w.unmount();
   });
 
@@ -290,6 +308,21 @@ describe("language not added (E-06)", () => {
     expect(callsOf("createPhrase")).toHaveLength(0);
     expect(w.find("[data-testid='save-language-row']").attributes("data-kind")).toBe("chosen");
     expect(w.find(".bundle-stub").attributes("data-language")).toBe("de");
+
+    // Picking a bundle and Save is still that choice (X8): Undo goes back to
+    // the two choices.
+    w.findComponent({ name: "SelectPhraseBundleV2" }).vm.$emit("update:selectedBundles", ["b2"]);
+    await flushPromises();
+    expect(w.find(".pilot-save").text()).toBe("Save to German");
+    await w.find(".pilot-save").trigger("click");
+    await flushPromises();
+    expect(callsOf("createPhrase")[0]).toMatchObject({ language: "de", bundleIds: ["b2"] });
+    const box = w.find("[data-testid='save-outcome']");
+    expect(box.attributes("data-kind")).toBe("savedInstead");
+    expect(box.text()).toContain("Saved to Office · German");
+    await box.find("[data-testid='undo']").trigger("click");
+    await flushPromises();
+    expect(w.find("[data-testid='save-language-row']").attributes("data-kind")).toBe("missing");
     w.unmount();
   });
 

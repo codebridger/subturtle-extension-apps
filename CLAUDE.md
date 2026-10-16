@@ -450,9 +450,10 @@ tests/
   language-catalog.test.ts          # one RTL list, picker names, bundled Vazirmatn
   own-language.test.ts              # translate request with / without a server profile; language store
   popup-languages.test.ts           # popup pill, language list, switch, plan limit, due line
-  save-language.test.ts             # save window language row, Keep / Save to, Undo, dark phase
+  save-language.test.ts             # save window language row, saved state, Keep / Save to, Undo, dark phase
   language-lookups.test.ts          # saved-phrase lookup, bundle suggestion, last-used bundles per language
   language-analytics.test.ts        # learning_language and target_language super properties
+  tab-broadcast.test.ts             # tab broadcast skips tabs without our content scripts quietly
   e2e/
     extension-fixture.ts            # chromium.launchPersistentContext + extension load
     server.mjs                      # static fixtures HTTP server
