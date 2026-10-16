@@ -1,4 +1,4 @@
-import { functionProvider } from "@modular-rest/client";
+import { authentication, functionProvider } from "@modular-rest/client";
 import type {
   KeepPhrasePendingReply,
   LangCode,
@@ -17,14 +17,24 @@ import type {
  *
  * Deliberately NOT wrapped in withAuthRetry: a missing function answers with an
  * error body, and a recovery there would log a registered user out.
+ *
+ * The `user_access` functions read the account from `args.userId`: modular-rest does
+ * not add it, and without it the server answers "User ID is required", so the popup
+ * pill and the save window language row never showed against a real server.
  */
+
+/** The signed-in user's id for `user_access` functions (the server checks it is theirs). */
+function caller(): { userId?: string } {
+  const id = authentication.user?.id;
+  return id ? { userId: id } : {};
+}
 
 /** `get-language-state`, or null when the server does not have it (yet). */
 export async function fetchLanguageState(): Promise<LanguageState | null> {
   try {
     const state = await functionProvider.run<LanguageState>({
       name: "get-language-state",
-      args: {},
+      args: { ...caller() },
     });
     return isLanguageState(state) ? state : null;
   } catch (_e) {
@@ -52,7 +62,7 @@ export async function fetchLanguageCapabilities(): Promise<LanguageCapabilities 
 export async function setActiveLanguage(language: LangCode): Promise<LanguageState> {
   const reply = await functionProvider.run<{ state: LanguageState }>({
     name: "set-active-language",
-    args: { language },
+    args: { ...caller(), language },
   });
   if (!reply || !isLanguageState(reply.state)) {
     throw new Error("The server did not return the new language state.");
@@ -70,7 +80,7 @@ export async function keepPhrasePending(
 ): Promise<KeepPhrasePendingReply> {
   return functionProvider.run<KeepPhrasePendingReply>({
     name: "keep-phrase-pending",
-    args: { phrase, language },
+    args: { ...caller(), phrase, language },
   });
 }
 
