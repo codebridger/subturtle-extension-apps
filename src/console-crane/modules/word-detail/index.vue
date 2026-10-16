@@ -244,16 +244,11 @@
         :direction="wordData?.direction" :language_info="wordData?.language_info"
         :linguistic_data="wordData?.linguistic_data" :chunks="wordData?.chunks || []" />
 
-      <!-- Login prompt: only when there's a translation worth saving -->
-      <button
-        v-else-if="showLoginPrompt"
-        type="button"
-        class="self-center inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-white text-sm font-semibold shadow-sm hover:from-pink-600 hover:to-purple-700 transition"
-        @click="handleLoginRequest"
-      >
-        <i class="text-lg i-solar-login-3-bold" />
-        <span>Login to save this phrase</span>
-      </button>
+      <!-- Logged out: save on this browser, sign in later (save-first E-02) -->
+      <LocalSaveSection v-else-if="!isLogin && wordData?.translation?.phrase" :phrase="cleanText(getProps().word!)"
+        :translation="cleanText(wordData?.translation?.phrase || '')" :context="wordData?.context"
+        :direction="wordData?.direction" :language_info="wordData?.language_info"
+        :linguistic_data="wordData?.linguistic_data" :chunks="wordData?.chunks || []" />
     </div>
   </div>
 </template>
@@ -267,14 +262,13 @@ import { Chunk, LanguageLearningData } from "./types";
 
 import { isLogin } from "../../../plugins/modular-rest";
 import SaveWordSectionV2 from "../../components/SaveWordSectionV2.vue";
+import LocalSaveSection from "../../components/LocalSaveSection.vue";
 import { useConsoleCraneStore } from "../../stores/console-crane";
 
 import { IconButton } from "pilotui/elements";
 import { Button } from "pilotui";
 
 import { useRoute } from "vue-router";
-import { sendMessage } from "../../../common/helper/massage";
-import { OpenLoginWindowMessage } from "../../../common/types/messaging";
 import { analytic } from "../../../plugins/mixpanel";
 import { decodeRouteParams } from "../../route-params";
 
@@ -319,10 +313,6 @@ onActivated(() => {
     return;
   }
   analytic.track("word-detail-page_viewed");
-  // A new view of the same word: the prompt may already be on screen, so the
-  // watch below would not fire again.
-  loginPromptTracked = false;
-  trackLoginPromptView();
 });
 
 /**
@@ -363,24 +353,6 @@ const frameSize = inject<{ width: number; height: number }>("frameSize");
 
 // Main state variables
 const wordData = ref<LanguageLearningData | null>(null); // Stores detailed linguistic data
-
-/**
- * "Login to save this phrase" (E-03). `save-login-prompt_viewed` fires once
- * per word view, when the button first shows: a new word or a new view resets
- * it, a sign-in state flip or a re-render does not.
- */
-const showLoginPrompt = computed(
-  () => !isLogin.value && !!wordData.value?.translation?.phrase
-);
-let loginPromptTracked = false;
-
-function trackLoginPromptView() {
-  if (loginPromptTracked || !showLoginPrompt.value) return;
-  loginPromptTracked = true;
-  analytic.track("save-login-prompt_viewed");
-}
-
-watch(showLoginPrompt, trackLoginPromptView);
 
 const pending = ref(false); // Loading state
 const error = ref<string | null>(null); // Translation error message, null when ok
@@ -661,7 +633,6 @@ watch(
   (value) => {
     key.value = new Date().getTime();
     wordData.value = null;
-    loginPromptTracked = false;
     error.value = null;
 
     if (!value) return;
@@ -722,15 +693,6 @@ async function fetchWordDetail() {
 function retryFetch() {
   analytic.track("word-detail-page_retry-clicked");
   fetchWordDetail();
-}
-
-/**
- * Handles login request when user clicks login button
- * Opens login window via messaging system
- */
-function handleLoginRequest() {
-  analytic.track("save-login-prompt_clicked");
-  sendMessage(new OpenLoginWindowMessage("save_prompt"));
 }
 </script>
 

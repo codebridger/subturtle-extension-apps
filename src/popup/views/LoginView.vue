@@ -117,7 +117,11 @@
     <template v-else>
       <div class="text-center w-80">
         <p class="text-gray-900 dark:text-white text-3xl">Logged In Successfully!</p>
-        <p class="text-gray-700 dark:text-gray-300 font-thin text-base mt-4">
+        <p v-if="syncMessage" class="text-gray-700 dark:text-gray-300 font-thin text-base mt-4"
+          data-testid="pending-saves-status">
+          {{ syncMessage }}
+        </p>
+        <p v-else class="text-gray-700 dark:text-gray-300 font-thin text-base mt-4">
           Go ahead and close this window, your adventure starts now!
         </p>
       </div>
@@ -151,6 +155,11 @@ import {
   loginSourceFrom,
   type LoginFailReason,
 } from "../helper/login-analytics";
+import { countPendingSaves } from "../../common/services/pending-saves";
+import {
+  syncPendingSaves,
+  type SyncResult,
+} from "../../common/services/pending-saves-sync";
 
 const pending = ref(false);
 
@@ -284,6 +293,34 @@ async function handleTokenLogin(token: string) {
   // Fired only on an explicit login from this view — session restores on
   // startup do not pass through here.
   analytic.track("user_logged-in", { source: loginSource });
+  // Not awaited: the login is done; the sync reports in syncMessage.
+  void sendPendingSaves();
+}
+
+/**
+ * Phrases saved before sign-in go to the account now (save-first E-04). If
+ * the window closes first, the next start carries on.
+ */
+const syncMessage = ref("");
+
+async function sendPendingSaves() {
+  const waiting = await countPendingSaves();
+  if (!waiting) return;
+  syncMessage.value = `Adding your ${waiting} saved phrases to your account…`;
+  syncMessage.value = pendingSavesMessage(await syncPendingSaves());
+}
+
+function pendingSavesMessage(result: SyncResult): string {
+  if (result.limitReached) {
+    return `Your plan's save limit is reached. ${result.left} phrases stay on this browser and will be added later.`;
+  }
+  if (result.skipped) {
+    return "Your saved phrases will be added to your account in a moment.";
+  }
+  if (result.left) {
+    return `${result.sent} phrases added. ${result.left} will be tried again later.`;
+  }
+  return `Your ${result.sent} saved phrases are in your account. You can close this window.`;
 }
 
 function launchWebAuthFlow(authURL) {

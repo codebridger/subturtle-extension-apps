@@ -342,7 +342,10 @@ async function savePhrase() {
         },
       })
       .then((result) => {
-        analytic.track("phrase_saved", { freemium: profileStore.isFreemium });
+        analytic.track("phrase_saved", {
+          freemium: profileStore.isFreemium,
+          logged_in: true,
+        });
         return result;
       });
 
