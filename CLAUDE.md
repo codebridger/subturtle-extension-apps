@@ -188,7 +188,7 @@ The learner's languages come from the server's `language` module, built to the A
 
 ### Save first, sign in later (pending saves)
 
-A logged-out learner can save on the word card. [LocalSaveSection](src/console-crane/components/LocalSaveSection.vue) keeps the phrase in `chrome.storage.local` (`pendingSaves`, a list; see [pending-saves.ts](src/common/services/pending-saves.ts)) with everything `createPhrase` needs plus the page URL and title. From the 3rd local phrase a soft sign-in card shows; at 50, sign-in replaces Save.
+A logged-out learner gets two choices on the word card from the first phrase: "Save without login" and "Login to save". [LocalSaveSection](src/console-crane/components/LocalSaveSection.vue) keeps a "Save without login" phrase in `chrome.storage.local` (`pendingSaves`, a list; see [pending-saves.ts](src/common/services/pending-saves.ts)) with everything `createPhrase` needs plus the page URL and title. From the 3rd local phrase a soft sign-in card shows; at 50, only sign-in is offered.
 
 [pending-saves-sync.ts](src/common/services/pending-saves-sync.ts) sends the list to the account after sign-in. It runs from `LoginView` after a login, from the popup ([PendingSavesBanner](src/popup/components/PendingSavesBanner.vue)), and from `console-crane.ts` when `isLogin` turns true, so a cut-off run carries on at the next start. A lock in `chrome.storage.local` keeps tabs from running together. The bundle comes from `getBundleSuggestionForPage` for the saved page (it needs a signed-in user, so it can't run at save time). It does **not** use `withAuthRetry`: that falls back to the shared anonymous account, and a user's phrases must never go there.
 
@@ -463,7 +463,7 @@ tests/
   language-lookups.test.ts          # saved-phrase lookup, bundle suggestion, last-used bundles per language
   language-analytics.test.ts        # learning_language and target_language super properties
   tab-broadcast.test.ts             # tab broadcast skips tabs without our content scripts quietly
-  local-save.test.ts                # save-first: logged-out Save on the word card, sign-in card at 3, required at 50
+  local-save.test.ts                # save-first: logged-out "Save without login" / "Login to save", sign-in card at 3, login only at 50
   pending-saves.test.ts             # save-first: local list (one copy per phrase, cap, remove, change listener)
   pending-saves-sync.test.ts        # save-first: send after sign-in (bundle, deviceId, lock, limit, failures)
   pending-saves-banner.test.ts      # save-first: popup "N phrases waiting" line

@@ -12,17 +12,18 @@
     </template>
 
     <template v-else>
-      <button
-        v-if="!isSaved"
-        type="button"
-        :class="PRIMARY_CLASS"
-        :disabled="isSaving"
-        data-testid="local-save-button"
-        @click="save"
-      >
-        <i class="text-lg i-ep-collection" />
-        <span>Save</span>
-      </button>
+      <!-- Both choices from the first phrase on: save here, or log in to save. -->
+      <div v-if="!isSaved" class="flex flex-wrap items-center justify-center gap-3" data-testid="save-choices">
+        <button type="button" :class="PRIMARY_CLASS" :disabled="isSaving" data-testid="local-save-button"
+          @click="saveWithoutLogin">
+          <i class="text-lg i-ep-collection" />
+          <span>Save without login</span>
+        </button>
+        <button type="button" :class="SECONDARY_CLASS" data-testid="login-to-save" @click="loginToSave">
+          <i class="text-lg i-solar-login-3-bold" />
+          <span>Login to save</span>
+        </button>
+      </div>
       <div v-else class="flex flex-col items-center gap-1" data-testid="local-saved">
         <span
           class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-sm font-semibold">
@@ -57,10 +58,14 @@
 /**
  * Save for a logged-out learner (save-first E-02, E-03).
  *
- * Save keeps the phrase in chrome.storage.local (common/services/pending-saves)
- * instead of the server; it is sent to the account after sign-in
- * (pending-saves-sync). There is no bundle choice here: the sync picks the
- * bundle from the page the phrase came from.
+ * Two choices from the first phrase on: "Save without login" keeps the phrase
+ * in chrome.storage.local (common/services/pending-saves) instead of the
+ * server, and it is sent to the account after sign-in (pending-saves-sync);
+ * "Login to save" opens the login window. There is no bundle choice here: the
+ * sync picks the bundle from the page the phrase came from.
+ *
+ * Events: save-login-prompt_viewed (once per word, when the choices show),
+ * save-login-prompt_clicked, save-without-login_clicked.
  *
  * From the 3rd local phrase on, each save shows a soft sign-in card ("Not now"
  * hides it until the next save). At MAX_PENDING_SAVES the card replaces Save.
@@ -94,6 +99,8 @@ const props = defineProps<{
 
 const PRIMARY_CLASS =
   "inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-white text-sm font-semibold shadow-sm hover:from-pink-600 hover:to-purple-700 transition disabled:opacity-60";
+const SECONDARY_CLASS =
+  "inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-purple-400 dark:border-purple-500/60 text-purple-700 dark:text-purple-200 text-sm font-semibold hover:bg-purple-50 dark:hover:bg-purple-900/30 transition";
 const CARD_CLASS =
   "w-full flex flex-col items-center gap-3 p-4 rounded-xl border border-purple-200 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-900/20 text-center";
 
@@ -115,6 +122,17 @@ const cardText = computed(
     `Sign in to keep your ${count.value} phrases and review them tomorrow.`
 );
 
+// The two choices (save here / log in). Not shown at the cap or once saved.
+const showChoices = computed(() => !isSaved.value && !isFull.value);
+let choicesTracked = false;
+
+/** save-login-prompt_viewed: once per word, after the saved state is known. */
+function trackChoicesView() {
+  if (choicesTracked || !showChoices.value) return;
+  choicesTracked = true;
+  analytic.track("save-login-prompt_viewed");
+}
+
 async function refresh() {
   const [found, n] = await Promise.all([
     findPendingSave(props.phrase),
@@ -122,12 +140,14 @@ async function refresh() {
   ]);
   isSaved.value = !!found;
   count.value = n;
+  trackChoicesView();
 }
 
 watch(
   () => props.phrase,
   () => {
     nudgeOpen.value = false;
+    choicesTracked = false;
     refresh();
   },
   { immediate: true }
@@ -185,6 +205,16 @@ async function save() {
   } finally {
     isSaving.value = false;
   }
+}
+
+function saveWithoutLogin() {
+  analytic.track("save-without-login_clicked", { count: count.value });
+  return save();
+}
+
+function loginToSave() {
+  analytic.track("save-login-prompt_clicked");
+  sendMessage(new OpenLoginWindowMessage("save_prompt")).catch(() => {});
 }
 
 function signIn() {
