@@ -4,9 +4,10 @@ import { createTestingPinia } from "@pinia/testing";
 import { reactive } from "vue";
 import { encodeRouteParams } from "../src/console-crane/route-params";
 
-// save-first E-02 / E-03: on the word card, a logged-out learner gets Save
-// (kept on this browser) instead of "Login to save this phrase", and a soft
-// sign-in card from the 3rd local phrase on; at the cap, sign-in replaces Save.
+// save-first E-02 / E-03: on the word card, a logged-out learner gets two
+// choices from the first phrase on, "Save without login" (kept on this
+// browser) and "Login to save"; a soft sign-in card from the 3rd local phrase
+// on; at the cap, only sign-in is offered.
 
 const route = vi.hoisted(() => ({ current: null as any }));
 vi.mock("vue-router", () => ({ useRoute: () => route.current }));
@@ -102,13 +103,41 @@ describe("save first, sign in later — word card", () => {
     showWord("had to");
   });
 
-  it("shows Save, not the login button, to a logged-out learner", async () => {
+  it("shows both choices to a logged-out learner, from the first phrase", async () => {
     const w = mountCard();
     await flushPromises();
 
-    expect(byTestId(w, "local-save-button").exists()).toBe(true);
-    expect(w.text()).not.toContain("Login to save this phrase");
+    expect(byTestId(w, "local-save-button").text()).toBe("Save without login");
+    expect(byTestId(w, "login-to-save").text()).toBe("Login to save");
     expect(byTestId(w, "server-save").exists()).toBe(false);
+    expect(calls("save-login-prompt_viewed")).toHaveLength(1);
+
+    // A re-render of the same word does not send the view again.
+    await w.vm.$forceUpdate();
+    await flushPromises();
+    expect(calls("save-login-prompt_viewed")).toHaveLength(1);
+    w.unmount();
+  });
+
+  it("sends save-login-prompt_viewed again for a new word", async () => {
+    const w = mountCard();
+    await flushPromises();
+    showWord("give up");
+    await flushPromises();
+    expect(calls("save-login-prompt_viewed")).toHaveLength(2);
+    w.unmount();
+  });
+
+  it("Login to save opens the login window with source save_prompt", async () => {
+    const w = mountCard();
+    await flushPromises();
+    await byTestId(w, "login-to-save").trigger("click");
+
+    expect(calls("save-login-prompt_clicked")).toHaveLength(1);
+    const send = chrome.runtime.sendMessage as ReturnType<typeof vi.fn>;
+    const open = send.mock.calls.find(([m]) => OpenLoginWindowMessage.is(m));
+    expect(open?.[0].source).toBe("save_prompt");
+    expect(mem[PENDING_SAVES_KEY]).toBeUndefined();
     w.unmount();
   });
 
@@ -136,6 +165,8 @@ describe("save first, sign in later — word card", () => {
       context: "I had to today",
     });
     expect(byTestId(w, "local-saved").exists()).toBe(true);
+    expect(byTestId(w, "save-choices").exists()).toBe(false);
+    expect(calls("save-without-login_clicked")).toEqual([{ count: 0 }]);
     expect(calls("phrase_saved")).toEqual([{ logged_in: false }]);
     // Only two saves so far: no sign-in card yet.
     expect(byTestId(w, "signin-card").exists()).toBe(false);
@@ -202,6 +233,8 @@ describe("save first, sign in later — word card", () => {
     await flushPromises();
 
     expect(byTestId(w, "local-save-button").exists()).toBe(false);
+    expect(byTestId(w, "login-to-save").exists()).toBe(false);
+    expect(calls("save-login-prompt_viewed")).toHaveLength(0);
     const card = byTestId(w, "signin-card");
     expect(card.attributes("data-required")).toBe("true");
     expect(card.text()).toContain(`your ${MAX_PENDING_SAVES} phrases`);
