@@ -14,7 +14,7 @@
     <template v-else>
       <!-- Both choices from the first phrase on: save here, or log in to save. -->
       <div v-if="!isSaved" class="flex flex-wrap items-center justify-center gap-3" data-testid="save-choices">
-        <button type="button" :class="PRIMARY_CLASS" :disabled="isSaving" data-testid="local-save-button"
+        <button type="button" :class="PRIMARY_CLASS" :disabled="isSaving || !isReady" data-testid="local-save-button"
           @click="saveWithoutLogin">
           <i class="text-lg i-ep-collection" />
           <span>Save without login</span>
@@ -105,6 +105,12 @@ const CARD_CLASS =
 const count = ref(0);
 const isSaved = ref(false);
 const isSaving = ref(false);
+// The saved state has been read from storage for this phrase.
+const isLoaded = ref(false);
+/** Save works only with a phrase, its translation, and the stored state known. */
+const isReady = computed(
+  () => isLoaded.value && !!props.phrase?.trim() && !!props.translation?.trim()
+);
 // The soft card: shown after a save once count >= SIGNIN_NUDGE_AT, hidden by "Not now".
 const nudgeOpen = ref(false);
 
@@ -138,6 +144,7 @@ async function refresh() {
   ]);
   isSaved.value = !!found;
   count.value = n;
+  isLoaded.value = true;
   trackChoicesView();
 }
 
@@ -146,6 +153,7 @@ watch(
   () => {
     nudgeOpen.value = false;
     choicesTracked = false;
+    isLoaded.value = false;
     refresh();
   },
   { immediate: true }
@@ -174,14 +182,25 @@ function pageOfSave(): { sourceUrl?: string; pageTitle?: string } {
   return { sourceUrl: location.href, pageTitle: document.title };
 }
 
+/**
+ * Every Save outcome that is not a new local phrase is tracked as
+ * `local-save_failed` with a reason, so a click without `phrase_saved` can be
+ * explained in Mixpanel (2026-10-17: a click on v1.19.0 left no trace).
+ */
+function trackSaveProblem(reason: string, extra: Record<string, unknown> = {}) {
+  analytic.track("local-save_failed", { reason, count: count.value, ...extra });
+}
+
 async function save() {
-  if (isSaving.value || !props.phrase || !props.translation) return;
+  if (isSaving.value) return trackSaveProblem("busy");
+  if (!isReady.value) return trackSaveProblem("not_ready");
   isSaving.value = true;
   try {
     const result = await addPendingSave({
       phrase: props.phrase,
       translation: props.translation,
-      translation_language: TranslateService.instance.targetLanguage.trim(),
+      // Never throw on a missing language: the save matters more.
+      translation_language: (TranslateService.instance.targetLanguage || "").trim(),
       context: props.context || "",
       direction: props.direction,
       language_info: props.language_info,
@@ -190,15 +209,20 @@ async function save() {
       ...pageOfSave(),
     });
     count.value = result.count;
-    if (result.status === "full") return;
+    if (result.status === "full") return trackSaveProblem("full");
 
     isSaved.value = true;
     if (result.status === "added") {
       analytic.track("phrase_saved", { logged_in: false });
+    } else {
+      trackSaveProblem("duplicate");
     }
     nudgeOpen.value = true;
   } catch (error) {
     console.error("Error saving phrase locally:", error);
+    trackSaveProblem("storage_error", {
+      message: String((error as any)?.message ?? error).slice(0, 200),
+    });
   } finally {
     isSaving.value = false;
   }

@@ -26,21 +26,33 @@ export function newAnonymousId(): string {
 let pending: Promise<string | undefined> | null = null;
 
 /**
+ * The last id this script read or created. A content script left in an open
+ * tab across an extension update keeps running, but chrome.storage throws
+ * there ("Extension context invalidated"); without this, its calls went out
+ * with no id and the server filed them under "anonymous-unknown"
+ * (2026-10-17, v1.19.0 rollout).
+ */
+let lastKnown: string | undefined;
+
+/**
  * Read the stored install id, creating and storing it when there is none yet.
- * Not cached after it settles: logout rotates the id (resetAnalyticsIdentity),
- * and the next call must see the new one.
+ * Not cached while storage works: logout rotates the id
+ * (resetAnalyticsIdentity), and the next call must see the new one.
  *
- * Resolves `undefined` only when there is no extension context (e.g. the
- * content script was orphaned by an update); callers then send no id.
+ * When storage fails, it answers the last id this script saw. It resolves
+ * `undefined` only when storage never worked in this script.
  */
 export function getInstallId(): Promise<string | undefined> {
   if (pending) return pending;
   pending = new Promise<string | undefined>((resolve) => {
     try {
       chrome.storage.local.get(ANON_ID_KEY, (data) => {
+        // A failed read must not mint a new id: that would split the person.
+        if (chrome.runtime?.lastError) return resolve(lastKnown);
         let id = data?.[ANON_ID_KEY] as string | undefined;
-        if (id) return resolve(id);
+        if (id) return resolve((lastKnown = id));
         id = newAnonymousId();
+        lastKnown = id;
         try {
           chrome.storage.local.set({ [ANON_ID_KEY]: id }, () => resolve(id));
         } catch {
@@ -48,10 +60,15 @@ export function getInstallId(): Promise<string | undefined> {
         }
       });
     } catch {
-      resolve(undefined);
+      resolve(lastKnown);
     }
   }).finally(() => {
     pending = null;
   });
   return pending;
+}
+
+/** Read the id once while the script is young, so a later update cannot cut it off. */
+export function rememberInstallId(): void {
+  void getInstallId();
 }

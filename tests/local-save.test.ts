@@ -44,6 +44,7 @@ vi.mock("../src/common/services/phrase.service", () => ({
 
 import { installMemoryChromeStorage } from "./memory-chrome-storage";
 import WordDetail from "../src/console-crane/modules/word-detail/index.vue";
+import LocalSaveSection from "../src/console-crane/components/LocalSaveSection.vue";
 import { TranslateService } from "../src/common/services/translate.service";
 import { findSavedPhrase } from "../src/common/services/phrase.service";
 import { analytic } from "../src/plugins/mixpanel";
@@ -243,5 +244,77 @@ describe("save first, sign in later — word card", () => {
       { count: MAX_PENDING_SAVES, required: true },
     ]);
     w.unmount();
+  });
+
+  // 2026-10-17: a "Save without login" click on v1.19.0 left no phrase_saved
+  // and no trace. Every other outcome now has an event, and Save waits until
+  // it can work.
+  describe("Save outcomes are always tracked", () => {
+    function mountSection(props: Record<string, any> = {}) {
+      return mount(LocalSaveSection, {
+        props: { phrase: "had to", translation: "fa had to", ...props },
+      });
+    }
+
+    it("Save stays disabled until the translation is there", async () => {
+      const w = mountSection({ translation: "" });
+      await flushPromises();
+      expect(byTestId(w as any, "local-save-button").attributes("disabled")).toBeDefined();
+
+      await w.setProps({ translation: "fa had to" });
+      await flushPromises();
+      expect(byTestId(w as any, "local-save-button").attributes("disabled")).toBeUndefined();
+      w.unmount();
+    });
+
+    it("a phrase saved meanwhile (e.g. another tab) sends local-save_failed duplicate", async () => {
+      const w = mountSection();
+      await flushPromises();
+      // Written behind the component's back, so it still shows Save.
+      mem[PENDING_SAVES_KEY] = [
+        { phrase: "had to", translation: "x", translation_language: "fa", savedAt: 1 },
+      ];
+      await byTestId(w as any, "local-save-button").trigger("click");
+      await flushPromises();
+
+      expect(calls("phrase_saved")).toEqual([]);
+      expect(calls("local-save_failed")).toEqual([{ reason: "duplicate", count: 1 }]);
+      expect(byTestId(w as any, "local-saved").exists()).toBe(true);
+      w.unmount();
+    });
+
+    it("a storage error sends local-save_failed storage_error with the message", async () => {
+      const w = mountSection();
+      await flushPromises();
+      (chrome.storage.local as any).set = vi.fn(() => {
+        throw new Error("Extension context invalidated.");
+      });
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      await byTestId(w as any, "local-save-button").trigger("click");
+      await flushPromises();
+
+      expect(calls("local-save_failed")).toEqual([
+        { reason: "storage_error", count: 0, message: "Extension context invalidated." },
+      ]);
+      expect(byTestId(w as any, "local-saved").exists()).toBe(false);
+      w.unmount();
+    });
+
+    it("a missing target language does not stop the save", async () => {
+      const service = TranslateService.instance as any;
+      const before = service.targetLanguage;
+      service.targetLanguage = undefined;
+      try {
+        const w = mountSection();
+        await flushPromises();
+        await byTestId(w as any, "local-save-button").trigger("click");
+        await flushPromises();
+        expect(calls("phrase_saved")).toEqual([{ logged_in: false }]);
+        expect(mem[PENDING_SAVES_KEY][0].translation_language).toBe("");
+        w.unmount();
+      } finally {
+        service.targetLanguage = before;
+      }
+    });
   });
 });
