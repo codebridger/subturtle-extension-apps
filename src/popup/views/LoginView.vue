@@ -134,7 +134,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import {
   GetCurrentChromeUserToken,
@@ -169,9 +169,31 @@ const pending = ref(false);
 const route = useRoute();
 const loginSource = loginSourceFrom(route?.query?.source);
 
+// A login result (success or failure) was already sent for this window.
+let outcomeTracked = false;
+
 function trackLoginFailed(reason: LoginFailReason) {
+  outcomeTracked = true;
   analytic.track("login_failed", { source: loginSource, reason });
 }
+
+/**
+ * The learner closed the login window (or the toolbar popup) without a
+ * result: `login_failed` with `window_closed` and `window: "login"` (the
+ * Google consent window sends `window_closed` without it). The page is going
+ * away, so it goes as a beacon, which survives the unload.
+ */
+function onPageHide() {
+  if (outcomeTracked || isLogin.value) return;
+  outcomeTracked = true;
+  analytic.track(
+    "login_failed",
+    { source: loginSource, reason: "window_closed", window: "login" },
+    { transport: "sendBeacon" }
+  );
+}
+window.addEventListener("pagehide", onPageHide);
+onBeforeUnmount(() => window.removeEventListener("pagehide", onPageHide));
 
 const chromeUserRes = ref<LoginStatusResponse | null>();
 
@@ -292,6 +314,7 @@ async function handleTokenLogin(token: string) {
   await loginWithLastSession();
   // Fired only on an explicit login from this view — session restores on
   // startup do not pass through here.
+  outcomeTracked = true;
   analytic.track("user_logged-in", { source: loginSource });
   // Not awaited: the login is done; the sync reports in syncMessage.
   void sendPendingSaves();

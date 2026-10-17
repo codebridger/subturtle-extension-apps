@@ -70,11 +70,38 @@ describe("getInstallId", () => {
     expect(await getInstallId()).toBe("after");
   });
 
-  it("resolves undefined without an extension context", async () => {
+  it("after an extension update cuts off storage, answers the last id it read", async () => {
+    mem[ANON_ID_KEY] = "install-7";
+    expect(await getInstallId()).toBe("install-7");
     vi.mocked(chrome.storage.local.get).mockImplementation((() => {
       throw new Error("Extension context invalidated.");
     }) as any);
-    expect(await getInstallId()).toBeUndefined();
+    expect(await getInstallId()).toBe("install-7");
+  });
+
+  it("a failed read (lastError) does not mint a new id", async () => {
+    mem[ANON_ID_KEY] = "install-8";
+    expect(await getInstallId()).toBe("install-8");
+    delete mem[ANON_ID_KEY];
+    vi.mocked(chrome.storage.local.get).mockImplementation(((
+      _key: string,
+      cb: (d: any) => void
+    ) => {
+      (chrome.runtime as any).lastError = { message: "Extension context invalidated." };
+      cb(undefined);
+      (chrome.runtime as any).lastError = undefined;
+    }) as any);
+    expect(await getInstallId()).toBe("install-8");
+    expect(mem[ANON_ID_KEY]).toBeUndefined();
+  });
+
+  it("resolves undefined when storage never worked in this script", async () => {
+    vi.resetModules();
+    const fresh = await import("../src/common/helper/install-id");
+    vi.mocked(chrome.storage.local.get).mockImplementation((() => {
+      throw new Error("Extension context invalidated.");
+    }) as any);
+    expect(await fresh.getInstallId()).toBeUndefined();
   });
 });
 
@@ -142,12 +169,13 @@ describe("TranslateService analytics args", () => {
     expect(lastArgs().deviceId).toBe(mem[ANON_ID_KEY]);
   });
 
-  it("sends no deviceId key when there is no extension context", async () => {
+  it("keeps sending the install id after an update cuts off storage (no anonymous-unknown)", async () => {
+    await TranslateService.instance.fetchSimpleTranslation("x", "", "word");
     vi.mocked(chrome.storage.local.get).mockImplementation((() => {
       throw new Error("Extension context invalidated.");
     }) as any);
     await TranslateService.instance.fetchSimpleTranslation("y", "", "word");
-    expect(lastArgs()).not.toHaveProperty("deviceId");
+    expect(lastArgs().deviceId).toBe("install-1");
   });
 
   it("sends deviceId with translationAdvice", async () => {
