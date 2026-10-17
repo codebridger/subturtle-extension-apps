@@ -54,6 +54,9 @@ vi.mock("mixpanel-browser", () => ({
     track: vi.fn(),
     get_property: vi.fn(),
     reset: vi.fn(),
+    unregister: vi.fn(),
+    identify: vi.fn(),
+    people: { set: vi.fn() },
   },
 }));
 
