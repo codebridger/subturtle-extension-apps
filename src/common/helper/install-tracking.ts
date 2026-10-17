@@ -65,7 +65,8 @@ export async function trackFromBackground(
       time: Date.now() / 1000,
       $insert_id: insertId(),
       app: "chrome-extension",
-      version: manifest.version_name || manifest.version,
+      // Shared names (plugins/mixpanel.ts): the type of app and its version.
+      app_version: manifest.version_name || manifest.version,
       ...properties,
     },
   };
@@ -90,7 +91,7 @@ function isStoreInstall(): boolean {
 
 /**
  * chrome.runtime.onInstalled handler: `extension_installed` on a new install
- * (and open the welcome page), `extension_updated` with `previous_version` on
+ * (and open the welcome page), `extension_updated` with `previous_app_version` on
  * an update. Other reasons (a Chrome update) are ignored.
  */
 export async function handleInstalled(
@@ -119,7 +120,7 @@ export async function handleInstalled(
   } else {
     await trackFromBackground("extension_updated", installId, {
       reason: "update",
-      previous_version: previousVersion || null,
+      previous_app_version: previousVersion || null,
     });
   }
 }
