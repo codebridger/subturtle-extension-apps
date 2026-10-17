@@ -88,7 +88,7 @@ import {
 } from "../common/types/messaging";
 import { ref } from "vue";
 import { useProfileStore } from "../stores/profile";
-import { analytic, resetAnalyticsIdentity } from "./mixpanel";
+import { resetAnalyticsIdentity, setAnalyticsUser } from "./mixpanel";
 import { debug, error, log } from "../common/helper/log";
 import {
   reauthAnonymously,
@@ -116,17 +116,16 @@ function updateIsLogin() {
 
   // If user is logged in, fetch membership and freemium details
   if (loginInfo) {
+    // Every page load: register only. The one $identify and profile update
+    // happen at the real login (identifyAtLogin in LoginView). Before the
+    // profile loads, so a failed profile request does not leave this page's
+    // events anonymous.
+    setAnalyticsUser(authentication.user?.id);
+
     const profileStore = useProfileStore();
 
     return profileStore.bootstrap()
-      .then(() => {
-        analytic.identify(authentication.user?.id);
-        analytic.people.set({
-          $email: authentication.user?.email,
-        });
-
-        return true;
-      })
+      .then(() => true)
       .catch((errorDetail) => {
         error("Error bootstrapping profile store:", errorDetail);
         return false;
@@ -200,8 +199,8 @@ function captureSession(): SessionSnapshot {
 /**
  * Follower side: take over the session the leader bundle verified — token,
  * user, profile, subscription — with no network. Analytics identity is set
- * silently (register, not identify): the leader already sent `$identify` and
- * `people.set` for this page.
+ * with register only (setAnalyticsUser), the same as the leader: no page
+ * load sends `$identify` or a profile update.
  */
 function adoptSession(snapshot: SessionSnapshot) {
   const auth = authentication as any;
@@ -221,18 +220,15 @@ function adoptSession(snapshot: SessionSnapshot) {
       activeSubscription: snapshot.activeSubscription ?? null,
       freemiumAllocation: snapshot.freemiumAllocation ?? null,
     });
-    analytic.register({
-      distinct_id: snapshot.user.id,
-      $user_id: snapshot.user.id,
-    });
+    setAnalyticsUser(snapshot.user.id);
   }
 }
 
 /**
  * Restore the stored session. ONCE PER PAGE: main.js, nibble.js and
  * console-crane.js all call this on load, and each used to run the token
- * check (`verify/token`), the profile find-one, getSubscriptionDetails and
- * Mixpanel `$identify` + `people.set` — three times per page load. Now the
+ * check (`verify/token`), the profile find-one and getSubscriptionDetails
+ * three times per page load. Now the
  * first bundle leads (runs the flow below) and the others adopt its result;
  * see page-once.ts for why that coordination lives on the isolated world's
  * globalThis.

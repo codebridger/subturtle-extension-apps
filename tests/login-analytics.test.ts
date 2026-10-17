@@ -25,6 +25,9 @@ vi.mock("../src/plugins/modular-rest", async () => {
       get getToken() {
         return tokenRef.current;
       },
+      get user() {
+        return tokenRef.current ? { id: "u1", email: "a@b.co", type: "user" } : null;
+      },
     },
     // A completed login flips isLogin, so the success view (and the
     // save-first sync message in it) renders.
@@ -198,6 +201,24 @@ describe("LoginView login events", () => {
     expect(eventsNamed("login_failed")).toEqual([
       { source: "save_prompt", reason: "server_error" },
     ]);
+  });
+
+  it("the real login sends one $identify and one profile update (not page loads)", async () => {
+    const mixpanel = (await import("mixpanel-browser")).default as any;
+    getMock.mockResolvedValue({ status: "success", token: "jwt" });
+    const w = await mountView();
+    tokenRef.current = "jwt";
+    await googleButton(w).trigger("click");
+    await flushPromises();
+
+    expect(mixpanel.identify).toHaveBeenCalledTimes(1);
+    expect(mixpanel.identify).toHaveBeenCalledWith("u1");
+    expect(mixpanel.people.set).toHaveBeenCalledTimes(1);
+    expect(mixpanel.people.set).toHaveBeenCalledWith({ $email: "a@b.co" });
+    // The identity is set before user_logged-in, so that event is on the user.
+    const order = (fn: any) => fn.mock.invocationCallOrder[0];
+    const loggedIn = track.mock.calls.findIndex(([e]) => e === "user_logged-in");
+    expect(order(mixpanel.identify)).toBeLessThan(track.mock.invocationCallOrder[loggedIn]);
   });
 
   it("user_logged-in carries the source from the route", async () => {
