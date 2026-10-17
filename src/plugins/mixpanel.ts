@@ -1,5 +1,9 @@
 import mixpanel, { Config } from "mixpanel-browser";
-import { ANON_ID_KEY, newAnonymousId } from "../common/helper/install-id";
+import {
+  ANON_ID_KEY,
+  newAnonymousId,
+  rememberInstallId,
+} from "../common/helper/install-id";
 
 /**
  * NO STORAGE ON THE HOST PAGE. This module runs inside content scripts, where
@@ -61,6 +65,8 @@ function applyStoredAnonymousId() {
   }
 }
 applyStoredAnonymousId();
+// Server calls send this id as deviceId; read it now, while storage works.
+rememberInstallId();
 
 /**
  * Logout. When a registered user was identified, forget them and start a fresh

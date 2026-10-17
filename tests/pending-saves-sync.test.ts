@@ -19,6 +19,7 @@ vi.mock("@modular-rest/client", () => ({
 }));
 vi.mock("../src/common/helper/install-id", () => ({
   getInstallId: vi.fn(async () => "install-1"),
+  rememberInstallId: vi.fn(),
 }));
 
 import { installMemoryChromeStorage } from "./memory-chrome-storage";
