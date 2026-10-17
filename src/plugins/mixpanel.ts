@@ -29,9 +29,31 @@ let config: Partial<Config> = {
 
 mixpanel.init(process.env.MIXPANEL_PROJECT_TOKEN as string, config);
 
-mixpanel.register({
-  app: "chrome-extension",
-});
+/**
+ * The extension version, the same value `extension_installed` /
+ * `extension_updated` send as `version` (install-tracking.ts): the full
+ * `version_name` on dev builds, else `version`. Undefined without an
+ * extension context (a content script left behind by an update), where
+ * getManifest throws.
+ */
+export function extensionVersion(): string | undefined {
+  try {
+    const manifest = chrome.runtime.getManifest();
+    return manifest.version_name || manifest.version || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Super properties every event carries. Registered again after reset(). */
+function registerSuperProperties() {
+  const version = extensionVersion();
+  mixpanel.register({
+    app: "chrome-extension",
+    ...(version ? { version } : {}),
+  });
+}
+registerSuperProperties();
 export const analytic = mixpanel;
 
 export { ANON_ID_KEY };
@@ -81,6 +103,8 @@ rememberInstallId();
 export function resetAnalyticsIdentity() {
   const wasIdentified = !!mixpanel.get_property("$user_id");
   mixpanel.reset();
+  // reset() clears super properties too.
+  registerSuperProperties();
   if (!wasIdentified) {
     applyStoredAnonymousId();
     return;
