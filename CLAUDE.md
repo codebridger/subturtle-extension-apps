@@ -444,7 +444,7 @@ tests/
   login-password.test.ts            # popup password form (ENABLE_PASSWORD_AUTH=true)
   login-password-disabled.test.ts   # popup password form hidden when flag is unset
   login-analytics.test.ts           # user_logged-in source, login_failed source + reason (E-03)
-  mixpanel-super-properties.test.ts # app + version on every event, kept after resetAnalyticsIdentity
+  mixpanel-super-properties.test.ts # app + app_version on every event, kept after resetAnalyticsIdentity
   local-save.test.ts                # save-first: logged-out "Save without login" / "Login to save", sign-in card at 3, login only at 50
   pending-saves.test.ts             # save-first: local list (one copy per phrase, cap, remove, change listener)
   pending-saves-sync.test.ts        # save-first: send after sign-in (bundle, deviceId, lock, limit, failures)

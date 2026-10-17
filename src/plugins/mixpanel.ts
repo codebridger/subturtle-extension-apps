@@ -30,8 +30,11 @@ let config: Partial<Config> = {
 mixpanel.init(process.env.MIXPANEL_PROJECT_TOKEN as string, config);
 
 /**
+ * Shared property names, the same in every app (dashboard, mobile, server,
+ * landing later): `app` is the type of app, `app_version` its version.
+ *
  * The extension version, the same value `extension_installed` /
- * `extension_updated` send as `version` (install-tracking.ts): the full
+ * `extension_updated` send as `app_version` (install-tracking.ts): the full
  * `version_name` on dev builds, else `version`. Undefined without an
  * extension context (a content script left behind by an update), where
  * getManifest throws.
@@ -50,7 +53,7 @@ function registerSuperProperties() {
   const version = extensionVersion();
   mixpanel.register({
     app: "chrome-extension",
-    ...(version ? { version } : {}),
+    ...(version ? { app_version: version } : {}),
   });
 }
 registerSuperProperties();

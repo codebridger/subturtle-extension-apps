@@ -79,7 +79,7 @@ describe("handleInstalled (background)", () => {
       distinct_id: id,
       $device_id: id,
       app: "chrome-extension",
-      version: "1.18.0",
+      app_version: "1.18.0",
       reason: "install",
     });
   });
@@ -91,7 +91,7 @@ describe("handleInstalled (background)", () => {
     expect(sentEvents(fetchMock)[0].properties.distinct_id).toBe("existing-id");
   });
 
-  it("on update: tracks extension_updated with previous_version and opens nothing", async () => {
+  it("on update: tracks extension_updated with previous_app_version and opens nothing", async () => {
     mem[ANON_ID_KEY] = "existing-id";
     await handleInstalled({ reason: "update", previousVersion: "1.17.0" } as any);
 
@@ -100,8 +100,8 @@ describe("handleInstalled (background)", () => {
     expect(e.event).toBe("extension_updated");
     expect(e.properties).toMatchObject({
       distinct_id: "existing-id",
-      previous_version: "1.17.0",
-      version: "1.18.0",
+      previous_app_version: "1.17.0",
+      app_version: "1.18.0",
     });
   });
 
