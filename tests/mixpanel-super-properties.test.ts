@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-// Every event carries the extension version as the `version` super property
-// (the same name and value as extension_installed / extension_updated).
+// Every event carries `app` (the type of app) and `app_version` (its version)
+// as super properties, the same names as extension_installed / extension_updated.
 
 const manifest = vi.hoisted(() => {
   const m: Record<string, any> = { version: "1.20.0.3", version_name: "1.20.0-dev.3" };
@@ -18,7 +18,7 @@ describe("mixpanel super properties", () => {
   it("registers app and version when the module loads", () => {
     expect(register).toHaveBeenCalledWith({
       app: "chrome-extension",
-      version: "1.20.0-dev.3",
+      app_version: "1.20.0-dev.3",
     });
   });
 
@@ -33,11 +33,11 @@ describe("mixpanel super properties", () => {
       expect(mixpanel.reset).toHaveBeenCalled();
       expect(register).toHaveBeenCalledWith({
         app: "chrome-extension",
-        version: "1.20.0-dev.3",
+        app_version: "1.20.0-dev.3",
       });
     });
 
-    it("uses version on a stable build (no version_name)", () => {
+    it("uses manifest.version on a stable build (no version_name)", () => {
       delete manifest.version_name;
       expect(extensionVersion()).toBe("1.20.0.3");
       manifest.version_name = "1.20.0-dev.3";
