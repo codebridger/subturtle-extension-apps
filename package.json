@@ -1,6 +1,6 @@
 {
   "name": "subturtle-extension",
-  "version": "1.17.0-dev.9",
+  "version": "1.17.0-dev.10",
   "private": true,
   "scripts": {
     "dev": "webpack --watch",
