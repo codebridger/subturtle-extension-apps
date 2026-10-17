@@ -1,3 +1,10 @@
+## [1.20.1](https://github.com/codebridger/subturtle-extension-apps/compare/v1.20.0...v1.20.1) (2026-10-17)
+
+
+### Bug Fixes
+
+* **analytics:** one $identify per login, install id as the only device id, no host page URLs ([3bb044c](https://github.com/codebridger/subturtle-extension-apps/commit/3bb044c4046e7ecc7b177d304e77d4767c9d0565))
+
 # [1.20.0](https://github.com/codebridger/subturtle-extension-apps/compare/v1.19.1...v1.20.0) (2026-10-17)
 
 
