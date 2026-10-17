@@ -1,3 +1,11 @@
+# [1.17.0-dev.11](https://github.com/codebridger/subturtle-extension-apps/compare/v1.17.0-dev.10...v1.17.0-dev.11) (2026-10-17)
+
+
+### Features
+
+* **analytics:** name the version property app_version, the shared name for every app ([5079a4c](https://github.com/codebridger/subturtle-extension-apps/commit/5079a4c634d687bbe3e6bbb1ba49b45842f3ef2f))
+* **analytics:** send the extension version with every event ([848b3e4](https://github.com/codebridger/subturtle-extension-apps/commit/848b3e494695e5307d123b1ca02744d617a30f8d))
+
 # [1.17.0-dev.10](https://github.com/codebridger/subturtle-extension-apps/compare/v1.17.0-dev.9...v1.17.0-dev.10) (2026-10-17)
 
 
