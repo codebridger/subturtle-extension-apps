@@ -455,6 +455,7 @@ tests/
   login-password.test.ts            # popup password form (ENABLE_PASSWORD_AUTH=true)
   login-password-disabled.test.ts   # popup password form hidden when flag is unset
   login-analytics.test.ts           # user_logged-in source, login_failed source + reason (E-03)
+  mixpanel-super-properties.test.ts # app + version on every event, kept after resetAnalyticsIdentity
   language-state.test.ts            # round-1 rules: dark gate, own language, save row, plan limit, deep link
   language-catalog.test.ts          # one RTL list, picker names, bundled Vazirmatn
   own-language.test.ts              # translate request with / without a server profile; language store
