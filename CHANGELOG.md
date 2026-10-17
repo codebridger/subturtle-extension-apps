@@ -1,3 +1,10 @@
+## [1.19.1](https://github.com/codebridger/subturtle-extension-apps/compare/v1.19.0...v1.19.1) (2026-10-17)
+
+
+### Bug Fixes
+
+* **analytics:** track every local save outcome, closed login windows, and keep the install id after updates ([f742e76](https://github.com/codebridger/subturtle-extension-apps/commit/f742e761d555f38f86574190a02e1e775db75af1))
+
 # [1.19.0](https://github.com/codebridger/subturtle-extension-apps/compare/v1.18.0...v1.19.0) (2026-10-16)
 
 
