@@ -159,6 +159,47 @@ describe("LoginView login events", () => {
     expect(w.find('[data-testid="pending-saves-status"]').exists()).toBe(false);
   });
 
+  // 2026-10-17: "Login to save" clicked twice, then nothing. Closing our own
+  // login window now sends login_failed (window_closed, window: login).
+  it("closing the login window without a result sends login_failed as a beacon", async () => {
+    await mountView();
+    window.dispatchEvent(new Event("pagehide"));
+
+    const closed = track.mock.calls.filter(([e]) => e === "login_failed");
+    expect(closed).toEqual([
+      [
+        "login_failed",
+        { source: "save_prompt", reason: "window_closed", window: "login" },
+        { transport: "sendBeacon" },
+      ],
+    ]);
+    // Sent once, even if the page hides again.
+    window.dispatchEvent(new Event("pagehide"));
+    expect(track.mock.calls.filter(([e]) => e === "login_failed")).toHaveLength(1);
+  });
+
+  it("closing after a login sends nothing more", async () => {
+    getMock.mockResolvedValue({ status: "success", token: "jwt" });
+    const w = await mountView();
+    await googleButton(w).trigger("click");
+    await flushPromises();
+    window.dispatchEvent(new Event("pagehide"));
+
+    expect(eventsNamed("login_failed")).toEqual([]);
+  });
+
+  it("closing after a failed login does not count it twice", async () => {
+    getMock.mockRejectedValue(new Error("HTTP error! status: 500"));
+    const w = await mountView();
+    await googleButton(w).trigger("click");
+    await flushPromises();
+    window.dispatchEvent(new Event("pagehide"));
+
+    expect(eventsNamed("login_failed")).toEqual([
+      { source: "save_prompt", reason: "server_error" },
+    ]);
+  });
+
   it("user_logged-in carries the source from the route", async () => {
     getMock.mockResolvedValue({ status: "success", token: "jwt" });
     const w = await mountView();
