@@ -27,7 +27,10 @@ vi.mock("../src/plugins/modular-rest", async () => {
 
 vi.mock("../src/popup/helper/http", () => ({ get: getMock, post: vi.fn() }));
 
-vi.mock("../src/plugins/mixpanel", () => ({ analytic: { track: vi.fn() } }));
+vi.mock("../src/plugins/mixpanel", () => ({
+  analytic: { track: vi.fn() },
+  identifyAtLogin: vi.fn(async () => {}),
+}));
 
 // The background script answers GetCurrentChromeUserToken with the Chrome
 // profile's access token; every other message (StoreUserTokenMessage) just acks.

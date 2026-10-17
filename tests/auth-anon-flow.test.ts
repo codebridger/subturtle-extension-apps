@@ -56,9 +56,11 @@ const analyticMock = {
   register: vi.fn(),
   reset: vi.fn(),
   people: { set: vi.fn() },
+  setAnalyticsUser: vi.fn(),
 };
 vi.mock("../src/plugins/mixpanel", () => ({
   analytic: analyticMock,
+  setAnalyticsUser: (id: string) => analyticMock.setAnalyticsUser(id),
   // Logout's identity reset; it calls mixpanel.reset() in production.
   resetAnalyticsIdentity: () => analyticMock.reset(),
 }));
@@ -132,6 +134,7 @@ describe("loginWithLastSession", () => {
     analyticMock.identify.mockReset();
     analyticMock.reset.mockReset();
     analyticMock.people.set.mockReset();
+    analyticMock.setAnalyticsUser.mockReset();
 
     getSendMessageMock().mockReset();
     stubBackgroundLoginStatus(null);
@@ -286,8 +289,11 @@ describe("loginWithLastSession", () => {
       await new Promise((r) => setTimeout(r, 0));
 
       expect(profileStore.bootstrap).toHaveBeenCalledTimes(1);
-      expect(analyticMock.identify).toHaveBeenCalledWith("user-1");
-      expect(analyticMock.people.set).toHaveBeenCalledWith({ $email: "x@y.z" });
+      // A page load registers the user; $identify and the profile update
+      // happen only at the real login (identifyAtLogin in LoginView).
+      expect(analyticMock.setAnalyticsUser).toHaveBeenCalledWith("user-1");
+      expect(analyticMock.identify).not.toHaveBeenCalled();
+      expect(analyticMock.people.set).not.toHaveBeenCalled();
       expect(mod.isLogin.value).toBe(true);
 
       // No anon re-roll, no clear-broadcast.
@@ -346,6 +352,7 @@ describe("loginWithLastSession — once per page across bundles", () => {
     analyticMock.identify.mockReset();
     analyticMock.register.mockReset();
     analyticMock.people.set.mockReset();
+    analyticMock.setAnalyticsUser.mockReset();
     getSendMessageMock().mockReset();
     stubBackgroundLoginStatus("user-token");
     vi.spyOn(console, "log").mockImplementation(() => {});
@@ -359,7 +366,7 @@ describe("loginWithLastSession — once per page across bundles", () => {
     return import("../src/plugins/modular-rest");
   }
 
-  it("verifies the token, loads profile/subscription and identifies once for three bundles", async () => {
+  it("verifies the token, loads profile/subscription once, and registers the user in all three bundles", async () => {
     const [main, nibble, crane] = [
       await loadBundle(),
       await loadBundle(),
@@ -374,19 +381,18 @@ describe("loginWithLastSession — once per page across bundles", () => {
 
     expect(auth.loginWithToken).toHaveBeenCalledTimes(1);
     expect(profileStore.bootstrap).toHaveBeenCalledTimes(1);
-    expect(analyticMock.identify).toHaveBeenCalledTimes(1);
-    expect(analyticMock.people.set).toHaveBeenCalledTimes(1);
+    // No page load sends $identify or a profile update, leader or not.
+    expect(analyticMock.identify).not.toHaveBeenCalled();
+    expect(analyticMock.people.set).not.toHaveBeenCalled();
 
     // The two followers adopt the leader's result without the network…
     expect(profileStore.adoptBootstrap).toHaveBeenCalledTimes(2);
     expect(profileStore.adoptBootstrap).toHaveBeenCalledWith(
       expect.objectContaining({ activeSubscription: { tier: "reader" } })
     );
-    // …and tag their events with the user silently (no extra $identify).
-    expect(analyticMock.register).toHaveBeenCalledWith({
-      distinct_id: "user-1",
-      $user_id: "user-1",
-    });
+    // …and all three bundles tag their events with the user.
+    expect(analyticMock.setAnalyticsUser).toHaveBeenCalledTimes(3);
+    expect(analyticMock.setAnalyticsUser).toHaveBeenCalledWith("user-1");
     expect(nibble.isLogin.value).toBe(true);
     expect(crane.isLogin.value).toBe(true);
   });
