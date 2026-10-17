@@ -142,7 +142,7 @@ import {
   StoreUserTokenMessage,
 } from "../../common/types/messaging";
 import { sendMessage, sendMessageToTabs } from "../../common/helper/massage";
-import { analytic } from "../../plugins/mixpanel";
+import { analytic, identifyAtLogin } from "../../plugins/mixpanel";
 import { get } from "../helper/http";
 import { joinToBaseUrl } from "../../common/helper/url";
 import {
@@ -314,6 +314,8 @@ async function handleTokenLogin(token: string) {
   await loginWithLastSession();
   // Fired only on an explicit login from this view — session restores on
   // startup do not pass through here.
+  // The real login: the one $identify and profile update (not on page loads).
+  await identifyAtLogin(authentication.user?.id, authentication.user?.email);
   outcomeTracked = true;
   analytic.track("user_logged-in", { source: loginSource });
   // Not awaited: the login is done; the sync reports in syncMessage.
