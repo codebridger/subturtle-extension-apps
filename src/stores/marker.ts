@@ -84,6 +84,16 @@ interface State {
 /**
  * Pinia store for managing word marking, selection, and translation in subtitles.
  */
+/** Wait this long after the selection changes before asking for a translation. */
+export const WORD_TRANSLATE_DELAY_MS = 300;
+
+let wordTranslateTimer: ReturnType<typeof setTimeout> | null = null;
+
+function cancelWordTranslate() {
+  if (wordTranslateTimer !== null) clearTimeout(wordTranslateTimer);
+  wordTranslateTimer = null;
+}
+
 export const useMarkerStore = defineStore("marker", {
   state: (): State => ({
     /**
@@ -265,10 +275,35 @@ export const useMarkerStore = defineStore("marker", {
     },
 
     /**
-     * Translates the currently selected phrase using the context, and stores the result in translatedWords.
+     * Ask for the selected phrase's translation once the selection settles.
+     *
+     * Hover marks a word on mouseenter, so moving the pointer across a caption
+     * line used to send one request per word it crossed (2026-10-18: one
+     * `phrase_hovered`, then 22 `translation_requested` in 11 s). Now each
+     * call restarts a short timer, and only the phrase still marked when it
+     * fires is translated: one request per hover, and per marked phrase.
+     * WORD_TRANSLATE_DELAY_MS matches the `phrase_hovered` dwell.
      */
     translate() {
-      let translatingList = [this.selectedPhrase];
+      cancelWordTranslate();
+      wordTranslateTimer = setTimeout(() => {
+        wordTranslateTimer = null;
+        this.translateNow();
+      }, WORD_TRANSLATE_DELAY_MS);
+    },
+
+    /**
+     * Translates the currently selected phrase using the context, and stores
+     * the result in translatedWords (keyed by phrase, so an answer that comes
+     * back after the selection moved on never shows on another phrase).
+     */
+    translateNow() {
+      const phrase = this.selectedPhrase;
+      if (!phrase || !phrase.trim()) return;
+      // Already translated in this page: nothing to ask.
+      if (this.translatedWords[phrase]) return;
+
+      let translatingList = [phrase];
 
       const _this = this;
 
@@ -365,6 +400,8 @@ export const useMarkerStore = defineStore("marker", {
      * Clears all marked words.
      */
     clear() {
+      // Nothing is marked any more: drop a translation that has not gone out.
+      cancelWordTranslate();
       this.stopAutoClearTimer();
       this.markedWords = [];
       this.evaluateAutoClearTimer();
