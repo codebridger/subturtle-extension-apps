@@ -141,18 +141,27 @@ export class TranslateService {
   }
 
   /**
-   * Analytics args for calls that fire a server event (E-01, E-05). `userId`
-   * stays for old servers; `deviceId` is the install's analytics id, read
-   * from storage on each call so it is never empty while the id loads and
-   * follows the new id after logout.
+   * Analytics args for calls that fire a server event (E-01, E-05).
+   * `deviceId` is the install's analytics id, read from storage on each call
+   * so it is never empty while the id loads and follows the new id after
+   * logout.
    */
   private async analyticsArgs(trigger?: TranslationTrigger) {
     const deviceId = await getInstallId();
     return {
-      userId: authentication.user?.id,
       ...(deviceId ? { deviceId } : {}),
       ...(trigger ? { trigger } : {}),
     };
+  }
+
+  /**
+   * `userId` (kept for old servers). Read inside the call withAuthRetry runs,
+   * i.e. after ensureSession and again on the retry, so it always matches the
+   * token that call carries: the server answers 403 when they differ.
+   */
+  private callerArg() {
+    const userId = authentication.user?.id;
+    return userId ? { userId } : {};
   }
 
   async fetchSimpleTranslation(
@@ -193,6 +202,7 @@ export class TranslateService {
             context: context || "",
             // For the server-side translation_requested analytics event.
             ...analytics,
+            ...this.callerArg(),
           },
         })
       );
@@ -248,6 +258,7 @@ export class TranslateService {
             context: context || "",
             // For the server-side translation_requested analytics event.
             ...analytics,
+            ...this.callerArg(),
           },
         })
       );
