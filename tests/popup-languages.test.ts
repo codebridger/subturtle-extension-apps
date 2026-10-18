@@ -28,6 +28,12 @@ vi.mock("../src/console-crane/modules/word-detail/index.vue", () => ({
   default: defineComponent({ name: "WordDetailModule", template: "<div />" }),
 }));
 
+const track = vi.hoisted(() => vi.fn());
+vi.mock("../src/plugins/mixpanel", async (importActual) => ({
+  ...(await importActual<typeof import("../src/plugins/mixpanel")>()),
+  analytic: { track },
+}));
+
 const routerPush = vi.fn();
 vi.mock("vue-router", () => ({
   useRouter: () => ({ push: routerPush }),
@@ -105,6 +111,8 @@ describe("LanguagePill", () => {
 });
 
 describe("LanguageSwitcher (popup list)", () => {
+  beforeEach(() => track.mockClear());
+
   function mountSwitcher(state = sara()) {
     useLanguageStore().setState(state);
     return mount(LanguageSwitcher, { props: { state, caps: null }, attachTo: document.body });
@@ -138,6 +146,17 @@ describe("LanguageSwitcher (popup list)", () => {
     expect(sent[0][1].type).toBe(MESSAGE_TYPE.LANGUAGE_STATE_CHANGED);
     expect(sent[0][1].state.learningLanguage).toBe("en");
     expect(w.emitted("close")).toBeTruthy();
+    w.unmount();
+  });
+
+  it("does not send language_switched: the server sends it with set-active-language (B-28)", async () => {
+    run.mockResolvedValue({ state: sara({ learningLanguage: "en" }) });
+    const w = mountSwitcher();
+    await w.find("[data-testid='language-row-en']").trigger("click");
+    await flushPromises();
+
+    expect(run).toHaveBeenCalledWith({ name: "set-active-language", args: { userId: "u1", language: "en" } });
+    expect(track).not.toHaveBeenCalledWith("language_switched", expect.anything());
     w.unmount();
   });
 
