@@ -26,7 +26,7 @@ vi.mock("@modular-rest/client", () => ({
     insertOne: h.insertOne,
     removeOne: h.removeOne,
   },
-  authentication: { user: { id: "u1", type: "user" }, getToken: "TOKEN" },
+  authentication: { user: { id: "u1", type: "user" }, getToken: "TOKEN", isLogin: true },
 }));
 
 // The profile store imports the sibling dashboard repo's types; keep it out.

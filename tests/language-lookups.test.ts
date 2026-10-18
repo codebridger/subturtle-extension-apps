@@ -8,7 +8,8 @@ const h = vi.hoisted(() => ({ findOne: vi.fn(), run: vi.fn() }));
 vi.mock("@modular-rest/client", () => ({
   dataProvider: { findOne: h.findOne },
   functionProvider: { run: h.run },
-  authentication: { user: { id: "u1" } },
+  // A signed-in learner: lookups are skipped for anyone else.
+  authentication: { user: { id: "u1", type: "user" }, isLogin: true },
 }));
 
 import { findSavedPhrase } from "../src/common/services/phrase.service";
