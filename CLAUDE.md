@@ -471,6 +471,7 @@ tests/
   pending-saves-sync.test.ts        # save-first: send after sign-in (bundle, deviceId, lock, limit, failures)
   pending-saves-banner.test.ts      # save-first: popup "N phrases waiting" line
   selection-popup-label.test.ts     # save-first: "Learn more or Save" / "Learn" (also for local saves)
+  signed-out-session.test.ts        # signed out: no call with a user id but no token (keep a valid anon token, wait for the bootstrap, logout forgets the user), no saved-phrase lookup
   memory-chrome-storage.ts          # helper (not a test): in-memory chrome.storage.local with promises
   install-tracking.test.ts          # onInstalled: extension_installed / extension_updated + welcome page (E-02)
   e2e/

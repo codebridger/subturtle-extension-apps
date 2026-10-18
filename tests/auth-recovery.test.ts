@@ -21,6 +21,7 @@ import {
   reauthAnonymously,
   withAuthRetry,
   setSessionRecovery,
+  setSessionBootstrap,
 } from "../src/common/helper/auth-recovery";
 
 function sendMessageMock() {
@@ -201,7 +202,9 @@ describe("withAuthRetry", () => {
     // earlier test injected a custom recovery.
     setSessionRecovery(reauthAnonymously);
 
-    auth.isLogin = false;
+    // A (possibly stale) token is in place, so ensureSession lets the first
+    // try go out; the server's answer decides whether recovery runs.
+    auth.isLogin = true;
     auth.getToken = "anon-token";
     auth.loginAsAnonymous.mockReset();
     // Default: recovery succeeds (produces a usable session).
@@ -347,5 +350,74 @@ describe("withAuthRetry", () => {
       .mockResolvedValueOnce("second");
     await expect(withAuthRetry(run2)).resolves.toBe("second");
     expect(auth.loginAsAnonymous).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("withAuthRetry — a token before the first try", () => {
+  beforeEach(() => {
+    setSessionRecovery(reauthAnonymously);
+    setSessionBootstrap(Promise.resolve());
+    auth.isLogin = false;
+    auth.getToken = null;
+    auth.loginAsAnonymous.mockReset();
+    auth.loginAsAnonymous.mockImplementation(async () => {
+      auth.isLogin = true;
+      auth.getToken = "fresh-anon";
+    });
+    sendMessageMock().mockClear();
+    vi.spyOn(console, "debug").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    setSessionBootstrap(Promise.resolve());
+  });
+
+  it("with no token, logs in anonymously first and sends the call once, with the token", async () => {
+    const tokens: (string | null)[] = [];
+    const run = vi.fn(async () => {
+      tokens.push(auth.getToken);
+      return "ok";
+    });
+
+    await expect(withAuthRetry(run)).resolves.toBe("ok");
+
+    expect(auth.loginAsAnonymous).toHaveBeenCalledTimes(1);
+    expect(tokens).toEqual(["fresh-anon"]);
+  });
+
+  it("waits for the session bootstrap and uses its token (no second anonymous login)", async () => {
+    let finish!: () => void;
+    setSessionBootstrap(
+      new Promise<void>((r) => {
+        finish = () => {
+          auth.isLogin = true;
+          auth.getToken = "restored";
+          r();
+        };
+      })
+    );
+    const tokens: (string | null)[] = [];
+    const run = vi.fn(async () => {
+      tokens.push(auth.getToken);
+      return "ok";
+    });
+
+    const pending = withAuthRetry(run);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(run).not.toHaveBeenCalled();
+
+    finish();
+    await expect(pending).resolves.toBe("ok");
+    expect(tokens).toEqual(["restored"]);
+    expect(auth.loginAsAnonymous).not.toHaveBeenCalled();
+  });
+
+  it("a failed bootstrap does not block the call", async () => {
+    setSessionBootstrap(Promise.reject(new Error("background gone")));
+    const run = vi.fn().mockResolvedValue("ok");
+
+    await expect(withAuthRetry(run)).resolves.toBe("ok");
+    expect(auth.loginAsAnonymous).toHaveBeenCalledTimes(1);
   });
 });

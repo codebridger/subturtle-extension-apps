@@ -213,36 +213,28 @@ describe("loginWithLastSession", () => {
   });
 
   describe("stored anonymous token", () => {
-    // FIXME: this pins the current behavior introduced in commit 6aff7ed
-    // (`tweak on login steps from initial moment`) which added an
-    // `if (user.type == "anonymous") authentication.logout()` block at
-    // src/plugins/modular-rest.ts:122-124. That contradicts the comment block
-    // at src/plugins/modular-rest.ts:130-139 (kept from the prior
-    // logout-cascade fix in 825db93) which still claims anon users hold a
-    // valid session at the outer .then. If you decide the comment is the
-    // intended behavior, drop the inner logout — and update this test to
-    // assert no re-roll, no null broadcast, isLogin remains true.
-    it("re-rolls the anonymous session when a stored anon token is returned", async () => {
-      stubBackgroundLoginStatus("stale-anon");
+    // A stored anonymous token that still verifies is kept. It used to be
+    // dropped (commit 6aff7ed) and re-rolled, which removed it from storage,
+    // broadcast a logout to every tab from the popup and left each content
+    // script with the anonymous user id and no token (401 / 403 on the next
+    // call). See tests/signed-out-session.test.ts.
+    it("keeps a stored anon token that verifies: no re-roll, no logout broadcast", async () => {
+      stubBackgroundLoginStatus("stored-anon");
       auth.loginWithToken.mockImplementation(async (token: string) => {
         auth.isLogin = true;
         auth.user = { id: "anon-1", type: "anonymous" };
         auth.getToken = token;
         return auth.user;
       });
-      auth.loginAsAnonymous.mockImplementation(async () => {
-        auth.isLogin = true;
-        auth.user = { id: "anon-2", type: "anonymous" };
-        auth.getToken = "fresh-anon";
-        return { token: "fresh-anon" };
-      });
 
       await mod.loginWithLastSession();
       await new Promise((r) => setTimeout(r, 0));
 
-      expect(auth.loginAsAnonymous).toHaveBeenCalledTimes(1);
-      const last = storeTokenCalls().at(-1)![0] as StoreUserTokenMessage;
-      expect(last.token).toBe("fresh-anon");
+      expect(auth.loginAsAnonymous).not.toHaveBeenCalled();
+      expect(auth.logout).not.toHaveBeenCalled();
+      expect(storeTokenCalls()).toHaveLength(0);
+      expect(auth.getToken).toBe("stored-anon");
+      expect(mod.isLogin.value).toBe(false); // signed out: not a registered user
     });
 
     it("falls through to a fresh anon login when a stored token is rejected by the server", async () => {
