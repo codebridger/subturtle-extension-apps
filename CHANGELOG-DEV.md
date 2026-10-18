@@ -1,3 +1,10 @@
+# [1.17.0-dev.14](https://github.com/codebridger/subturtle-extension-apps/compare/v1.17.0-dev.13...v1.17.0-dev.14) (2026-10-18)
+
+
+### Bug Fixes
+
+* wait for the anonymous token before the first call, skip saved-phrase lookup when signed out (E-07) ([3593184](https://github.com/codebridger/subturtle-extension-apps/commit/35931845baf2723d08e1e1947a942d40255ac562))
+
 # [1.17.0-dev.13](https://github.com/codebridger/subturtle-extension-apps/compare/v1.17.0-dev.12...v1.17.0-dev.13) (2026-10-18)
 
 
