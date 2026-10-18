@@ -1,3 +1,10 @@
+## [1.20.2](https://github.com/codebridger/subturtle-extension-apps/compare/v1.20.1...v1.20.2) (2026-10-18)
+
+
+### Bug Fixes
+
+* **subtitle:** one word translation per hover instead of one per word crossed ([756e309](https://github.com/codebridger/subturtle-extension-apps/commit/756e309e30ecc00082a927a4ac41861240bcfa39))
+
 ## [1.20.1](https://github.com/codebridger/subturtle-extension-apps/compare/v1.20.0...v1.20.1) (2026-10-17)
 
 
