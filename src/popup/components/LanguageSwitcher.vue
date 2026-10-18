@@ -76,7 +76,8 @@ const error = ref("");
 /**
  * Switch the active language (E-03). The server is the source of truth; the
  * new state goes to this popup's store and to every open tab, so the next
- * save and translation there follow it without a reload.
+ * save and translation there follow it without a reload. `set-active-language`
+ * sends the `language_switched` event itself (B-28), so this popup does not.
  */
 async function pick(code: string) {
   const from = props.state.learningLanguage;
@@ -90,7 +91,6 @@ async function pick(code: string) {
     const next = await setActiveLanguage(code);
     languages.setState(next);
     sendMessageToTabs(new LanguageStateChangedMessage(JSON.parse(JSON.stringify(next))));
-    analytic.track("language_switched", { from, to: code, surface: "popup" });
     emit("close");
   } catch (e) {
     console.error("Could not switch language:", e);
