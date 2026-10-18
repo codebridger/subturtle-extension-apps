@@ -224,6 +224,72 @@ function recoverOnce(): Promise<boolean> {
 }
 
 // ---------------------------------------------------------------------------
+// Session gate (before the first call)
+// ---------------------------------------------------------------------------
+
+/**
+ * The page's session bootstrap (modular-rest.ts `loginWithLastSession`),
+ * late-bound for the same reasons as setSessionRecovery above. Each new run
+ * (page load, a login or logout message) replaces the previous one.
+ */
+let sessionBootstrap: Promise<unknown> | null = null;
+
+export function setSessionBootstrap(run: Promise<unknown>): void {
+  sessionBootstrap = run;
+}
+
+/**
+ * Upper bound on how long a call waits for the bootstrap. The bootstrap is a
+ * background round trip plus one or two server calls; if it hangs (a dead
+ * service worker), calls go ahead after this and self-heal as before.
+ */
+const BOOTSTRAP_WAIT_MS = 10_000;
+
+/** Resolves once the page's session bootstrap has settled (never rejects). */
+export async function whenSessionReady(): Promise<void> {
+  const run = sessionBootstrap;
+  if (!run) return;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  await Promise.race([
+    run.catch(() => undefined),
+    new Promise((r) => (timer = setTimeout(r, BOOTSTRAP_WAIT_MS))),
+  ]);
+  clearTimeout(timer);
+}
+
+/**
+ * Make sure a token is in place before a call goes out: wait for the
+ * bootstrap, and if there is still no token (a logout message cleared it, or
+ * the bootstrap's anonymous login failed), log in anonymously first.
+ *
+ * Without this, a call sent in the gap went out with no `authorization`
+ * header, failed with 401 / 403, and only then did withAuthRetry log in and
+ * retry: extra round trips and red errors in the page console.
+ *
+ * Waiting for the bootstrap first matters: logging in anonymously while the
+ * bootstrap is still restoring a signed-in user's token would store the
+ * anonymous token over theirs.
+ */
+export async function ensureSession(): Promise<void> {
+  await whenSessionReady();
+  if (!authentication.isLogin) await reauthAnonymously();
+}
+
+/**
+ * True for a signed-in learner with a real account. False when signed out:
+ * no session, the shared anonymous account, or a user left over after the
+ * token was cleared. Gate user-only lookups (saved phrases, bundles) on it:
+ * the anonymous account has none and may not read them (the server answers
+ * 403), and a call without a token answers 401.
+ */
+export function isRegisteredUser(): boolean {
+  return (
+    authentication.isLogin &&
+    authentication.user?.type?.toLowerCase() === "user"
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Retry policy
 // ---------------------------------------------------------------------------
 
@@ -242,6 +308,9 @@ function recoverOnce(): Promise<boolean> {
  * anonymous re-auth in production). A registered user whose token is genuinely
  * dead is cleanly downgraded to anonymous across the extension.
  *
+ * Before the first try it runs ensureSession, so the call never goes out
+ * without a token (a signed-out page waits for its anonymous token).
+ *
  * Guarantees:
  *   - Only retries auth-shaped errors (isAuthError is conservative), so genuine
  *     failures — network, rate limit, business errors — surface unchanged.
@@ -249,6 +318,7 @@ function recoverOnce(): Promise<boolean> {
  *     session, so it can never loop.
  */
 export async function withAuthRetry<T>(run: () => Promise<T>): Promise<T> {
+  await ensureSession();
   try {
     return await run();
   } catch (err) {

@@ -92,6 +92,7 @@ import { resetAnalyticsIdentity, setAnalyticsUser } from "./mixpanel";
 import { debug, error, log } from "../common/helper/log";
 import {
   reauthAnonymously,
+  setSessionBootstrap,
   setSessionRecovery,
 } from "../common/helper/auth-recovery";
 import { pageOnce } from "../common/helper/page-once";
@@ -235,8 +236,18 @@ function adoptSession(snapshot: SessionSnapshot) {
  *
  * Keyed by the stored token, so a login / logout (a new token) starts a fresh
  * page-level run instead of adopting a stale one.
+ *
+ * The run is also registered as the page's session bootstrap, so calls made
+ * meanwhile (ensureSession in withAuthRetry, findSavedPhrase) wait for its
+ * token instead of going out without one.
  */
-export async function loginWithLastSession(tokenHint?: string | null) {
+export function loginWithLastSession(tokenHint?: string | null) {
+  const run = runLoginWithLastSession(tokenHint);
+  setSessionBootstrap(run);
+  return run;
+}
+
+async function runLoginWithLastSession(tokenHint?: string | null) {
   let token = tokenHint ?? null;
   if (!tokenHint) {
     try {
@@ -270,12 +281,12 @@ async function restoreSession() {
 
       debug("retrieved user from last login: ", user);
 
-      if (user.type == "anonymous") {
-        authentication.logout();
-        return false;
-      } else {
-        return updateIsLogin();
-      }
+      // A stored anonymous token that still verifies is kept. It used to be
+      // dropped here (and a fresh one minted), which also removed it from
+      // storage and — from the popup — broadcast a logout to every tab,
+      // leaving each content script with the anonymous user id and no token.
+      // The anonymous account is shared, so a new token buys nothing.
+      return updateIsLogin();
 
     })
     .then(async (_isRegisteredUser) => {
@@ -309,6 +320,10 @@ async function restoreSession() {
 
 export async function logout(sendAuthStatusToOtherParts = true) {
   authentication.logout();
+  // The client's logout clears the token but keeps `user`. Drop it too, or
+  // calls that read `authentication.user.id` (translate's userId, saved-phrase
+  // lookups) go out claiming an account with no token: 401 / 403.
+  (authentication as any).user = null;
 
   // Clear profile store data
   const profileStore = useProfileStore();

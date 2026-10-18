@@ -1,5 +1,6 @@
 import { authentication, functionProvider } from "@modular-rest/client";
 import { normaliseSourceUrl } from "../helper/url-normalise";
+import { isRegisteredUser } from "../helper/auth-recovery";
 import type { BundleSuggestion } from "../../console-crane/modules/word-detail/types";
 
 /**
@@ -23,8 +24,9 @@ export class BundleSuggestionService {
   async getForCurrentPage(): Promise<BundleSuggestion> {
     const empty: BundleSuggestion = { matchedBundle: null, suggestedName: null };
 
-    // Logged-in only; anonymous users get nothing to suggest.
-    if (!authentication.user?.id) return empty;
+    // Signed-in only; the anonymous account has no bundles to suggest (and a
+    // user left over after logout has no token to ask with).
+    if (!isRegisteredUser()) return empty;
     if (typeof location === "undefined") return empty;
 
     const key = normaliseSourceUrl(location.href);
