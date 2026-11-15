@@ -24,7 +24,11 @@ jobs:
     name: Verify (lint, unit, build, e2e)
     # Prevent duplicate runs on internal PRs from branches that already trigger a push event
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository || !contains(fromJSON('["main", "dev"]'), github.event.pull_request.head.ref)
-    runs-on: ubuntu-latest
+    # Pinned, not `ubuntu-latest`: `ubuntu-latest` moved to Ubuntu 26.04, which Playwright
+    # (1.59.x) cannot install Chromium on ("does not support chromium on ubuntu26.04-x64"), so
+    # the "Install Playwright Chromium" step failed on every branch. Move to a newer image once
+    # a Playwright release supports it.
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
