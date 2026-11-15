@@ -50,6 +50,17 @@
           {{ loading ? "Translating…" : "Translate" }}
         </button>
       </form>
+
+      <!-- The own language translations are written in (design X1). Shown
+           with language profiles only (E-12). -->
+      <p
+        v-if="translatedInto"
+        data-testid="translated-into"
+        class="mt-2 mb-0 text-xs font-semibold text-gray-500 dark:text-gray-400"
+      >
+        Translated into
+        <span class="font-bold text-gray-700 dark:text-gray-200" :dir="translatedIntoDir" :lang="translatedIntoCode">{{ translatedInto }}</span>
+      </p>
     </div>
 
     <div v-if="submittedWord" class="rounded-xl overflow-hidden">
@@ -59,7 +70,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from "vue";
+import { ref, onMounted, nextTick, computed } from "vue";
+import { useLanguageStore } from "../../stores/language";
+import { nativeLanguageName, languageName, textDirection } from "../../common/language/catalog";
 import WordDetailModule from "../../console-crane/modules/word-detail/index.vue";
 
 const placeholder = "Type or paste any text to translate…";
@@ -68,6 +81,18 @@ const inputEl = ref<HTMLInputElement | null>(null);
 const inputText = ref("");
 const submittedWord = ref("");
 const loading = ref(false);
+
+const languages = useLanguageStore();
+const translatedIntoCode = computed(() =>
+  languages.isMultilingual ? languages.state?.translationLanguage || "" : ""
+);
+// The native name ("فارسی"), as the design shows it; English name as fallback.
+const translatedInto = computed(() => {
+  const code = translatedIntoCode.value;
+  if (!code) return "";
+  return nativeLanguageName(code, languages.caps) || languageName(code, languages.caps);
+});
+const translatedIntoDir = computed(() => textDirection(translatedIntoCode.value));
 
 onMounted(async () => {
   await nextTick();

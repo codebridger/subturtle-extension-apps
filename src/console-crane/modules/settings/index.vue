@@ -26,8 +26,15 @@
         <!-- Language Settings -->
         <Fieldset class="mb-6 dark:bg-gray-900" legend="Language">
           <div class="flex flex-col space-y-4">
-            <div class="flex items-center justify-between">
-              <span class="text-lg dark:text-gray-100">Interface Language</span>
+            <!-- The own language (translations are written in it). With
+                 language profiles it lives on the server (E-01) and is changed
+                 on the dashboard; before that, the local select as before. -->
+            <div v-if="languages.isMultilingual" class="flex items-center justify-between gap-4" data-testid="settings-own-language">
+              <span class="text-lg dark:text-gray-100">Your own language</span>
+              <span class="text-sm text-gray-600 dark:text-gray-300" dir="auto">{{ ownLanguage }}</span>
+            </div>
+            <div v-else class="flex items-center justify-between">
+              <span class="text-lg dark:text-gray-100">Your own language</span>
               <SelectTarget class="w-48" />
             </div>
           </div>
@@ -38,11 +45,19 @@
 </template>
 
 <script setup lang="ts">
-import { inject, onMounted } from "vue";
+import { computed, inject, onMounted } from "vue";
 import Fieldset from "../../../common/components/Fieldset.vue";
 import SelectTarget from "../../../common/components/inputs/SelectTarget.vue";
 import ThemeSwitcher from "../../../common/components/inputs/ThemeSwitcher.vue";
 import { analytic } from "../../../plugins/mixpanel";
+import { useLanguageStore } from "../../../stores/language";
+import { pickerLabel } from "../../../common/language/catalog";
+
+// The own language from the server profile (E-01).
+const languages = useLanguageStore();
+const ownLanguage = computed(() =>
+  pickerLabel(languages.state?.translationLanguage, languages.caps)
+);
 
 // Inject frame size from modal
 const frameSize = inject<{ width: number; height: number }>("frameSize");

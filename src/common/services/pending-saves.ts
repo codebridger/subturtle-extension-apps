@@ -33,6 +33,12 @@ export interface PendingSave {
   language_info?: { source: string; target: string };
   linguistic_data?: any;
   chunks?: any[];
+  /**
+   * The language detected for the phrase (multilingual round 1). Logged out
+   * there is no language state, so the sync picks the target language with
+   * the learner's state after sign-in.
+   */
+  detected_language?: string | null;
   sourceUrl?: string;
   pageTitle?: string;
   savedAt: number;

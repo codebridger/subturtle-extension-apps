@@ -286,7 +286,7 @@ describe("findSavedPhrase", () => {
     await plugin.loginWithLastSession();
     expect(auth.user?.type).toBe("anonymous");
 
-    expect(await phrases.findSavedPhrase("hello")).toBeNull();
+    expect(await phrases.findSavedPhrase("hello", "en")).toBeNull();
     expect(calls.filter((c) => c.kind === "find-one")).toEqual([]);
   });
 
@@ -294,7 +294,7 @@ describe("findSavedPhrase", () => {
     auth.user = { id: ANON_ID, type: "anonymous" };
     auth.token = null;
 
-    expect(await phrases.findSavedPhrase("hello")).toBeNull();
+    expect(await phrases.findSavedPhrase("hello", "en")).toBeNull();
     expect(calls).toEqual([]);
   });
 
@@ -303,7 +303,7 @@ describe("findSavedPhrase", () => {
     server.tokenOwner["user-token"] = "user-1";
     await plugin.loginWithLastSession();
 
-    await phrases.findSavedPhrase("hello");
+    await phrases.findSavedPhrase("hello", "en");
     expect(calls).toEqual([
       { kind: "find-one", token: "user-token", claimed: "user-1" },
     ]);

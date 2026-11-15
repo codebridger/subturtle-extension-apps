@@ -14,6 +14,11 @@ import {
   type SubscriptionType,
 } from "../../../dashboard-app/frontend/types/database.type";
 import { log } from "../common/helper/log";
+import type {
+  LanguageCapabilities,
+  LanguageState,
+} from "../common/language/types";
+import { useLanguageStore } from "./language";
 
 export const useProfileStore = defineStore("profile", () => {
   const authUser = computed(() => authentication.user);
@@ -60,9 +65,14 @@ export const useProfileStore = defineStore("profile", () => {
       });
   }
 
+  // Languages live in their own store (stores/language.ts); the profile
+  // bootstrap loads them and the session snapshot carries them.
+  const languageStore = useLanguageStore();
+
   function logout() {
     authentication.logout();
     userDetail.value = undefined;
+    languageStore.clear();
   }
 
   function getProfileInfo() {
@@ -92,6 +102,8 @@ export const useProfileStore = defineStore("profile", () => {
       getProfileInfo(),
       // Fetch subscription details
       fetchSubscription(),
+      // Languages (never rejects)
+      languageStore.fetchLanguages(),
     ]);
   }
 
@@ -104,12 +116,16 @@ export const useProfileStore = defineStore("profile", () => {
     isFreemium: boolean;
     activeSubscription: SubscriptionType | null;
     freemiumAllocation: FreemiumAllocationType | null;
+    languageState?: LanguageState | null;
+    languageCaps?: LanguageCapabilities | null;
   }) {
     userDetail.value = snapshot.profile;
     isFreemium.value = snapshot.isFreemium;
     activeSubscription.value = snapshot.activeSubscription;
     freemiumAllocation.value = snapshot.freemiumAllocation;
     isSubscriptionFetching.value = false;
+    languageStore.setCaps(snapshot.languageCaps ?? null);
+    languageStore.setState(snapshot.languageState ?? null);
   }
 
   function loginWithLastSession() {

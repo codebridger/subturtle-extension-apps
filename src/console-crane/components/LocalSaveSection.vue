@@ -93,6 +93,8 @@ const props = defineProps<{
   language_info?: { source: string; target: string };
   linguistic_data?: any;
   chunks?: Chunk[];
+  /** The phrase's detected language; the sync picks the target with it. */
+  detected_language?: string | null;
 }>();
 
 const PRIMARY_CLASS =
@@ -206,6 +208,7 @@ async function save() {
       language_info: props.language_info,
       linguistic_data: props.linguistic_data,
       chunks: props.chunks || [],
+      detected_language: props.detected_language ?? null,
       ...pageOfSave(),
     });
     count.value = result.count;

@@ -36,7 +36,19 @@ export async function sendMessage<T extends BaseMessage | LoginStatusResponse>(
 }
 
 /**
- * Send message to all tabs
+ * True for the error Chrome gives when a tab has no listener: tabs without our
+ * content scripts (chrome:// pages, the Web Store, tabs opened before the
+ * extension was installed or reloaded). Expected for a broadcast.
+ */
+export function isNoReceiverError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return /Receiving end does not exist/i.test(message);
+}
+
+/**
+ * Send message to all tabs. Fire-and-forget: a tab without our content
+ * scripts is skipped quietly (E-03: the popup used to log an uncaught
+ * "Receiving end does not exist" for each such tab after a language switch).
  * @param message
  * @returns
  */
@@ -48,7 +60,17 @@ export function sendMessageToTabs<T extends BaseMessage | LoginStatusResponse>(
 
   chrome.tabs.query({}, (tabs) => {
     for (const tab of tabs) {
-      tab?.id && chrome.tabs.sendMessage(tab.id, message);
+      if (!tab?.id) continue;
+      // Cast: @types/chrome still types tabs.sendMessage as void; in MV3 the
+      // no-callback overload returns a Promise.
+      const sent = chrome.tabs.sendMessage(tab.id, message) as unknown as
+        | Promise<unknown>
+        | undefined;
+      sent?.catch?.((error: unknown) => {
+        if (!isNoReceiverError(error)) {
+          console.warn("Could not send a message to a tab:", error);
+        }
+      });
     }
   });
 }

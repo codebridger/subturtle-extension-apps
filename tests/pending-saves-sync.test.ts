@@ -34,6 +34,9 @@ import {
   listPendingSaves,
 } from "../src/common/services/pending-saves";
 import { analytic } from "../src/plugins/mixpanel";
+import { createPinia, setActivePinia } from "pinia";
+import { useLanguageStore } from "../src/stores/language";
+import type { LanguageState, LanguageSummary } from "../src/common/language/types";
 
 const track = vi.mocked(analytic.track);
 
@@ -224,5 +227,96 @@ describe("syncPendingSaves", () => {
     expect(isSaveLimitError(LIMIT_ERROR)).toBe(true);
     expect(isSaveLimitError(new Error('TIER_LIMIT_REACHED: "save_words"'))).toBe(true);
     expect(isSaveLimitError(new Error("network"))).toBe(false);
+  });
+});
+
+// Multilingual round 1 (dev): logged out there is no language state, so the
+// sync gives each phrase its language with the save window's rule.
+
+function summary(code: string): LanguageSummary {
+  return {
+    code,
+    status: "active",
+    startLevel: "A1",
+    startLevelSource: "default",
+    dueCount: 0,
+    phraseCount: 0,
+    explanationLanguage: "fa",
+    starterPack: { state: "none", heard: 0, total: 0 },
+  };
+}
+
+const SARA: LanguageState = {
+  translationLanguage: "fa",
+  learningLanguage: "de",
+  languages: [summary("en"), summary("de")],
+  onboardingState: "done",
+  plan: "learner",
+  maxLanguages: 10,
+  pending: [],
+};
+
+describe("syncPendingSaves with language profiles", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    installMemoryChromeStorage();
+    auth.isLogin = true;
+    auth.user = { id: "u1", type: "user" };
+    findOne.mockResolvedValue(null);
+    insertOne.mockResolvedValue({ _id: "b-new" });
+    run.mockImplementation(async ({ name }: any) =>
+      name === "getBundleSuggestionForPage"
+        ? { matchedBundle: null, suggestedName: "My Show" }
+        : { _id: "p" }
+    );
+    setActivePinia(createPinia());
+    useLanguageStore().setState(SARA);
+  });
+
+  async function seedDetected(phrase: string, detected: string | null) {
+    await addPendingSave({
+      phrase,
+      translation: "x",
+      translation_language: "fa",
+      detected_language: detected,
+      sourceUrl: "https://example.com/show/1",
+      pageTitle: "My Show",
+    });
+  }
+
+  it("saves to the detected language when the learner has it, else to the active one", async () => {
+    await seedDetected("the house", "en");
+    await seedDetected("bonjour", "fr"); // not added: the active language
+    await seedDetected("Haus", null); // unknown: the active language
+    await syncPendingSaves();
+
+    const langs = Object.fromEntries(
+      createCalls().map((c) => [c.args.phrase, c.args.language])
+    );
+    expect(langs).toEqual({ "the house": "en", bonjour: "de", Haus: "de" });
+  });
+
+  it("asks for the bundle and creates it in that language", async () => {
+    await seedDetected("the house", "en");
+    await syncPendingSaves();
+
+    const suggestion = run.mock.calls
+      .map(([c]) => c)
+      .find((c) => c.name === "getBundleSuggestionForPage");
+    expect(suggestion.args.language).toBe("en");
+    expect(insertOne.mock.calls[0][0].doc).toEqual({
+      title: "My Show",
+      refId: "u1",
+      language: "en",
+    });
+    expect(findOne.mock.calls[0][0].query.language).toEqual({ $in: ["en", null] });
+  });
+
+  it("one page saved in two languages gets a bundle per language", async () => {
+    await seedDetected("the house", "en");
+    await seedDetected("Haus", "de");
+    await syncPendingSaves();
+
+    expect(insertOne.mock.calls.map(([a]) => a.doc.language)).toEqual(["en", "de"]);
   });
 });
