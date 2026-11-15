@@ -1,3 +1,37 @@
+# [1.21.0](https://github.com/codebridger/subturtle-extension-apps/compare/v1.20.3...v1.21.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **analytics:** E-01 E-05 send the install id and trigger with translation calls ([1466a8f](https://github.com/codebridger/subturtle-extension-apps/commit/1466a8f09f405f4271fb1ce217796745ad08e7ae))
+* **analytics:** one $identify per login, install id as the only device id, no host page URLs ([e6d0714](https://github.com/codebridger/subturtle-extension-apps/commit/e6d0714273e00ec922c3cb18b9e131150760771f))
+* **analytics:** track every local save outcome, closed login windows, and keep the install id after updates ([3c9f737](https://github.com/codebridger/subturtle-extension-apps/commit/3c9f737060c15af925af16b42e59aeaf0e1867d8))
+* **languages:** keep the language state in its own store so unit tests run in CI (E-01) ([8928f6c](https://github.com/codebridger/subturtle-extension-apps/commit/8928f6cf84bc7ba147cff54f02a699688572af2a))
+* **languages:** send the user's id with the language calls so the pill and save row work (E-03, E-05) ([9b1d2d4](https://github.com/codebridger/subturtle-extension-apps/commit/9b1d2d430d9d2bbc329f6486f1f7bacf7cca67d4))
+* **popup:** ignore tabs without our content scripts when telling tabs (E-03) ([9f68e9d](https://github.com/codebridger/subturtle-extension-apps/commit/9f68e9d8a50580449e1c33d6c5df6cee2e560d74))
+* **save:** keep the save window open and show the saved state (E-05, E-06) ([fc3c98b](https://github.com/codebridger/subturtle-extension-apps/commit/fc3c98bfd770a5f7b591f148dc2805329071efc3))
+* **subtitle:** one word translation per hover instead of one per word crossed ([db415d2](https://github.com/codebridger/subturtle-extension-apps/commit/db415d2b7ea15ca4c29022ab2d70323c9a1ad720))
+* wait for the anonymous token before the first call, skip saved-phrase lookup when signed out (E-07) ([3593184](https://github.com/codebridger/subturtle-extension-apps/commit/35931845baf2723d08e1e1947a942d40255ac562))
+
+
+### Features
+
+* **analytics:** E-02 track installs and updates and open the welcome page ([b7ddfd6](https://github.com/codebridger/subturtle-extension-apps/commit/b7ddfd6d79fddc89a9d116244c7c4dca5634633a)), closes [codebridger/subturtle-dashboard-app#144](https://github.com/codebridger/subturtle-dashboard-app/issues/144)
+* **analytics:** E-03 track the save-login prompt and login results ([efec688](https://github.com/codebridger/subturtle-extension-apps/commit/efec6881407b7f51629c5ea530357c453b2c3ad1))
+* **analytics:** name the version property app_version, the shared name for every app ([5079a4c](https://github.com/codebridger/subturtle-extension-apps/commit/5079a4c634d687bbe3e6bbb1ba49b45842f3ef2f))
+* **analytics:** send the extension version with every event ([848b3e4](https://github.com/codebridger/subturtle-extension-apps/commit/848b3e494695e5307d123b1ca02744d617a30f8d))
+* **languages:** read languages and own language from the server profile (E-01, E-02, E-09, E-10, E-12) ([63f79d1](https://github.com/codebridger/subturtle-extension-apps/commit/63f79d1845574774688880d01b565a9635e06293))
+* **languages:** send the learning language to analytics and show the own language in page settings (E-13, E-03) ([58f5845](https://github.com/codebridger/subturtle-extension-apps/commit/58f5845cedee5371e53a2c869047e728672f86d9))
+* **popup:** add the language pill, list, due line and plan limit (E-03, E-04, E-11, E-14) ([8294301](https://github.com/codebridger/subturtle-extension-apps/commit/8294301ab0df4fd1104cbeb004ab2da9a68fb060))
+* **save:** add the save window language row, keep for later and per-language saves (E-05, E-06, E-07, E-08) ([8068363](https://github.com/codebridger/subturtle-extension-apps/commit/8068363b45fe7d2c711ceb1356cc724d95b460c7))
+* **save:** save-first E-01 to E-05 let logged-out learners save and sign in later (dev port) ([99f57e6](https://github.com/codebridger/subturtle-extension-apps/commit/99f57e6d11299eeda79d34bd5dea4c07efc49015))
+* **save:** save-first E-02 show "Save without login" and "Login to save" together ([6337290](https://github.com/codebridger/subturtle-extension-apps/commit/63372906e7963bf9487d1f5b0e585c002596bd3f))
+
+
+### Performance Improvements
+
+* **translation:** E-04 E-06 share in-flight translations and translate each caption once ([7c0a3b2](https://github.com/codebridger/subturtle-extension-apps/commit/7c0a3b27403286fe22480d973f0fb9616cd7ae7a))
+
 ## [1.20.3](https://github.com/codebridger/subturtle-extension-apps/compare/v1.20.2...v1.20.3) (2026-10-18)
 
 
