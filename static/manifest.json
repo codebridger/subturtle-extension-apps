@@ -1,6 +1,6 @@
 {
 	"name": "Subturtle: Learn English with Subtitles, Videos & AI Coach",
-	"description": "Learn English from any video or web page: tap a subtitle word for its meaning, save and review words, and speak with an AI coach.",
+	"description": "Learn English from any video or page: save words, talk to an AI coach. Also Spanish, German, French, Italian, Swedish, Lithuanian.",
 	"version": "1.20.3",
 	"manifest_version": 3,
 	"icons": {
@@ -15,8 +15,7 @@
 	],
 	"host_permissions": [
 		"<all_urls>",
-		"https://api-js.mixpanel.com/",
-		"https://ipapi.co/json/"
+		"https://api-js.mixpanel.com/"
 	],
 	"oauth2": {
 		"client_id": "245138511605-cg62vajjtrivc6deski1reb6hns4dqfa.apps.googleusercontent.com",

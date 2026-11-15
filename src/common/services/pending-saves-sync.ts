@@ -14,6 +14,12 @@
  * - The Starter save limit stops the run; the rest stay for later.
  * - No `withAuthRetry`: on an auth error it falls back to the shared anonymous
  *   account, and a user's phrases must never be saved there.
+ * - Languages (multilingual round 1): logged out there is no language state,
+ *   so each phrase gets its language here, with the same rule as the save
+ *   window (`resolveSaveRow` on the detected language). A language the
+ *   learner has not added goes to the active language ("Save to <active>").
+ *   Without language profiles nothing is sent, as before (an old server
+ *   resolves it itself, B-25).
  */
 import {
   authentication,
@@ -24,6 +30,8 @@ import { COLLECTIONS, DATABASE } from "../static/global";
 import { getInstallId } from "../helper/install-id";
 import { analytic } from "../../plugins/mixpanel";
 import { log } from "../helper/log";
+import { useLanguageStore } from "../../stores/language";
+import { languageFilter, resolveSaveRow } from "../language/state";
 import {
   listPendingSaves,
   removePendingSave,
@@ -115,33 +123,70 @@ async function releaseLock(owner: string): Promise<void> {
   }
 }
 
+/**
+ * A function that gives the language each phrase is saved to, or null for
+ * all (no language profiles: requests stay as before). Loads the learner's
+ * language state when the login has not loaded it yet.
+ */
+async function languagePicker(): Promise<(item: PendingSave) => string | null> {
+  let languages: ReturnType<typeof useLanguageStore>;
+  try {
+    languages = useLanguageStore();
+  } catch {
+    // No Pinia in this context.
+    return () => null;
+  }
+  if (!languages.state) await languages.fetchLanguages();
+  const state = languages.state;
+  if (!languages.isMultilingual || !state) return () => null;
+
+  return (item) => {
+    const row = resolveSaveRow({
+      state,
+      caps: languages.caps,
+      detected: item.detected_language ?? null,
+    });
+    return row.target ?? row.active;
+  };
+}
+
 async function findBundleByTitle(
   userId: string,
-  title: string
+  title: string,
+  language: string | null
 ): Promise<string | null> {
   const existing = await dataProvider.findOne<any>({
     database: DATABASE.USER_CONTENT,
     collection: COLLECTIONS.PHRASE_BUNDLE,
-    query: { refId: userId, title },
+    query: {
+      refId: userId,
+      title,
+      ...(language ? { language: languageFilter(language) } : {}),
+    },
   });
   return existing?._id || null;
 }
 
 /** Use the user's bundle with this title, or create it (the refId+title index is unique). */
-async function findOrCreateBundle(userId: string, title: string): Promise<string> {
-  const existingId = await findBundleByTitle(userId, title);
+async function findOrCreateBundle(
+  userId: string,
+  title: string,
+  language: string | null
+): Promise<string> {
+  const existingId = await findBundleByTitle(userId, title, language);
   if (existingId) return existingId;
   try {
     const created: any = await dataProvider.insertOne({
       database: DATABASE.USER_CONTENT,
       collection: COLLECTIONS.PHRASE_BUNDLE,
-      doc: { title, refId: userId },
+      // Bundles carry their language (E-07, B-09).
+      doc: { title, refId: userId, ...(language ? { language } : {}) },
     });
     analytic.track("phrase-bundle_created", { source: "pending_saves" });
     if (created?._id) return created._id;
   } catch (error) {
     // Created at the same moment by another run: use that one.
-    const fallbackId = await findBundleByTitle(userId, title);
+    const fallbackId = await findBundleByTitle(userId, title, language);
     if (fallbackId) return fallbackId;
     throw error;
   }
@@ -156,9 +201,11 @@ async function findOrCreateBundle(userId: string, title: string): Promise<string
 async function bundleFor(
   userId: string,
   item: PendingSave,
+  language: string | null,
   cache: Map<string, string>
 ): Promise<string> {
-  const pageKey = `${item.sourceUrl || ""}\n${item.pageTitle || ""}`;
+  // Per page and language: a German page bundle is no bundle for English.
+  const pageKey = `${item.sourceUrl || ""}\n${item.pageTitle || ""}\n${language || ""}`;
   const cached = cache.get(pageKey);
   if (cached) return cached;
 
@@ -172,6 +219,7 @@ async function bundleFor(
           refId: userId,
           pageTitle: item.pageTitle || "",
           pageUrl: item.sourceUrl || "",
+          ...(language ? { language } : {}),
         },
       });
       bundleId = suggestion?.matchedBundle?._id || null;
@@ -184,7 +232,7 @@ async function bundleFor(
     }
   }
 
-  const id = bundleId || (await findOrCreateBundle(userId, title));
+  const id = bundleId || (await findOrCreateBundle(userId, title, language));
   cache.set(pageKey, id);
   return id;
 }
@@ -206,6 +254,7 @@ async function run(userId: string): Promise<SyncResult> {
 
   try {
     const deviceId = await getInstallId();
+    const languageFor = await languagePicker();
     const bundles = new Map<string, string>();
 
     // Oldest first, so a limit keeps the newest phrases for later.
@@ -216,7 +265,8 @@ async function run(userId: string): Promise<SyncResult> {
       await refreshLock(owner);
 
       try {
-        const bundleId = await bundleFor(userId, item, bundles);
+        const language = languageFor(item);
+        const bundleId = await bundleFor(userId, item, language, bundles);
         await functionProvider.run({
           name: "createPhrase",
           args: {
@@ -233,6 +283,8 @@ async function run(userId: string): Promise<SyncResult> {
             linguistic_data: item.linguistic_data,
             chunks: item.chunks || [],
             sourceUrl: item.sourceUrl,
+            // The language it is saved to (E-07); only with language profiles.
+            ...(language ? { language } : {}),
           },
         });
         await removePendingSave(item.phrase);

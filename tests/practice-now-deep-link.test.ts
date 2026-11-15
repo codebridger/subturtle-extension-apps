@@ -38,6 +38,18 @@ describe("buildPracticeNowPath", () => {
     expect(req.aiCharacter).toBe("Kore");
   });
 
+  it("carries the phrase's language (E-08)", () => {
+    const path = buildPracticeNowPath({ phraseId: "abc123", language: "de" });
+    expect(decodeSession(path).language).toBe("de");
+    expect(new URLSearchParams(path.split("?")[1]).get("language")).toBe("de");
+  });
+
+  it("sends no language when there is none (old servers)", () => {
+    const path = buildPracticeNowPath({ phraseId: "abc123" });
+    expect(decodeSession(path)).not.toHaveProperty("language");
+    expect(path).not.toContain("language=");
+  });
+
   it("ships the eight Gemini voices with Kore as default", () => {
     expect(PRACTICE_NOW_VOICES).toHaveLength(8);
     expect(PRACTICE_NOW_VOICES).toContain("Kore");
